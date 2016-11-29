@@ -1,5 +1,7 @@
 # rubiks-color-resolver
 
+## Overview
+
 rubiks_rgb_solver.py accepts a JSON structure of RGB values for each square of
 either a 2x2x2 or 3x3x3 rubiks cube and returns the kociemba representation of
 that cube.
@@ -56,3 +58,7 @@ is represented via UULUUFUUF but lets lay it out to be nice and neat:
 
 So Bu was replaced with L because Bu is the color of side L, Or was replaced
 with F because Or is the color of side F, etc
+
+## Install
+sudo pip install git+https://github.com/dwalton76/kociemba.git
+
