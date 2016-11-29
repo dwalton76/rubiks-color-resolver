@@ -416,7 +416,7 @@ class CubeSide(object):
             self.corner_squares.append(self.squares[position])
 
 
-class RubiksColorSolver(object):
+class RubiksColorSolver3x3x3(object):
 
     """
     This class accepts a RGB value for all 54 squares on a Rubiks cube and
@@ -1044,6 +1044,174 @@ class RubiksColorSolver(object):
         return self.cube_for_kociemba()
 
 
+class RubiksColorSolver2x2x2(RubiksColorSolver3x3x3):
+
+    def __init__(self):
+        RubiksColorSolver3x3x3.__init__(self)
+
+    def enter_scan_data(self, scan_data):
+        """
+        Take the data from scanning a 2x2x2 cube and manipulate it to look
+        like a scan of a 3x3x3 cube. This allows us to re-use the majority
+        of code in RubiksColorSolver3x3x3 for resolving the colors of a 2x2x2 cube
+        """
+        self.scan_data = scan_data
+
+        position_2x2x2_to_3x3x3 = {
+            1 : 1,
+            2 : 3,
+            3 : 7,
+            4 : 9,
+            5 : 10,
+            6 : 12,
+            7 : 16,
+            8 : 18,
+            9 : 19,
+            10 : 21,
+            11 : 25,
+            12 : 27,
+            13 : 28,
+            14 : 30,
+            15 : 34,
+            16 : 36,
+            17 : 37,
+            18 : 39,
+            19 : 43,
+            20 : 45,
+            21 : 46,
+            22 : 48,
+            23 : 52,
+            24 : 54,
+        }
+
+        for (position_2x2x2, (red, green, blue)) in self.scan_data.items():
+            position = position_2x2x2_to_3x3x3[position_2x2x2]
+            side = self.get_side(position)
+            side.set_square(position, red, green, blue)
+
+        # These are the RGB values for each color as seen via the EV3 color sensor
+        white = (60, 100, 70)
+        green = (6, 35, 13)
+        yellow = (34, 43, 8)
+        orange = (40, 20, 6)
+        blue = (6, 19, 20)
+        red = (30, 12, 6)
+
+        fake_data = {
+            # Upper will be white
+            2 : white,
+            4 : white,
+            5 : white,
+            6 : white,
+            8 : white,
+
+            # Left will be red
+            11 : red,
+            13 : red,
+            14 : red,
+            15 : red,
+            17 : red,
+
+            # Front will be blue
+            20 : blue,
+            22 : blue,
+            23 : blue,
+            24 : blue,
+            26 : blue,
+
+            # Right will be orange
+            29 : orange,
+            31 : orange,
+            32 : orange,
+            33 : orange,
+            35 : orange,
+
+            # Back will be green
+            38 : green,
+            40 : green,
+            41 : green,
+            42 : green,
+            44 : green,
+
+            # Down will be yellow
+            47 : yellow,
+            49 : yellow,
+            50 : yellow,
+            51 : yellow,
+            53 : yellow,
+        }
+
+        for (position, (red, green, blue)) in fake_data.items():
+            side = self.get_side(position)
+            side.set_square(position, red, green, blue)
+
+    def print_layout(self):
+        log.info("""
+
+        01 02
+        03 04
+ 05 06  09 10  13 14  17 18
+ 07 08  11 12  15 16  19 20
+        21 22
+        23 24
+
+""")
+
+    def print_cube(self):
+        """
+        Print the cube but skip the 3x3x3 faked data entries
+        """
+        data = [[], [], [], [], [], []]
+
+        color_codes = {
+          'OR': 90,
+          'Rd': 91,
+          'Gr': 92,
+          'Ye': 93,
+          'Bu': 94,
+          'Wh': 97
+        }
+
+        for side_name in self.side_order:
+            side = self.sides[side_name]
+
+            if side_name == 'U':
+                line_number = 0
+                prefix = '       '
+            elif side_name in ('L', 'F', 'R', 'B'):
+                line_number = 2
+                prefix = ''
+            else:
+                line_number = 4
+                prefix = '       '
+
+            for x in range(self.width):
+
+                # rows 0 and 2 are real, 1 is faked so skip it
+                if x == 1:
+                    continue
+
+                data[line_number].append(prefix)
+
+                for color_name in (side.squares[side.min_pos + (x * self.width)].color.name,
+                                   # side.squares[side.min_pos + (x * self.width) + 1].color.name, # faked, skip it
+                                   side.squares[side.min_pos + (x * self.width) + 2].color.name):
+                    color_code = color_codes.get(color_name)
+
+                    # default to white
+                    if color_code is None:
+                        color_code = 97
+
+                    data[line_number].append('\033[%dm%s\033[0m' % (color_code, color_name))
+                line_number += 1
+
+        output = []
+        for row in data:
+            output.append(' '.join(row))
+
+        log.info("Cube\n\n%s\n" % '\n'.join(output))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('rgb', help='RGB json', default=None)
@@ -1054,13 +1222,29 @@ if __name__ == '__main__':
                         format='%(asctime)s %(levelname)5s: %(message)s')
     log = logging.getLogger(__name__)
 
+    # Color the errors and warnings in red
+    logging.addLevelName(logging.ERROR, "\033[91m  %s\033[0m" % logging.getLevelName(logging.ERROR))
+    logging.addLevelName(logging.WARNING, "\033[91m%s\033[0m" % logging.getLevelName(logging.WARNING))
+
     try:
-        cube = RubiksColorSolver()
         scan_data_str_keys = json.loads(args.rgb)
         scan_data = {}
 
         for (key, value) in scan_data_str_keys.items():
             scan_data[int(key)] = value
+
+        square_count = len(scan_data.keys())
+
+        # 2x2x2 cube
+        if square_count == 24:
+            cube = RubiksColorSolver2x2x2()
+
+        # 3x3x3 cube
+        elif square_count == 54:
+            cube = RubiksColorSolver3x3x3()
+
+        else:
+            raise Exception("Only 2x2x2 and 3x3x3 cubes are supported, your cube has %s squares" % square_count)
 
         cube.enter_scan_data(scan_data)
         kociemba = cube.crunch_colors()
