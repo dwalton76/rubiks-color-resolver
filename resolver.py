@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from rubikscolorresolver import RubiksColorSolver2x2x2, RubiksColorSolver3x3x3
 import argparse
@@ -41,7 +41,7 @@ try:
 
     cube.enter_scan_data(scan_data)
     cube.crunch_colors()
-    print json.dumps(cube.cube_for_json())
+    print(json.dumps(cube.cube_for_json()))
 
 except Exception as e:
     log.exception(e)
