@@ -572,17 +572,98 @@ class RubiksColorSolver3x3x3(object):
         log.info("Cube\n\n%s\n" % '\n'.join(output))
 
     def cube_for_kociemba(self):
-        data = []
+        """
+        Say for example our cube is
 
-        color_to_num = {}
+                   Wh Wh Bu
+                   Wh Wh OR
+                   Wh Wh OR
+         Rd Rd Rd  Bu Bu Ye  Gr Gr OR  Wh Gr Gr
+         Bu Bu Bu  OR OR Ye  Gr Gr OR  Wh Rd Rd
+         Bu Bu Bu  OR OR Ye  Gr Gr OR  Wh Rd Rd
+                   Ye Ye Rd
+                   Ye Ye Rd
+                   Ye Ye Gr
+
+        The kociemba representation of this cube is UULUUFUUFRRFRRFRRFLLDFFDFFDDDBDDBDDRBBBLLLLLLURRUBBUBB
+        So how to read that string? Break it down in groups of 9 so we have one row per side.
+
+        UULUUFUUF
+        RRFRRFRRF
+        LLDFFDFFD
+        DDBDDBDDR
+        BBBLLLLLL
+        URRUBBUBB
+            ^
+            |-- This column is the middle square for each side
+
+        The sides are printed Upper, Right, Front, Down, Left, Back because this is the
+        order expected by kociemba. The Upper side
+
+            Wh Wh Bu
+            Wh Wh OR
+            Wh Wh OR
+
+        is represented via UULUUFUUF but lets lay it out to be nice and neat:
+
+             U U L
+             U U F
+             U U F
+
+        So Bu was replaced with L because Bu is the color of side L, Or was replaced
+        with F because Or is the color of side F, etc
+        """
+        data = []
+        color_to_side_name = {}
 
         for side in self.sides.values():
-            color_to_num[side.middle_square.color] = side.name
+            color_to_side_name[side.middle_square.color] = side.name
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 color = side.squares[x].color
-                data.append(color_to_num[color])
+                data.append(color_to_side_name[color])
+
+        return data
+
+    def cube_for_json(self):
+        """
+        Return a dictionary of the cube data so that we can json dump it
+        A sample entry for a square:
+
+          "1": {
+            "color": "Wh",
+            "currentPosition": 1,
+            "currentSide": "U",
+            "finalSide": "U",
+            "rgb": {
+              "blue": 43,
+              "green": 71,
+              "red": 39
+            }
+          },
+        """
+        data = {}
+        color_to_side_name = {}
+
+        for side in self.sides.values():
+            color_to_side_name[side.middle_square.color] = side.name
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for x in range(side.min_pos, side.max_pos + 1):
+                square = side.squares[x]
+                color = square.color
+                data[square.position] = {
+                    'currentSide' : side.name,
+                    'currentPosition' : square.position,
+                    'rgb' : {
+                        'red' : square.red,
+                        'green' : square.green,
+                        'blue' : square.blue,
+                    },
+                    'color' : color.name,
+                    'finalSide' : color_to_side_name[color]
+                }
 
         return data
 
@@ -1247,8 +1328,8 @@ if __name__ == '__main__':
             raise Exception("Only 2x2x2 and 3x3x3 cubes are supported, your cube has %s squares" % square_count)
 
         cube.enter_scan_data(scan_data)
-        kociemba = cube.crunch_colors()
-        print(''.join(map(str, kociemba)))
+        cube.crunch_colors()
+        print json.dumps(cube.cube_for_json())
 
     except Exception as e:
         log.exception(e)

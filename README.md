@@ -2,9 +2,10 @@
 
 ## Overview
 
-rubiks_rgb_solver.py accepts a JSON structure of RGB values for each square of
-either a 2x2x2 or 3x3x3 rubiks cube and returns the kociemba representation of
-that cube.
+rubiks_rgb_solver.py
+- accepts a JSON structure of RGB values for each square of either a 2x2x2 or 3x3x3 rubiks cube
+- analyzes all RGB values to assign each square one of the six colors of the cube. The CIEDE2000 algorithm is used to calculate the color distance between colors. The algorithm evaluates thousands of permutations color assignments and selects the one that results in the least total color distance with valid cube parity.
+- prints a json structure containing the color information for each square
 
 In the following example the RGB values for square 1 is (39, 71, 43).  In this
 particular example the RGB values were collected via the Lego Mindstorms EV3
@@ -24,40 +25,36 @@ dwalton@laptop ~/l/rubiks-color-resolver> ./rubiks_rgb_solver.py '{"1": [39, 71,
            Ye Ye Rd
            Ye Ye Gr
 
+{
+  "1": {
+    "color": "Wh",
+    "currentPosition": 1,
+    "currentSide": "U",
+    "finalSide": "U",
+    "rgb": {
+      "blue": 43,
+      "green": 71,
+      "red": 39
+    }
+  },
+  "10": {
+    "color": "Rd",
+    "currentPosition": 10,
+    "currentSide": "L",
+    "finalSide": "B",
+    "rgb": {
+      "blue": 4,
+      "green": 9,
+      "red": 24
+    }
+  },
 
-UULUUFUUFRRFRRFRRFLLDFFDFFDDDBDDBDDRBBBLLLLLLURRUBBUBB
+[snip]
 dwalton@laptop ~/l/rubiks-color-resolver>
 ```
 
 In the output above the Cube printout is a log message which is printed to stderr.
-The actual result is the 'UULUUFUUFRRFRRFRRFLLDFFDFFDDDBDDBDDRBBBLLLLLLURRUBBUBB'
-string. So how to read that string? Break it down in groups of 9 so we have one
-row per side.
-```
-UULUUFUUF
-RRFRRFRRF
-LLDFFDFFD
-DDBDDBDDR
-BBBLLLLLL
-URRUBBUBB
-    ^
-    |-- This column is the middle square for each side
-```
-The sides are printed Upper, Right, Front, Down, Left, Back because this is the
-order expected by kociemba. The Upper side
-```
-    Wh Wh Bu
-    Wh Wh OR
-    Wh Wh OR
-```
-is represented via UULUUFUUF but lets lay it out to be nice and neat:
-```
-     U U L
-     U U F
-     U U F
-```
-So Bu was replaced with L because Bu is the color of side L, Or was replaced
-with F because Or is the color of side F, etc
+The actual result is the json output.
 
 ## Install
 sudo pip install git+https://github.com/dwalton76/kociemba.git
