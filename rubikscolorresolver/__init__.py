@@ -1178,47 +1178,50 @@ class RubiksColorSolver2x2x2(RubiksColorSolver3x3x3):
         red = (30, 12, 6)
 
         fake_data = {
-            # Upper will be white
-            2 : white,
-            4 : white,
-            5 : white,
-            6 : white,
-            8 : white,
+            # Use the standard color layout
+            # https://ruwix.com/online-rubiks-cube-solver-program/
 
-            # Left will be red
-            11 : red,
-            13 : red,
-            14 : red,
-            15 : red,
-            17 : red,
+            # Upper will be yellow
+            2 : yellow,
+            4 : yellow,
+            5 : yellow,
+            6 : yellow,
+            8 : yellow,
 
-            # Front will be blue
-            20 : blue,
-            22 : blue,
-            23 : blue,
-            24 : blue,
-            26 : blue,
+            # Left will be green
+            11 : green,
+            13 : green,
+            14 : green,
+            15 : green,
+            17 : green,
 
-            # Right will be orange
-            29 : orange,
-            31 : orange,
-            32 : orange,
-            33 : orange,
-            35 : orange,
+            # Front will be orange
+            20 : orange,
+            22 : orange,
+            23 : orange,
+            24 : orange,
+            26 : orange,
 
-            # Back will be green
-            38 : green,
-            40 : green,
-            41 : green,
-            42 : green,
-            44 : green,
+            # Right will be blue
+            29 : blue,
+            31 : blue,
+            32 : blue,
+            33 : blue,
+            35 : blue,
 
-            # Down will be yellow
-            47 : yellow,
-            49 : yellow,
-            50 : yellow,
-            51 : yellow,
-            53 : yellow,
+            # Back will be red
+            38 : red,
+            40 : red,
+            41 : red,
+            42 : red,
+            44 : red,
+
+            # Down will be white
+            47 : white,
+            49 : white,
+            50 : white,
+            51 : white,
+            53 : white,
         }
 
         for (position, (red, green, blue)) in fake_data.items():
