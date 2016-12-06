@@ -648,6 +648,9 @@ class RubiksColorSolver3x3x3(object):
 
         return data
 
+    def cube_for_kociemba_strict(self):
+        return self.cube_for_kociemba()
+
     def cube_for_json(self):
         """
         Return a dictionary of the cube data so that we can json dump it
@@ -1163,7 +1166,7 @@ class RubiksColorSolver3x3x3(object):
 
         self.print_layout()
         self.print_cube()
-        return self.cube_for_kociemba()
+        return self.cube_for_kociemba_strict()
 
 
 class RubiksColorSolver2x2x2(RubiksColorSolver3x3x3):
@@ -1220,6 +1223,7 @@ class RubiksColorSolver2x2x2(RubiksColorSolver3x3x3):
         red = (104, 4, 2)
 
         fake_data = {
+            # dwalton
             # Use the standard color layout
             # https://ruwix.com/online-rubiks-cube-solver-program/
 
@@ -1335,3 +1339,33 @@ class RubiksColorSolver2x2x2(RubiksColorSolver3x3x3):
             output.append(' '.join(row))
 
         log.info("Cube\n\n%s\n" % '\n'.join(output))
+
+    def cube_for_kociemba_strict(self):
+        """
+        By "strict" here we do not include the fake 3x3x3 squares
+        """
+        data = []
+        color_to_side_name = {
+            'Ye' : 'U',
+            'Gr' : 'L',
+            'OR' : 'F',
+            'Bu' : 'R',
+            'Rd' : 'B',
+            'Wh' : 'D',
+        }
+
+        for side_name in self.side_order:
+            side = self.sides[side_name]
+
+            for x in range(self.width):
+
+                # rows 0 and 2 are real, 1 is faked so skip it
+                if x == 1:
+                    continue
+
+                for color_name in (side.squares[side.min_pos + (x * self.width)].color.name,
+                                   # side.squares[side.min_pos + (x * self.width) + 1].color.name, # faked, skip it
+                                   side.squares[side.min_pos + (x * self.width) + 2].color.name):
+                    data.append(color_to_side_name[color_name])
+
+        return data
