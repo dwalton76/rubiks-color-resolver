@@ -258,6 +258,9 @@ class Corner(object):
              self.square3.side, self.square3.position,
              self.square1.color.name, self.square2.color.name, self.square3.color.name)
 
+    def __lt__(self, other):
+        return 0
+
     def colors_match(self, colorA, colorB, colorC):
         if (colorA in (self.square1.color, self.square2.color, self.square3.color) and
             colorB in (self.square1.color, self.square2.color, self.square3.color) and
@@ -467,27 +470,46 @@ class RubiksColorSolver3x3x3(object):
         self.edges = []
         self.corners = []
 
-        # These are the RGB values for each color as seen via the EV3 color
-        # sensor. Translate these to hex for the dict below.
-        #
-        # white = (60, 100, 70)
-        # green = (6, 35, 13)
-        # yellow = (34, 43, 8)
-        # orange = (40, 20, 6)
-        # blue = (6, 19, 20)
-        # red = (30, 12, 6)
-
         self.crayola_colors = {
+            # Handy website for converting RGB tuples to hex
+            # http://www.w3schools.com/colors/colors_converter.asp
+            #
             # The RGB values in comments are the originals used, they came
-            # from crayola's website
-            'Wh': hashtag_rgb_to_labcolor('#3C6446'),  # White  - FFFFFF
-            'Gr': hashtag_rgb_to_labcolor('#06230D'),  # Green  - 1C8E0D
-            'Ye': hashtag_rgb_to_labcolor('#222B08'),  # Yellow - F6EB20
-            'OR': hashtag_rgb_to_labcolor('#281406'),  # Orange - FF80000
-            'Bu': hashtag_rgb_to_labcolor('#061314'),  # Blue   - 2862B9
-            'Rd': hashtag_rgb_to_labcolor('#1E0C06')   # Red    - C91111
+            # from crayola's website. These are the RGB values for each color
+            # as seen via the EV3 color sensor.
+            #   white = (60, 100, 70)
+            #   green = (6, 35, 13)
+            #   yellow = (34, 43, 8)
+            #   orange = (40, 20, 6)
+            #   blue = (6, 19, 20)
+            #   red = (30, 12, 6)
+            #
+            #'Wh': hashtag_rgb_to_labcolor('#3C6446'),  # White  - FFFFFF
+            #'Gr': hashtag_rgb_to_labcolor('#06230D'),  # Green  - 1C8E0D
+            #'Ye': hashtag_rgb_to_labcolor('#222B08'),  # Yellow - F6EB20
+            #'OR': hashtag_rgb_to_labcolor('#281406'),  # Orange - FF80000
+            #'Bu': hashtag_rgb_to_labcolor('#061314'),  # Blue   - 2862B9
+            #'Rd': hashtag_rgb_to_labcolor('#1E0C06')   # Red    - C91111
+            #
+            # Note that the values from the EV3 color sensor are not as accurate
+            # as those we get from a webcam so lets use the webcam numbers
 
-            # These are the RGB values according to crayola
+            # These are the RGB values as seen via a webcam
+            #   white = (142, 171, 215)
+            #   green = (20, 105, 74)
+            #   yellow = (160, 160, 48)
+            #   orange = (148, 53, 9)
+            #   blue = (3, 40, 146)
+            #   red = (104, 4, 2)
+            #
+            'Wh': hashtag_rgb_to_labcolor('#8eabd7'),
+            'Gr': hashtag_rgb_to_labcolor('#14694a'),
+            'Ye': hashtag_rgb_to_labcolor('#a0a030'),
+            'OR': hashtag_rgb_to_labcolor('#943509'),
+            'Bu': hashtag_rgb_to_labcolor('#032892'),
+            'Rd': hashtag_rgb_to_labcolor('#680402')
+
+            # RGB values for other colors according to crayola's website
             # 'Yg': hashtag_rgb_to_labcolor('#51C201'),  # Yellow Green
             # 'Or': hashtag_rgb_to_labcolor('#D84E09'),  # Red Orange
             # 'Sy': hashtag_rgb_to_labcolor('#09C5F4'),  # Sky Blue
@@ -1169,13 +1191,13 @@ class RubiksColorSolver2x2x2(RubiksColorSolver3x3x3):
             side = self.get_side(position)
             side.set_square(position, red, green, blue)
 
-        # These are the RGB values for each color as seen via the EV3 color sensor
-        white = (60, 100, 70)
-        green = (6, 35, 13)
-        yellow = (34, 43, 8)
-        orange = (40, 20, 6)
-        blue = (6, 19, 20)
-        red = (30, 12, 6)
+        # These are the RGB values for each color as seen via a webcam
+        white = (142, 171, 215)
+        green = (20, 105, 74)
+        yellow = (160, 160, 48)
+        orange = (148, 53, 9)
+        blue = (3, 40, 146)
+        red = (104, 4, 2)
 
         fake_data = {
             # Use the standard color layout
