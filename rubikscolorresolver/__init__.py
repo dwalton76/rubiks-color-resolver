@@ -3,6 +3,7 @@
 from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt
 from kociemba.pykociemba.verify import verify as verify_parity
+from pprint import pformat
 import json
 import logging
 import sys
@@ -907,7 +908,11 @@ class RubiksColorSolver3x3x3(object):
         if fake_corner_parity and result == -6:
             return True
 
-        log.debug("parity is %s" % result)
+        # This gives a false positive on 2x2x2
+        if isinstance(self, RubiksColorSolver2x2x2) and result == -6:
+            return True
+
+        log.info("parity is %s" % result)
         return False
 
     def valid_edge_parity(self):
@@ -959,17 +964,23 @@ class RubiksColorSolver3x3x3(object):
                 for (distance, (colorA, colorB)) in value:
                     log.info("edge_best_match %s, score %s, colorA %s, colorB %s" % (edge, distance, colorA.name, colorB.name))
                 log.info('')
-                score_delta.append((second_place_distance - first_place_distance, edge, (first_place_color[0], first_place_color[1])))
+                score_delta.append((second_place_distance - first_place_distance, first_place_distance, edge, (first_place_color[0], first_place_color[1])))
 
             score_delta = list(reversed(sorted(score_delta)))
 
             log.info("SCORES DELTA")
-            for (distance, edge_best_match, (colorA, colorB)) in score_delta:
+            for (delta_distance, distance, edge_best_match, (colorA, colorB)) in score_delta:
                 log.info("%s, edge_best_match %s, colorA %s, colorB %s" % (distance, edge_best_match, colorA.name, colorB.name))
+
+            # for edge in unresolved_edges:
+            #     log.info("unresolved_edge: %s" % edge)
+            #
+            # for (colorA, colorB) in needed_edges:
+            #     log.info("needed_edges: %s/%s" % (colorA.name, colorB.name))
 
             while permutation_count > self.edge_permutation_limit:
 
-                for (distance, edge_best_match, (colorA, colorB)) in score_delta:
+                for (delta_distance, distance, edge_best_match, (colorA, colorB)) in score_delta:
                     if edge_best_match in unresolved_edges and (colorA, colorB) in needed_edges:
                         break
                 else:
@@ -1068,17 +1079,17 @@ class RubiksColorSolver3x3x3(object):
                 for (distance, (colorA, colorB, colorC)) in value:
                     log.info("corner_best_match %s, score %s, colorA %s, colorB %s, colorC %s" % (corner, distance, colorA.name, colorB.name, colorC.name))
                 log.info('')
-                score_delta.append((second_place_distance - first_place_distance, corner, (first_place_color[0], first_place_color[1], first_place_color[2])))
+                score_delta.append((second_place_distance - first_place_distance, first_place_distance, corner, (first_place_color[0], first_place_color[1], first_place_color[2])))
 
             score_delta = list(reversed(sorted(score_delta)))
 
             log.info("SCORES DELTA")
-            for (distance, corner_best_match, (colorA, colorB, colorC)) in score_delta:
+            for (delta_distance, distance, corner_best_match, (colorA, colorB, colorC)) in score_delta:
                 log.info("%s, corner_best_match %s, colorA %s, colorB %s, colorC %s" % (distance, corner_best_match, colorA.name, colorB.name, colorC.name))
 
             while permutation_count > self.corner_permutation_limit:
 
-                for (distance, corner_best_match, (colorA, colorB, colorC)) in score_delta:
+                for (delta_distance, distance, corner_best_match, (colorA, colorB, colorC)) in score_delta:
                     if corner_best_match in unresolved_corners and (colorA, colorB, colorC) in needed_corners:
                         break
                 else:
@@ -1091,10 +1102,18 @@ class RubiksColorSolver3x3x3(object):
 
                 unresolved_corners = [corner for corner in self.corners if corner.valid is False]
                 permutation_count = factorial(len(needed_corners))
-                log.info("%s/%s/%s best match is %s with distance %d (permutations %d/%d)" %
-                         (colorA.name, colorB.name, colorC.name, corner_best_match, distance, permutation_count, self.corner_permutation_limit))
+                log.info("%s/%s/%s best match is %s with distance %d (total %d) (permutations %d/%d)" %
+                         (colorA.name, colorB.name, colorC.name, corner_best_match,
+                          distance, best_match_total_distance,
+                          permutation_count, self.corner_permutation_limit))
 
         score_per_permutation = []
+
+        # for corner in unresolved_corners:
+        #     log.info("unresolved_corners: %s" % corner)
+        #
+        # for (colorA, colorB, colorC) in needed_corners:
+        #     log.info("needed_corners: %s/%s/%s" % (colorA.name, colorB.name, colorC.name))
 
         for corner_permutation in permutations(unresolved_corners):
             total_distance = 0
@@ -1105,6 +1124,7 @@ class RubiksColorSolver3x3x3(object):
             score_per_permutation.append((total_distance, corner_permutation))
 
         score_per_permutation = sorted(score_per_permutation)
+        # log.info("score_per_permutation:\n%s\n" % pformat(score_per_permutation[0:5]))
 
         # Now traverse the permutations from best score to worst. The first
         # permutation that produces a cube with valid parity is the permutation
@@ -1117,14 +1137,14 @@ class RubiksColorSolver3x3x3(object):
                 total_distance += distance
                 corner_best_match.update_colors(colorA, colorB, colorC)
                 corner_best_match.valid = True
+                log.info("%s/%s/%s best match is %s with distance %d (%d total)" %
+                         (colorA.name, colorB.name, colorC.name, corner_best_match, distance, total_distance))
 
             if self.valid_cube_parity(fake_corner_parity=False):
-                log.info("%s/%s/%s best match is %s with distance %d" %
-                         (colorA.name, colorB.name, colorC.name, corner_best_match, distance))
-                log.info("Total distance: %d, cube parity is valid" % total_distance)
+                log.info("Total distance: %d (%d from best_match), cube parity is valid" % (total_distance, best_match_total_distance))
                 break
             else:
-                log.debug("Total distance: %d, cube parity is NOT valid" % total_distance)
+                log.info("Total distance: %d (%d from best_match), cube parity is NOT valid" % (total_distance, best_match_total_distance))
 
         log.info('\n')
 
