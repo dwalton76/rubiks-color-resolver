@@ -1369,3 +1369,6 @@ class RubiksColorSolver2x2x2(RubiksColorSolver3x3x3):
                     data.append(color_to_side_name[color_name])
 
         return data
+
+class RubiksColorSolver4x4x4(object):
+    pass
