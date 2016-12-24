@@ -219,7 +219,7 @@ def delta_e_cie2000(lab1, lab2):
     return delta_e
 
 
-def get_color_distance_lab(c1, c2):
+def get_color_distance(c1, c2):
     try:
         return dcache[(c1, c2)]
     except KeyError:
@@ -274,7 +274,7 @@ class Square(object):
         cie_data = []
 
         for (color_name, color_obj) in crayon_box.items():
-            distance = get_color_distance_lab(self.rawcolor, color_obj)
+            distance = get_color_distance(self.rawcolor, color_obj)
             cie_data.append((distance, color_name, color_obj))
         cie_data = sorted(cie_data)
 
@@ -325,12 +325,12 @@ class Edge(object):
             return True
         return False
 
-    def _get_color_distance_labs(self, colorA, colorB):
-        distanceAB = (get_color_distance_lab(self.square1.rawcolor, colorA) +
-                      get_color_distance_lab(self.square2.rawcolor, colorB))
+    def _get_color_distances(self, colorA, colorB):
+        distanceAB = (get_color_distance(self.square1.rawcolor, colorA) +
+                      get_color_distance(self.square2.rawcolor, colorB))
 
-        distanceBA = (get_color_distance_lab(self.square1.rawcolor, colorB) +
-                      get_color_distance_lab(self.square2.rawcolor, colorA))
+        distanceBA = (get_color_distance(self.square1.rawcolor, colorB) +
+                      get_color_distance(self.square2.rawcolor, colorA))
 
         return (distanceAB, distanceBA)
 
@@ -341,12 +341,12 @@ class Edge(object):
         try:
             return self.dcache[(colorA, colorB)]
         except KeyError:
-            value = min(self._get_color_distance_labs(colorA, colorB))
+            value = min(self._get_color_distances(colorA, colorB))
             self.dcache[(colorA, colorB)] = value
             return value
 
     def update_colors(self, colorA, colorB):
-        (distanceAB, distanceBA) = self._get_color_distance_labs(colorA, colorB)
+        (distanceAB, distanceBA) = self._get_color_distances(colorA, colorB)
 
         if distanceAB < distanceBA:
             self.square1.color = colorA
@@ -405,18 +405,18 @@ class Corner(object):
             return True
         return False
 
-    def _get_color_distance_labs(self, colorA, colorB, colorC):
-        distanceABC = (get_color_distance_lab(self.square1.rawcolor, colorA) +
-                       get_color_distance_lab(self.square2.rawcolor, colorB) +
-                       get_color_distance_lab(self.square3.rawcolor, colorC))
+    def _get_color_distances(self, colorA, colorB, colorC):
+        distanceABC = (get_color_distance(self.square1.rawcolor, colorA) +
+                       get_color_distance(self.square2.rawcolor, colorB) +
+                       get_color_distance(self.square3.rawcolor, colorC))
 
-        distanceCAB = (get_color_distance_lab(self.square1.rawcolor, colorC) +
-                       get_color_distance_lab(self.square2.rawcolor, colorA) +
-                       get_color_distance_lab(self.square3.rawcolor, colorB))
+        distanceCAB = (get_color_distance(self.square1.rawcolor, colorC) +
+                       get_color_distance(self.square2.rawcolor, colorA) +
+                       get_color_distance(self.square3.rawcolor, colorB))
 
-        distanceBCA = (get_color_distance_lab(self.square1.rawcolor, colorB) +
-                       get_color_distance_lab(self.square2.rawcolor, colorC) +
-                       get_color_distance_lab(self.square3.rawcolor, colorA))
+        distanceBCA = (get_color_distance(self.square1.rawcolor, colorB) +
+                       get_color_distance(self.square2.rawcolor, colorC) +
+                       get_color_distance(self.square3.rawcolor, colorA))
         return (distanceABC, distanceCAB, distanceBCA)
 
     def color_distance(self, colorA, colorB, colorC):
@@ -426,12 +426,12 @@ class Corner(object):
         try:
             return self.dcache[(colorA, colorB, colorC)]
         except KeyError:
-            value = min(self._get_color_distance_labs(colorA, colorB, colorC))
+            value = min(self._get_color_distances(colorA, colorB, colorC))
             self.dcache[(colorA, colorB, colorC)] = value
             return value
 
     def update_colors(self, colorA, colorB, colorC):
-        (distanceABC, distanceCAB, distanceBCA) = self._get_color_distance_labs(colorA, colorB, colorC)
+        (distanceABC, distanceCAB, distanceBCA) = self._get_color_distances(colorA, colorB, colorC)
         min_distance = min(distanceABC, distanceCAB, distanceBCA)
 
         if min_distance == distanceABC:
@@ -454,9 +454,9 @@ class Corner(object):
             self.square1.color = colorB
             self.square1.color_name = colorB.name
             self.square2.color = colorC
-            self.square1.color_name = colorC.name
+            self.square2.color_name = colorC.name
             self.square3.color = colorA
-            self.square1.color_name = colorA.name
+            self.square3.color_name = colorA.name
 
     def validate(self):
 
@@ -755,7 +755,7 @@ class RubiksColorSolverGeneric(object):
     def sort_squares(self, target_square, squares_to_sort):
         rank = []
         for square in squares_to_sort:
-            distance = get_color_distance_lab(target_square.rawcolor, square.rawcolor)
+            distance = get_color_distance(target_square.rawcolor, square.rawcolor)
             rank.append((distance, square))
         rank = list(sorted(rank))
 
@@ -833,7 +833,7 @@ class RubiksColorSolverGeneric(object):
 
             for (anchor_square, color_name) in zip(self.anchor_squares, permutation):
                 color_obj = self.crayola_colors[color_name]
-                distance += get_color_distance_lab(anchor_square.rawcolor, color_obj)
+                distance += get_color_distance(anchor_square.rawcolor, color_obj)
 
             if min_distance is None or distance < min_distance:
                 min_distance = distance
@@ -1274,8 +1274,8 @@ class RubiksColorSolverGeneric(object):
 
     def crunch_colors(self):
         self.identify_center_squares()
-        self.identify_edge_squares()
         self.identify_corner_squares()
+        self.identify_edge_squares()
 
         self.resolve_edge_squares()
         self.resolve_corner_squares()
@@ -1641,7 +1641,7 @@ class RubiksColorSolver3x3x3(object):
             for (side_name, color_name) in zip(self.side_order, permutation):
                 side = self.sides[side_name]
                 color_obj = self.crayola_colors[color_name]
-                distance += get_color_distance_lab(side.middle_square.rawcolor, color_obj)
+                distance += get_color_distance(side.middle_square.rawcolor, color_obj)
 
             if min_distance is None or distance < min_distance:
                 min_distance = distance
