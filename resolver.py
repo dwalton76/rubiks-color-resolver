@@ -7,8 +7,7 @@ import logging
 import sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--test', action='store_true', default=False)
-parser.add_argument('--rgb', help='RGB json', default=None)
+parser.add_argument('rgb', help='RGB json', default=None)
 args = parser.parse_args()
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
