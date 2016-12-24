@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from rubikscolorresolver import RubiksColorSolverGeneric, RubiksColorSolver2x2x2, RubiksColorSolver3x3x3
+from math import sqrt
 import argparse
 import json
 import logging
