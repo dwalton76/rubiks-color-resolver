@@ -27,6 +27,7 @@ test_cases = (
     ('3x3x3 cross',        'test-data/3x3x3-cross.txt',        'DUDUUUDUDFRFRRRFRFRFRFFFRFRUDUDDDUDUBLBLLLBLBLBLBBBLBL'),
     ('3x3x3 tetris',       'test-data/3x3x3-tetris.txt',       'FFBFUBFBBUDDURDUUDRLLRFLRRLBBFBDFBFFUDDULDUUDLRRLBRLLR'),
     ('3x3x3 superflip',    'test-data/3x3x3-superflip.txt',    'UBULURUFURURFRBRDRFUFLFRFDFDFDLDRDBDLULBLFLDLBUBRBLBDB'),
+    ('3x3x3 random 01',    'test-data/3x3x3-random-01.txt',    'DURUULDBRFDFLRRLFBRLUUFFUFFLRUDDDRRDLBBDLLBBBDFFBBRLUU'),
     ('4x4x4 solved',       'test-data/4x4x4-solved.txt',       'UUUUUUUUUUUUUUUURRRRRRRRRRRRRRRRFFFFFFFFFFFFFFFFDDDDDDDDDDDDDDDDLLLLLLLLLLLLLLLLBBBBBBBBBBBBBBBB'),
 )
 
@@ -44,6 +45,7 @@ for (desc, filename, expected) in test_cases:
         square_count_per_side = int(square_count/6)
         width = int(sqrt(square_count_per_side))
 
+        # remove the False if you want to test with the old RubiksColorSolver3x3x3
         if False and width == 3:
             cube = RubiksColorSolver3x3x3()
         else:
