@@ -737,12 +737,12 @@ class RubiksColorSolverGeneric(object):
             # log.info("cube_for_kociemba_strict:\n%s" % pformat(color_to_side_name))
         else:
             color_to_side_name = {
-                'Ye' : 'U',
-                'Gr' : 'L',
-                'OR' : 'F',
-                'Bu' : 'R',
-                'Wh' : 'D',
-                'Rd' : 'B'
+                'Wh' : 'U',
+                'OR' : 'L',
+                'Gr' : 'F',
+                'Rd' : 'R',
+                'Ye' : 'D',
+                'Bu' : 'B'
             }
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
@@ -888,17 +888,17 @@ class RubiksColorSolverGeneric(object):
                 side = self.sides[side_name]
 
                 if side_name == 'U':
-                    target_color_name = 'Ye'
-                elif side_name == 'L':
-                    target_color_name = 'Gr'
-                elif side_name == 'F':
-                    target_color_name = 'OR'
-                elif side_name == 'R':
-                    target_color_name = 'Bu'
-                elif side_name == 'D':
                     target_color_name = 'Wh'
-                elif side_name == 'B':
+                elif side_name == 'L':
+                    target_color_name = 'OR'
+                elif side_name == 'F':
+                    target_color_name = 'Gr'
+                elif side_name == 'R':
                     target_color_name = 'Rd'
+                elif side_name == 'D':
+                    target_color_name = 'Ye'
+                elif side_name == 'B':
+                    target_color_name = 'Bu'
 
                 for square in all_squares:
                     if square.color_name == target_color_name:

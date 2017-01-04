@@ -21,15 +21,15 @@ logging.addLevelName(logging.WARNING, "\033[91m%s\033[0m" % logging.getLevelName
 # - in the log output grab the "RGB json" and save that in a file in test-data
 # - in the log output grab the "Final cube for kociema", this is what you put in the entry in the test_cases tuple
 test_cases = (
-    ('2x2x2 solved',       'test-data/2x2x2-solved.txt',       'UUUURRRRFFFFDDDDLLLLBBBB'),
+    ('2x2x2 solved',       'test-data/2x2x2-solved.txt',       'DDDDBBBBLLLLUUUUFFFFRRRR'),
     ('3x3x3 solved',       'test-data/3x3x3-solved.txt',       'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'),
     ('3x3x3 checkerboard', 'test-data/3x3x3-checkerboard.txt', 'UDUDUDUDURLRLRLRLRFBFBFBFBFDUDUDUDUDLRLRLRLRLBFBFBFBFB'),
     ('3x3x3 cross',        'test-data/3x3x3-cross.txt',        'DUDUUUDUDFRFRRRFRFRFRFFFRFRUDUDDDUDUBLBLLLBLBLBLBBBLBL'),
     ('3x3x3 tetris',       'test-data/3x3x3-tetris.txt',       'FFBFUBFBBUDDURDUUDRLLRFLRRLBBFBDFBFFUDDULDUUDLRRLBRLLR'),
     ('3x3x3 superflip',    'test-data/3x3x3-superflip.txt',    'UBULURUFURURFRBRDRFUFLFRFDFDFDLDRDBDLULBLFLDLBUBRBLBDB'),
     ('3x3x3 random 01',    'test-data/3x3x3-random-01.txt',    'DURUULDBRFDFLRRLFBRLUUFFUFFLRUDDDRRDLBBDLLBBBDFFBBRLUU'),
-    ('4x4x4 solved',       'test-data/4x4x4-solved.txt',       'UUUUUUUUUUUUUUUURRRRRRRRRRRRRRRRFFFFFFFFFFFFFFFFDDDDDDDDDDDDDDDDLLLLLLLLLLLLLLLLBBBBBBBBBBBBBBBB'),
-    ('4x4x4 turn UR',      'test-data/4x4x4-turn-UR.txt',      'DDDBDDDLDDDLDDDLBBBRBBBRBBBRBBBRBBBULLLULLLULLLUUUURUUURUUURUUUFLLLLFFFFFFFFFFFFDFFFDRRRDRRRDRRR'),
+    ('4x4x4 solved',       'test-data/4x4x4-solved.txt',       'DDDDDDDDDDDDDDDDBBBBBBBBBBBBBBBBLLLLLLLLLLLLLLLLUUUUUUUUUUUUUUUUFFFFFFFFFFFFFFFFRRRRRRRRRRRRRRRR'),
+    ('4x4x4 turn UR',      'test-data/4x4x4-turn-UR.txt',      'UUURUUUFUUUFUUUFRRRBRRRBRRRBRRRBRRRDFFFDFFFDFFFDDDDBDDDBDDDBDDDLFFFFLLLLLLLLLLLLULLLUBBBUBBBUBBB'),
 )
 
 results = []
