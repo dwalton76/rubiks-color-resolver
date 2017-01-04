@@ -764,7 +764,6 @@ class RubiksColorSolverGeneric(object):
             result.append(square)
         return result
 
-
     def valid_cube_parity(self, fake_corner_parity):
         # TODO
         return True
@@ -774,7 +773,6 @@ class RubiksColorSolverGeneric(object):
 
     def identify_anchor_squares(self, use_centers):
 
-        # dwalton
         if use_centers:
             num_of_center_squares_per_side = len(self.sideU.center_squares)
             to_keep = num_of_center_squares_per_side - 1
@@ -988,7 +986,7 @@ class RubiksColorSolverGeneric(object):
         self.valid_edges = sorted(self.valid_edges)
 
         # U and B
-        for (pos1, pos2) in zip(self.sideU.edge_north_pos, self.sideB.edge_north_pos):
+        for (pos1, pos2) in zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)):
             self.edges.append(Edge(self, pos1, pos2))
 
         # U and L
@@ -1032,7 +1030,7 @@ class RubiksColorSolverGeneric(object):
             self.edges.append(Edge(self, pos1, pos2))
 
         # B and D
-        for (pos1, pos2) in zip(self.sideB.edge_south_pos, self.sideD.edge_south_pos):
+        for (pos1, pos2) in zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos):
             self.edges.append(Edge(self, pos1, pos2))
 
     def resolve_edge_squares(self):
@@ -1107,6 +1105,13 @@ class RubiksColorSolverGeneric(object):
                     if edge_best_match in unresolved_edges and (colorA, colorB) in needed_edges:
                         break
                 else:
+                    log.warning("permutation_count %d, edge_permutation_limit %d" % (permutation_count, self.edge_permutation_limit))
+                    for (colorA, colorB) in needed_edges:
+                        log.warning("needed_edge: %s/%s" % (colorA.name, colorB.name))
+
+                    for edge in unresolved_edges:
+                        log.warning("unresolved_edge: %s" % edge)
+
                     raise Exception("Did not find an edge in unresolved_edges")
 
                 best_match_total_distance += distance
