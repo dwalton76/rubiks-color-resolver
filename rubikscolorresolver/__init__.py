@@ -998,7 +998,7 @@ class RubiksColorSolverGeneric(object):
             self.edges.append(Edge(self, pos1, pos2))
 
         # U and R
-        for (pos1, pos2) in zip(self.sideU.edge_east_pos, self.sideR.edge_north_pos):
+        for (pos1, pos2) in zip(self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos)):
             self.edges.append(Edge(self, pos1, pos2))
 
         # F and L
@@ -1018,7 +1018,7 @@ class RubiksColorSolverGeneric(object):
             self.edges.append(Edge(self, pos1, pos2))
 
         # L and D
-        for (pos1, pos2) in zip(self.sideL.edge_south_pos, self.sideD.edge_west_pos):
+        for (pos1, pos2) in zip(self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos)):
             self.edges.append(Edge(self, pos1, pos2))
 
         # R and D
