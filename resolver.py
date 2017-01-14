@@ -31,15 +31,6 @@ try:
     square_count_per_side = int(square_count/6)
     width = int(sqrt(square_count_per_side))
 
-    '''
-    if width == 2:
-        cube = RubiksColorSolver2x2x2()
-    elif width == 3:
-        cube = RubiksColorSolver3x3x3()
-    else:
-        cube = RubiksColorSolverGeneric(width)
-    '''
-
     cube = RubiksColorSolverGeneric(width)
     cube.enter_scan_data(scan_data)
     cube.crunch_colors()
