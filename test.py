@@ -54,9 +54,9 @@ for (desc, filename, expected) in test_cases:
         output = ''.join(cube.cube_for_kociemba_strict())
 
         if output == expected:
-            results.append("PASS: %s" % desc)
+            results.append("\033[92mPASS\033[0m: %s" % desc)
         else:
-            results.append("FAIL: %s %s" % (desc, output))
+            results.append("\033[91mFAIL\033[0m: %s" % desc)
             results.append("   expected %s" % expected)
 
 print('\n'.join(results))
