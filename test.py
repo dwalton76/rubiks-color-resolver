@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from rubikscolorresolver import RubiksColorSolverGeneric, RubiksColorSolver3x3x3
+from rubikscolorresolver import RubiksColorSolverGeneric
 from math import sqrt
 import argparse
 import json
@@ -31,6 +31,7 @@ test_cases = (
     ('4x4x4 solved',       'test-data/4x4x4-solved.txt',       'DDDDDDDDDDDDDDDDBBBBBBBBBBBBBBBBLLLLLLLLLLLLLLLLUUUUUUUUUUUUUUUUFFFFFFFFFFFFFFFFRRRRRRRRRRRRRRRR'),
     ('4x4x4 turn UR',      'test-data/4x4x4-turn-UR.txt',      'UUURUUUFUUUFUUUFRRRBRRRBRRRBRRRBRRRDFFFDFFFDFFFDDDDBDDDBDDDBDDDLFFFFLLLLLLLLLLLLULLLUBBBUBBBUBBB'),
     ('4x4x4 random 01',    'test-data/4x4x4-random-01.txt',    'LUFLUBLBRBLFBFFLBDRFLUURLUUUFDFDRLRURFLBRFLBUDUDRLRRBBBBFFFLLLRBDBUUUDDDUDDBDDDFUULBFRRFLRRBRDDF'),
+    ('4x4x4 random 02',    'test-data/4x4x4-random-02.txt',    'RRFDRRRDLLRFDLRDLRBRFBFLDBFBFDDFBUBFRDUUBDURLUURBBBURRLFLLLLBDFUUUDLLBFFBBFDRUBUFDUBFDDFLUULLURD'),
 )
 
 results = []
@@ -47,12 +48,7 @@ for (desc, filename, expected) in test_cases:
         square_count_per_side = int(square_count/6)
         width = int(sqrt(square_count_per_side))
 
-        # remove the False if you want to test with the old RubiksColorSolver3x3x3
-        if False and width == 3:
-            cube = RubiksColorSolver3x3x3()
-        else:
-            cube = RubiksColorSolverGeneric(width)
-
+        cube = RubiksColorSolverGeneric(width)
         cube.enter_scan_data(scan_data)
         cube.crunch_colors()
         output = ''.join(cube.cube_for_kociemba_strict())

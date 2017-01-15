@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
 logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(levelname)5s: %(message)s')
+                    format='%(asctime)s %(levelname)7s: %(message)s')
 log = logging.getLogger(__name__)
 
 # Color the errors and warnings in red
