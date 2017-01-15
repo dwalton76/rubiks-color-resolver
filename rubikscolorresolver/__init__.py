@@ -3,7 +3,6 @@
 from copy import deepcopy
 from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt
-from kociemba.pykociemba.verify import verify as verify_parity
 from pprint import pformat
 import json
 import logging
@@ -751,13 +750,6 @@ class RubiksColorSolverGeneric(object):
         for (distance, square) in rank:
             result.append(square)
         return result
-
-    def valid_cube_parity(self, fake_corner_parity):
-        # TODO
-        return True
-
-    def valid_edge_parity(self):
-        return self.valid_cube_parity(True)
 
     def identify_anchor_squares(self, use_centers):
 
