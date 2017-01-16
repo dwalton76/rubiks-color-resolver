@@ -3,8 +3,8 @@
 ## Overview
 
 rubiks_rgb_solver.py
-- accepts a JSON structure of RGB values for each square of either a 2x2x2 or 3x3x3 rubiks cube
-- analyzes all RGB values to assign each square one of the six colors of the cube. The CIEDE2000 algorithm is used to calculate the color distance between colors. The algorithm evaluates thousands of permutations color assignments and selects the one that results in the least total color distance with valid cube parity.
+- accepts a JSON structure of RGB values for each square of a rubiks cube (any size)
+- analyzes all RGB values to assign each square one of the six colors of the cube. The CIE 2000 algorithm is used to calculate the color distance between colors.
 - prints a json structure containing the color information for each square
 
 In the following example the RGB values for square 1 is (39, 71, 43).  In this
@@ -58,4 +58,3 @@ The actual result is the json output.
 
 ## Install
 sudo pip install git+https://github.com/dwalton76/kociemba.git
-
