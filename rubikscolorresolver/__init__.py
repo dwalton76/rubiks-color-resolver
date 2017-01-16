@@ -483,7 +483,7 @@ class CubeSide(object):
     def __init__(self, cube, width, name):
         self.cube = cube
         self.name = name  # U, L, etc
-        self.color = None  # Will be the color of the middle square
+        self.color = None  # Will be the color of the anchor square
         self.squares = {}
         self.width = width
         self.squares_per_side = width * width
@@ -646,14 +646,6 @@ class RubiksColorSolverGeneric(object):
             side = self.get_side(position)
             side.set_square(position, red, green, blue)
 
-        '''
-        for side_name in self.side_order:
-            side = self.sides[side_name]
-
-            for (position, square) in side.squares.items():
-                log.info("SCAN DATA %d: %s RGB (%d, %d, %d)" % (position, square, square.red, square.green, square.blue))
-        '''
-
     def print_layout(self):
         log.info('\n' + get_cube_layout(self.width) + '\n')
 
@@ -718,10 +710,10 @@ class RubiksColorSolverGeneric(object):
 
                 if mid_square.color_name in color_to_side_name:
                     log.info("color_to_side_name:\n%s" % pformat(color_to_side_name))
-                    raise Exception("side %s with color %s, %s is already in color_to_side_name" % (side, mid_square.color_name, mid_square.color_name))
+                    raise Exception("side %s with color %s, %s is already in color_to_side_name" %\
+                        (side, mid_square.color_name, mid_square.color_name))
                 color_to_side_name[mid_square.color_name] = side.name
 
-            # log.info("cube_for_kociemba_strict:\n%s" % pformat(color_to_side_name))
         else:
             color_to_side_name = {
                 'Wh' : 'U',
@@ -736,6 +728,54 @@ class RubiksColorSolverGeneric(object):
             for x in range(side.min_pos, side.max_pos + 1):
                 color_name = side.squares[x].color_name
                 data.append(color_to_side_name[color_name])
+
+        return data
+
+    def cube_for_json(self):
+        """
+        Return a dictionary of the cube data so that we can json dump it
+        A sample entry for a square:
+
+          "1": {
+            "color": "Wh",
+            "currentPosition": 1,
+            "currentSide": "U",
+            "finalSide": "U",
+            "rgb": {
+              "blue": 43,
+              "green": 71,
+              "red": 39
+            }
+          },
+        """
+        data = {}
+        data['sides'] = {}
+        data['squares'] = {}
+        color_to_side = {}
+
+        for side in self.sides.values():
+            color_to_side[side.color] = side
+            data['sides'][side.name] = {
+                'color' : side.color_name,
+                'red' : side.red,
+                'green' : side.green,
+                'blue' : side.blue,
+            }
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for x in range(side.min_pos, side.max_pos + 1):
+                square = side.squares[x]
+                color = square.color
+                final_side = color_to_side[color]
+                data['squares'][square.position] = {
+                    'currentSide' : side.name,
+                    'currentPosition' : square.position,
+                    'red' : square.red,
+                    'green' : square.green,
+                    'blue' : square.blue,
+                    'color' : color.name,
+                    'finalSide' : color_to_side[color].name
+                }
 
         return data
 
@@ -849,6 +889,9 @@ class RubiksColorSolverGeneric(object):
         if self.sideU.mid_pos:
             for side_name in self.side_order:
                 side = self.sides[side_name]
+                side.red = side.squares[side.mid_pos].red
+                side.green = side.squares[side.mid_pos].green
+                side.blue = side.squares[side.mid_pos].blue
                 side.color = side.squares[side.mid_pos].color
                 side.color_name = side.squares[side.mid_pos].color_name
         else:
@@ -885,6 +928,9 @@ class RubiksColorSolverGeneric(object):
 
                 for square in all_squares:
                     if square.color_name == target_color_name:
+                        side.red = square.red
+                        side.green = square.green
+                        side.blue = square.blue
                         side.color = square.color
                         side.color_name = square.color_name
                         break

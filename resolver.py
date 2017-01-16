@@ -34,7 +34,7 @@ try:
     cube = RubiksColorSolverGeneric(width)
     cube.enter_scan_data(scan_data)
     cube.crunch_colors()
-    # print(json.dumps(cube.cube_for_json()))
+    # print(json.dumps(cube.cube_for_json(), indent=4, sort_keys=True))
     print(''.join(cube.cube_for_kociemba_strict()))
 
 except Exception as e:
