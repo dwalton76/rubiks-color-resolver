@@ -803,14 +803,32 @@ class RubiksColorSolverGeneric(object):
                 side = self.sides[side_name]
                 all_center_squares.extend(side.center_squares)
 
-            # Take the first center square on the list and for a 4x4x4 cube find
-            # the 3 (see 'to_keep' above) other center squares that are closest in color
-            while all_center_squares:
-                anchor_square = all_center_squares.pop(0)
-                self.anchor_squares.append(anchor_square)
-                log.info("center anchor square %s with color %s" % (anchor_square, anchor_square.color_name))
+            # 3x3x3, 5x5x5, etc
+            if self.sideU.mid_pos:
+                for side_name in self.side_order:
+                    side = self.sides[side_name]
+                    anchor_square = side.squares[side.mid_pos]
+                    self.anchor_squares.append(anchor_square)
+                    all_center_squares.remove(anchor_square)
+                    log.info("center anchor square %s (odd) with color %s" % (anchor_square, anchor_square.color_name))
 
-                if to_keep:
+                    # to_keep will be 0 for a 3x3x3
+                    if to_keep:
+                        closest = self.sort_squares(anchor_square, all_center_squares)[0:to_keep]
+
+                        for square in closest:
+                            square.anchor_square = anchor_square
+                            all_center_squares.remove(square)
+
+            # 4x4x4, 6x6x6, etc
+            else:
+                # Take the first center square on the list and for a 4x4x4 cube find
+                # the 3 (see 'to_keep' above) other center squares that are closest in color
+                while all_center_squares:
+                    anchor_square = all_center_squares.pop(0)
+                    self.anchor_squares.append(anchor_square)
+                    log.info("center anchor square %s (even) with color %s" % (anchor_square, anchor_square.color_name))
+
                     closest = self.sort_squares(anchor_square, all_center_squares)[0:to_keep]
 
                     for square in closest:
@@ -894,6 +912,7 @@ class RubiksColorSolverGeneric(object):
                 side.blue = side.squares[side.mid_pos].blue
                 side.color = side.squares[side.mid_pos].color
                 side.color_name = side.squares[side.mid_pos].color_name
+
         else:
             '''
             color_to_side_name = {
@@ -1076,12 +1095,15 @@ class RubiksColorSolverGeneric(object):
 
         # And our 'needed' list of colors will hold the colors of every edge color pair
         needed_edge_color_tuple = sorted(self.valid_edges)
-        # for (edge1, edge2) in needed_edge_color_tuple:
-        #     log.info("needed color tuple %s %s" % (edge1.name, edge2.name))
+        for (edge1, edge2) in needed_edge_color_tuple:
+            # log.info("needed color tuple %s %s" % (edge1.name, edge2.name))
+            assert edge1.name != edge2.name,\
+                "Both sides of an edge cannot be the same color, edge1 %s and edge2 %s are both %s" %\
+                (edge1, edge2, edge1.name)
 
         unresolved_edges = [edge for edge in self.edges if edge.valid is False]
-        # for edge in unresolved_edges:
-        #     log.info("unresolved edge %s" % edge)
+        #for edge in unresolved_edges:
+        #    log.info("unresolved edge %s" % edge)
 
         while unresolved_edges:
             log.info("%d edges to resolve" % len(unresolved_edges))
