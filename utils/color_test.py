@@ -6,7 +6,7 @@ used once upon a time to verify that our cie2000 is working.
 """
 
 from colormath.color_objects import sRGBColor, LabColor
-from colormath.color_diff import delta_e_cie2000
+from colormath.color_diff import delta_e_cie2000, delta_e_cie1994, delta_e_cie1976
 from colormath.color_conversions import convert_color
 from rubikscolorresolver import delta_e_cie2000 as my_delta_e_cie2000
 from rubikscolorresolver import rgb2lab
@@ -23,23 +23,27 @@ def rgb_to_labcolor(red, green, blue):
 # yellow = (34, 43, 8)
 # orange = (40, 20, 6)
 
-my_red = rgb2lab((30, 12, 6))
-my_blue = rgb2lab((6, 19, 20))
-my_orange = rgb2lab((40, 20, 6))
+my_white = rgb2lab((232, 232, 236))
+my_green = rgb2lab((41, 202, 121))
+my_white2 = rgb2lab((217, 233, 247))
 
-print "my_red      : %s" % my_red
-print "my_blue     : %s" % my_blue
-print "my_orange   : %s" % my_orange
-print "red->blue   : %s" % my_delta_e_cie2000(my_red, my_blue)
-print "red->orange : %s\n\n" % my_delta_e_cie2000(my_red, my_orange)
+print "my_white     : %s" % my_white
+print "my_green     : %s" % my_green
+print "my_white2    : %s" % my_white2
+print "cie2000 white->green : %s" % my_delta_e_cie2000(my_white, my_green)
+print "cie2000 white->white2: %s\n\n" % my_delta_e_cie2000(my_white, my_white2)
 
-red = rgb_to_labcolor(30, 12, 6)
-blue = rgb_to_labcolor(6, 19, 20)
-orange = rgb_to_labcolor(40, 20, 6)
-distance = delta_e_cie2000(red, blue)
+white = rgb_to_labcolor(232, 232, 236)
+green = rgb_to_labcolor(41, 202, 121)
+white2 = rgb_to_labcolor(217, 233, 247)
+distance = delta_e_cie2000(white, green)
 
-print "red         : %s" % red
-print "blue        : %s" % blue
-print "orange      : %s" % my_orange
-print "red->blue   : %s" % delta_e_cie2000(red, blue)
-print "red->orange : %s" % delta_e_cie2000(red, orange)
+print "white        : %s" % white
+print "green        : %s" % green
+print "white2       : %s" % white2
+print "cie2000 white->green : %s" % delta_e_cie2000(white, green)
+print "cie2000 white->white2: %s\n" % delta_e_cie2000(white, white2)
+print "cie1994 white->green : %s" % delta_e_cie1994(white, green)
+print "cie1994 white->white2: %s\n" % delta_e_cie1994(white, white2)
+print "cie1976 white->green : %s" % delta_e_cie1976(white, green)
+print "cie1976 white->white2: %s\n" % delta_e_cie1976(white, white2)

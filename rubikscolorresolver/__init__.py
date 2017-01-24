@@ -90,10 +90,13 @@ def get_cube_layout(size):
 
 class LabColor(object):
 
-    def __init__(self, L, a, b):
+    def __init__(self, L, a, b, red, green, blue):
         self.L = L
         self.a = a
         self.b = b
+        self.red = red
+        self.green = green
+        self.blue = blue
         self.name = None
 
     def __str__(self):
@@ -146,7 +149,8 @@ def rgb2lab(inputColor):
     a = round(a, 4)
     b = round(b, 4)
 
-    return LabColor(L, a, b)
+    (red, green, blue) = inputColor
+    return LabColor(L, a, b, red, green, blue)
 
 
 def delta_e_cie2000(lab1, lab2):
@@ -215,6 +219,15 @@ def delta_e_cie2000(lab1, lab2):
                    pow(delta_cp / (s_c * kc), 2) +
                    pow(delta_hp / (s_h * kh), 2) +
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
+
+    # This is a sanity check that I (daniel) added to catch some extreme
+    # cases where two colors can have a low distance even though one of
+    # their RGB values differ greatly
+    if (abs(lab1.red - lab2.red) > 100 or
+        abs(lab1.green - lab2.green) > 100 or
+        abs(lab1.blue - lab2.blue) > 100):
+        delta_e += 1000
+
     return delta_e
 
 
@@ -788,6 +801,7 @@ class RubiksColorSolverGeneric(object):
 
         result = []
         for (distance, square) in rank:
+            log.info("%s vs %s distance %s (%s vs %s)" % (target_square, square, distance, pformat(target_square.rgb), pformat(square.rgb)))
             result.append(square)
         return result
 
@@ -798,7 +812,7 @@ class RubiksColorSolverGeneric(object):
             to_keep = num_of_center_squares_per_side - 1
 
 
-            # 3x3x3, 5x5x5, etc
+            # odd cube - 3x3x3, 5x5x5, etc
             if self.sideU.mid_pos:
 
                 # Build a list of the center squares from all six sides excluding the mid_pos center squares
@@ -810,7 +824,7 @@ class RubiksColorSolverGeneric(object):
                         if square != side.squares[side.mid_pos]:
                             all_center_squares.append(square)
 
-                log.info("all_center_squares: %s" % ', '.join(map(str, all_center_squares)))
+                # log.info("all_center_squares: %s" % ', '.join(map(str, all_center_squares)))
 
                 for side_name in self.side_order:
                     side = self.sides[side_name]
@@ -825,8 +839,10 @@ class RubiksColorSolverGeneric(object):
                         for square in closest:
                             square.anchor_square = anchor_square
                             all_center_squares.remove(square)
+                    #        log.info("%s anchor square is %s" % (square, anchor_square))
+                    #log.info('\n\n')
 
-            # 4x4x4, 6x6x6, etc
+            # even cube - 4x4x4, 6x6x6, etc
             else:
 
                 # Build a list of the center squares from all six sides
@@ -847,6 +863,8 @@ class RubiksColorSolverGeneric(object):
                     for square in closest:
                         square.anchor_square = anchor_square
                         all_center_squares.remove(square)
+                    #    log.info("%s anchor square is %s" % (square, anchor_square))
+                    #log.info('\n\n')
 
         # use corners
         else:
@@ -1119,9 +1137,9 @@ class RubiksColorSolverGeneric(object):
         #    log.info("unresolved edge %s" % edge)
 
         while unresolved_edges:
-            log.info("%d edges to resolve" % len(unresolved_edges))
+            # log.info("%d edges to resolve" % len(unresolved_edges))
 
-            # Calculate the color distance for each edge vs each of the neede color tuples
+            # Calculate the color distance for each edge vs each of the needed color tuples
             for edge in unresolved_edges:
                 edge.first_vs_second_delta = 0
                 foo = []
@@ -1152,13 +1170,13 @@ class RubiksColorSolverGeneric(object):
                     edge.first_vs_second_delta = second_distance - first_distance
                     edge.first_place_colors = (first_colorA, first_colorB)
                     edge.first_distance = first_distance
-                    log.info("%s 1st vs 2nd delta %d (%d - %d)" % (edge, edge.first_vs_second_delta, second_distance, first_distance))
+                    log.debug("%s 1st vs 2nd delta %d (%d - %d)" % (edge, edge.first_vs_second_delta, second_distance, first_distance))
                 else:
                     (first_distance, (first_colorA, first_colorB)) = foo[0]
                     edge.first_vs_second_delta = first_distance
                     edge.first_place_colors = (first_colorA, first_colorB)
                     edge.first_distance = first_distance
-                    log.info("%s 1st vs 2nd delta %d" % (edge, edge.first_vs_second_delta))
+                    log.debug("%s 1st vs 2nd delta %d" % (edge, edge.first_vs_second_delta))
 
             # Now look at all of the edges and resolve the one whose 1st vs 2nd color
             # tuple distance is the greatest.  Think of it as the higher this delta
@@ -1185,7 +1203,7 @@ class RubiksColorSolverGeneric(object):
             edge.first_distance = None
             needed_edge_color_tuple.remove((colorA, colorB))
             unresolved_edges.remove(edge)
-            log.info("edge %s 1st vs 2nd delta of %d was the highest\n\n" % (edge, max_delta))
+            log.info("edge %s 1st vs 2nd delta of %d was the highest" % (edge, max_delta))
 
     def resolve_corner_squares(self):
         log.info('Resolve corners')
@@ -1195,7 +1213,7 @@ class RubiksColorSolverGeneric(object):
             corner.valid = False
 
         # And our 'needed' list will hold the colors of all 8 corners
-        needed_corner_color_tuple = sorted(self.valid_corners)
+        needed_corner_color_tuple = self.valid_corners
 
         unresolved_corners = [corner for corner in self.corners if corner.valid is False]
 
@@ -1221,13 +1239,13 @@ class RubiksColorSolverGeneric(object):
                     corner.first_vs_second_delta = second_distance - first_distance
                     corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
                     corner.first_distance = first_distance
-                    log.info("%s 1st vs 2nd delta %d (%d - %d)" % (corner, corner.first_vs_second_delta, second_distance, first_distance))
+                    log.debug("%s 1st vs 2nd delta %d (%d - %d)" % (corner, corner.first_vs_second_delta, second_distance, first_distance))
                 else:
                     (first_distance, (first_colorA, first_colorB, first_colorC)) = foo[0]
                     corner.first_vs_second_delta = first_distance
                     corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
                     corner.first_distance = first_distance
-                    log.info("%s 1st vs 2nd delta %d" % (corner, corner.first_vs_second_delta))
+                    log.debug("%s 1st vs 2nd delta %d" % (corner, corner.first_vs_second_delta))
 
             # Now look at all of the corners and resolve the one whose 1st vs 2nd color
             # tuple distance is the greatest.  Think of it as the higher this delta
@@ -1254,7 +1272,7 @@ class RubiksColorSolverGeneric(object):
             corner.first_distance = None
             needed_corner_color_tuple.remove((colorA, colorB, colorC))
             unresolved_corners.remove(corner)
-            log.info("corner %s 1st vs 2nd delta of %d was the highest\n\n" % (corner, max_delta))
+            log.info("corner %s 1st vs 2nd delta of %d was the highest" % (corner, max_delta))
 
     def crunch_colors(self):
         self.identify_center_squares()
