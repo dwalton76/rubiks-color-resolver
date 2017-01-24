@@ -797,19 +797,25 @@ class RubiksColorSolverGeneric(object):
             num_of_center_squares_per_side = len(self.sideU.center_squares)
             to_keep = num_of_center_squares_per_side - 1
 
-            # Build a list of the center squares from all six sides
-            all_center_squares = []
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_center_squares.extend(side.center_squares)
 
             # 3x3x3, 5x5x5, etc
             if self.sideU.mid_pos:
+
+                # Build a list of the center squares from all six sides excluding the mid_pos center squares
+                all_center_squares = []
+                for side_name in self.side_order:
+                    side = self.sides[side_name]
+
+                    for square in side.center_squares:
+                        if square != side.squares[side.mid_pos]:
+                            all_center_squares.append(square)
+
+                log.info("all_center_squares: %s" % ', '.join(map(str, all_center_squares)))
+
                 for side_name in self.side_order:
                     side = self.sides[side_name]
                     anchor_square = side.squares[side.mid_pos]
                     self.anchor_squares.append(anchor_square)
-                    all_center_squares.remove(anchor_square)
                     log.info("center anchor square %s (odd) with color %s" % (anchor_square, anchor_square.color_name))
 
                     # to_keep will be 0 for a 3x3x3
@@ -822,6 +828,13 @@ class RubiksColorSolverGeneric(object):
 
             # 4x4x4, 6x6x6, etc
             else:
+
+                # Build a list of the center squares from all six sides
+                all_center_squares = []
+                for side_name in self.side_order:
+                    side = self.sides[side_name]
+                    all_center_squares.extend(side.center_squares)
+
                 # Take the first center square on the list and for a 4x4x4 cube find
                 # the 3 (see 'to_keep' above) other center squares that are closest in color
                 while all_center_squares:
