@@ -656,6 +656,7 @@ class RubiksColorSolverGeneric(object):
         self.scan_data = scan_data
 
         for (position, (red, green, blue)) in sorted(self.scan_data.items()):
+            position = int(position)
             side = self.get_side(position)
             side.set_square(position, red, green, blue)
 
