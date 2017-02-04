@@ -9,6 +9,7 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('rgb', help='RGB json', default=None)
+parser.add_argument('-j', '--json', action='store_true')
 args = parser.parse_args()
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
@@ -34,8 +35,11 @@ try:
     cube = RubiksColorSolverGeneric(width)
     cube.enter_scan_data(scan_data)
     cube.crunch_colors()
-    # print(json.dumps(cube.cube_for_json(), indent=4, sort_keys=True))
-    print(''.join(cube.cube_for_kociemba_strict()))
+
+    if args.json:
+        print(json.dumps(cube.cube_for_json(), indent=4, sort_keys=True))
+    else:
+        print(''.join(cube.cube_for_kociemba_strict()))
 
 except Exception as e:
     log.exception(e)

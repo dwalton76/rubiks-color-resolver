@@ -763,6 +763,7 @@ class RubiksColorSolverGeneric(object):
           },
         """
         data = {}
+        data['kociemba'] = ''.join(self.cube_for_kociemba_strict())
         data['sides'] = {}
         data['squares'] = {}
         color_to_side = {}
