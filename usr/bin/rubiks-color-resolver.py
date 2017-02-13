@@ -9,7 +9,7 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('rgb', help='RGB json', default=None)
-parser.add_argument('-j', '--json', action='store_true')
+parser.add_argument('-j', '--json', help='Print json results', action='store_true')
 args = parser.parse_args()
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
