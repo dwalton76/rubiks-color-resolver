@@ -34,71 +34,58 @@ dwalton@laptop ~/l/rubiks-color-resolver> rubiks-color-resolver.py --json '{"1":
            Ye Ye Gr
 
 {
+    "kociemba": "UULUUFUUFRRFRRFRRFLLDFFDFFDDDBDDBDDRBBBLLLLLLURRUBBUBB",
     "sides": {
         "B": {
-            "blue": 6,
-            "color": "Rd",
-            "green": 14,
-            "red": 32
+            "colorHTML": {
+                "blue": 0,
+                "green": 0,
+                "red": 204
+            },
+            "colorName": "Rd",
+            "colorScan": {
+                "blue": 6,
+                "green": 14,
+                "red": 32
+            }
         },
         "D": {
-            "blue": 9,
-            "color": "Ye",
-            "green": 45,
-            "red": 37
+            "colorHTML": {
+                "blue": 0,
+                "green": 204,
+                "red": 255
+            },
+            "colorName": "Ye",
+            "colorScan": {
+                "blue": 9,
+                "green": 45,
+                "red": 37
+            }
         },
-        "F": {
-            "blue": 8,
-            "color": "OR",
-            "green": 22,
-            "red": 44
-        },
-        "L": {
-            "blue": 21,
-            "color": "Wh",
-            "green": 19,
-            "red": 6
-        },
-        "R": {
-            "blue": 14,
-            "color": "Gr",
-            "green": 37,
-            "red": 6
-        },
-        "U": {
-            "blue": 74,
-            "color": "Bu",
-            "green": 103,
-            "red": 64
-        }
-    },
-    "squares": {
+[snip]
         "1": {
-            "blue": 43,
-            "color": "Bu",
-            "currentPosition": 1,
-            "currentSide": "U",
-            "finalSide": "U",
-            "green": 71,
-            "red": 39
+            "colorScan": {
+                "blue": 43,
+                "green": 71,
+                "red": 39
+            },
+            "finalSide": "U"
         },
         "2": {
-            "blue": 62,
-            "color": "Bu",
-            "currentPosition": 2,
-            "currentSide": "U",
-            "finalSide": "U",
-            "green": 90,
-            "red": 54
+            "colorScan": {
+                "blue": 62,
+                "green": 90,
+                "red": 54
+            },
+            "finalSide": "U"
         },
         "3": {
-            "blue": 17,
-            "color": "Wh",
-            "currentPosition": 3,
-            "currentSide": "U",
-            "finalSide": "L",
-            "green": 16,
-            "red": 5
+            "colorScan": {
+                "blue": 17,
+                "green": 16,
+                "red": 5
+            },
+            "finalSide": "L"
         },
 [snip]
 ```

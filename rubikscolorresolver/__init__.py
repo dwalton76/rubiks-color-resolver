@@ -794,19 +794,6 @@ class RubiksColorSolverGeneric(object):
     def cube_for_json(self):
         """
         Return a dictionary of the cube data so that we can json dump it
-        A sample entry for a square:
-
-          "1": {
-            "color": "Wh",
-            "currentPosition": 1,
-            "currentSide": "U",
-            "finalSide": "U",
-            "rgb": {
-              "blue": 43,
-              "green": 71,
-              "red": 39
-            }
-          },
         """
         data = {}
         data['kociemba'] = ''.join(self.cube_for_kociemba_strict())
@@ -814,13 +801,25 @@ class RubiksColorSolverGeneric(object):
         data['squares'] = {}
         color_to_side = {}
 
+        html_color = {
+            'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
+            'Bu' : {'red' :   0, 'green' :   0, 'blue' : 153},
+            'OR' : {'red' : 255, 'green' : 102, 'blue' : 0},
+            'Rd' : {'red' : 204, 'green' :   0, 'blue' : 0},
+            'Wh' : {'red' : 255, 'green' : 255, 'blue' : 255},
+            'Ye' : {'red' : 255, 'green' : 204, 'blue' : 0},
+        }
+
         for side in self.sides.values():
             color_to_side[side.color] = side
             data['sides'][side.name] = {
-                'color' : side.color_name,
-                'red' : side.red,
-                'green' : side.green,
-                'blue' : side.blue,
+                'colorName' : side.color_name,
+                'colorScan' : {
+                    'red'   : side.red,
+                    'green' : side.green,
+                    'blue'  : side.blue,
+                },
+                'colorHTML' : html_color[side.color_name]
             }
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
@@ -829,12 +828,11 @@ class RubiksColorSolverGeneric(object):
                 color = square.color
                 final_side = color_to_side[color]
                 data['squares'][square.position] = {
-                    'currentSide' : side.name,
-                    'currentPosition' : square.position,
-                    'red' : square.red,
-                    'green' : square.green,
-                    'blue' : square.blue,
-                    'color' : color.name,
+                    'colorScan' : {
+                        'red'   : square.red,
+                        'green' : square.green,
+                        'blue'  : square.blue,
+                    },
                     'finalSide' : color_to_side[color].name
                 }
 
