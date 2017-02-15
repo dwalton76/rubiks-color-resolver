@@ -89,6 +89,26 @@ def get_cube_layout(size):
     return '\n'.join(result)
 
 
+def get_important_square_indexes(size):
+    squares_per_side = size * size
+    min_square = 1
+    max_square = squares_per_side * 6
+    first_squares = []
+    last_squares = []
+
+    for index in range(1, max_square + 1):
+        if (index - 1) % squares_per_side == 0:
+            first_squares.append(index)
+        elif index % squares_per_side == 0:
+            last_squares.append(index)
+
+    last_UBD_squares = (last_squares[0], last_squares[4], last_squares[5])
+    #log.info("first    squares: %s" % pformat(first_squares))
+    #log.info("last     squares: %s" % pformat(last_squares))
+    #log.info("last UBD squares: %s" % pformat(last_UBD_squares))
+    return (first_squares, last_squares, last_UBD_squares)
+
+
 class LabColor(object):
 
     def __init__(self, L, a, b, red, green, blue):
@@ -716,6 +736,126 @@ class RubiksColorSolverGeneric(object):
             'Rd': hashtag_rgb_to_labcolor('#680402')
         }
         self.crayon_box = deepcopy(self.crayola_colors)
+        self.www_header()
+
+    def www_header(self):
+        """
+        Write the <head> including css
+        """
+        side_margin = 10
+        square_size = 40
+        size = self.width # 3 for 3x3x3, etc
+
+        with open('/tmp/rubiks-color-resolver.html', 'w') as fh:
+            fh.write("""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+div.clear {
+    clear: both;
+}
+
+div.clear_left {
+    clear: left;
+}
+
+div.side {
+    margin: %dpx;
+    float: left;
+}
+
+""" % side_margin)
+
+            for x in range(1, size-1):
+                fh.write("div.col%d,\n" % x)
+
+            fh.write("""div.col%d {
+    float: left;
+}
+
+div.col%d {
+    margin-left: %dpx;
+}
+div#upper,
+div#down {
+    margin-left: %dpx;
+}
+""" % (size-1,
+       size,
+       (size - 1) * square_size,
+       (size * square_size) + (size * side_margin)))
+
+            fh.write("""
+div.square {
+    width: %dpx;
+    height: %dpx;
+    color: black;
+    font-weight: bold;
+    line-height: %dpx;
+    text-align: center;
+}
+
+div.square span {
+  display:        inline-block;
+  vertical-align: middle;
+  line-height:    normal;
+}
+
+</style>
+<title>CraneCuber</title>
+</head>
+<body>
+""" % (square_size, square_size, square_size))
+
+    def write_cube(self, desc, cube):
+        """
+        'cube' is a list of (R,G,B) tuples
+        """
+        col = 1
+        squares_per_side = self.width * self.width
+        min_square = 1
+        max_square = squares_per_side * 6
+
+        sides = ('upper', 'left', 'front', 'right', 'back', 'down')
+        side_index = -1
+        (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
+
+        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+            fh.write("<h1>%s</h1>\n" % desc)
+            for index in range(1, max_square + 1):
+                if index in first_squares:
+                    side_index += 1
+                    fh.write("<div class='side' id='%s'>\n" % sides[side_index])
+
+                (red, green, blue) = cube[index]
+                (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
+                H = int(H * 360)
+                S = int(S * 100)
+                V = int(V * 100)
+
+                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d) HSV (%d, %d, %d)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                    (col, red, green, blue, H, S, V,
+                     red, green, blue,
+                     index))
+
+                if index in last_squares:
+                    fh.write("</div>\n")
+
+                    if index in last_UBD_squares:
+                        fh.write("<div class='clear'></div>\n")
+
+                col += 1
+
+                if col == self.width + 1:
+                    col = 1
+
+    def www_footer(self):
+        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+            fh.write("""
+</body>
+</html>
+""")
 
     def get_side(self, position):
         """
@@ -733,11 +873,20 @@ class RubiksColorSolverGeneric(object):
 
     def enter_scan_data(self, scan_data):
         self.scan_data = scan_data
+        cube = ['dummy',]
 
         for (position, (red, green, blue)) in sorted(self.scan_data.items()):
             position = int(position)
             side = self.get_side(position)
             side.set_square(position, red, green, blue)
+            cube.append((red, green, blue))
+
+        # write the input to the web page so we can reproduce bugs, etc just from the web page
+        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+            fh.write("<h1>JSON Input</h1>\n")
+            fh.write("<pre>%s</pre>\n" % json.dumps(scan_data))
+
+        self.write_cube('Input RGB values', cube)
 
     def print_layout(self):
         log.info('\n' + get_cube_layout(self.width) + '\n')
@@ -1065,6 +1214,21 @@ class RubiksColorSolverGeneric(object):
                 else:
                     raise Exception("%s: could not determine color, target %s" % (side, target_color_name))
 
+        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+            fh.write('<h1>Side -> Color Mapping</h1>\n')
+            fh.write('<ul>\n')
+            for side_name in self.side_order:
+                side = self.sides[side_name]
+                fh.write('<li>%s -> %s</li>\n' % (side_name, side.color_name))
+            fh.write('</ul>\n')
+
+            fh.write('<h1>Anchor Squares</h1>\n')
+            for anchor_square in self.anchor_squares:
+                fh.write("<div class='square' title='RGB (%d, %d, %d)' style='background-color: #%02x%02x%02x;'><span>%02d/%s</span></div>\n" %
+                         (anchor_square.color.red, anchor_square.color.green, anchor_square.color.blue,
+                          anchor_square.color.red, anchor_square.color.green, anchor_square.color.blue,
+                          anchor_square.position, anchor_square.color_name))
+
     def identify_center_squares(self):
         num_of_center_squares_per_side = len(self.sideU.center_squares)
         self.anchor_squares = []
@@ -1075,7 +1239,6 @@ class RubiksColorSolverGeneric(object):
         # A 2x2x2 does not have center squares
         else:
             self.identify_anchor_squares(False)
-
 
     def identify_corner_squares(self):
         self.valid_corners = []
@@ -1345,6 +1508,15 @@ class RubiksColorSolverGeneric(object):
             unresolved_corners.remove(corner)
             log.info("corner %s 1st vs 2nd delta of %d was the highest" % (corner, max_delta))
 
+    def write_final_cube(self):
+        data = self.cube_for_json()
+        cube = ['dummy', ]
+        for (square_index, value) in data['squares'].items():
+            html_colors = data['sides'][value['finalSide']]['colorHTML']
+            cube.append((html_colors['red'], html_colors['green'], html_colors['blue']))
+
+        self.write_cube('Final Cube', cube)
+
     def crunch_colors(self):
         self.identify_center_squares()
         self.identify_corner_squares()
@@ -1355,3 +1527,5 @@ class RubiksColorSolverGeneric(object):
 
         self.print_layout()
         self.print_cube()
+        self.write_final_cube()
+        self.www_footer()
