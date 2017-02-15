@@ -890,7 +890,6 @@ class RubiksColorSolverGeneric(object):
             num_of_center_squares_per_side = len(self.sideU.center_squares)
             to_keep = num_of_center_squares_per_side - 1
 
-
             # odd cube - 3x3x3, 5x5x5, etc
             if self.sideU.mid_pos:
 
@@ -1070,17 +1069,15 @@ class RubiksColorSolverGeneric(object):
         num_of_center_squares_per_side = len(self.sideU.center_squares)
         self.anchor_squares = []
 
+        if num_of_center_squares_per_side:
+            self.identify_anchor_squares(True)
+
         # A 2x2x2 does not have center squares
-        if not num_of_center_squares_per_side:
-            return
-
-        self.identify_anchor_squares(True)
-
-    def identify_corner_squares(self):
-
-        if not self.anchor_squares:
+        else:
             self.identify_anchor_squares(False)
 
+
+    def identify_corner_squares(self):
         self.valid_corners = []
         self.valid_corners.append((self.sideU.color, self.sideF.color, self.sideL.color))
         self.valid_corners.append((self.sideU.color, self.sideR.color, self.sideF.color))
@@ -1202,21 +1199,16 @@ class RubiksColorSolverGeneric(object):
         # Initially we flag all of our Edge objects as invalid
         for edge in self.edges:
             edge.valid = False
+        unresolved_edges = [edge for edge in self.edges if edge.valid is False]
 
         # And our 'needed' list of colors will hold the colors of every edge color pair
         needed_edge_color_tuple = sorted(self.valid_edges)
         for (edge1, edge2) in needed_edge_color_tuple:
-            # log.info("needed color tuple %s %s" % (edge1.name, edge2.name))
             assert edge1.name != edge2.name,\
                 "Both sides of an edge cannot be the same color, edge1 %s and edge2 %s are both %s" %\
                 (edge1, edge2, edge1.name)
 
-        unresolved_edges = [edge for edge in self.edges if edge.valid is False]
-        #for edge in unresolved_edges:
-        #    log.info("unresolved edge %s" % edge)
-
         while unresolved_edges:
-            # log.info("%d edges to resolve" % len(unresolved_edges))
 
             # Calculate the color distance for each edge vs each of the needed color tuples
             for edge in unresolved_edges:
