@@ -4,6 +4,7 @@ from copy import deepcopy
 from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt
 from pprint import pformat
+import colorsys
 import json
 import logging
 import sys
@@ -153,6 +154,36 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
+def same_hue(lab1, lab2):
+    # to use python coloursys convertion we have to rescale to range 0-1
+    (H1, S1, V1) = colorsys.rgb_to_hsv(float(lab1.red/255), float(lab1.green/255), float(lab1.blue/255))
+    (H2, S2, V2) = colorsys.rgb_to_hsv(float(lab2.red/255), float(lab2.green/255), float(lab2.blue/255))
+
+    # rescale H to 360 degrees and S, V to percent of 100%
+    H1 = int(H1 * 360)
+    S1 = int(S1 * 100)
+    V1 = int(V1 * 100)
+
+    H2 = int(H2 * 360)
+    S2 = int(S2 * 100)
+    V2 = int(V2 * 100)
+
+    HUE_THRESHOLD = 60
+
+    # white is a little odd
+    if H1 <= 50 or  H1 >= 310:
+        if H2 > 50 and H2 < 310:
+            return False
+
+    else:
+        if abs(H1 - H2) > HUE_THRESHOLD:
+            return False
+
+        # look at saturation for orange/red?
+
+    return True
+
+
 def delta_e_cie2000(lab1, lab2):
     """
     Ported from this php implementation
@@ -226,6 +257,8 @@ def delta_e_cie2000(lab1, lab2):
     if (abs(lab1.red - lab2.red) > 100 or
         abs(lab1.green - lab2.green) > 100 or
         abs(lab1.blue - lab2.blue) > 100):
+        delta_e += 1000
+    elif not same_hue(lab1, lab2):
         delta_e += 1000
 
     return delta_e
@@ -459,7 +492,7 @@ class Corner(object):
         (distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC) = self._get_color_distances(colorA, colorB, colorC)
         min_distance = min(distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC)
 
-        log.warning("%s vs %s/%s/%s, distanceABC %s, distanceACB %s, distanceCAB %s, distanceCBA %s, distanceBCA %s, distanceBAC %s, min %s" %
+        log.debug("%s vs %s/%s/%s, distanceABC %s, distanceACB %s, distanceCAB %s, distanceCBA %s, distanceBCA %s, distanceBAC %s, min %s" %
                     (self, colorA.name, colorB.name, colorC.name,
                     distanceABC, distanceACB,
                     distanceCAB, distanceCBA,
