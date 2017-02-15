@@ -422,14 +422,27 @@ class Corner(object):
                        get_color_distance(self.square2.rawcolor, colorB) +
                        get_color_distance(self.square3.rawcolor, colorC))
 
+        distanceACB = (get_color_distance(self.square1.rawcolor, colorA) +
+                       get_color_distance(self.square2.rawcolor, colorC) +
+                       get_color_distance(self.square3.rawcolor, colorB))
+
         distanceCAB = (get_color_distance(self.square1.rawcolor, colorC) +
                        get_color_distance(self.square2.rawcolor, colorA) +
                        get_color_distance(self.square3.rawcolor, colorB))
 
+        distanceCBA = (get_color_distance(self.square1.rawcolor, colorC) +
+                       get_color_distance(self.square2.rawcolor, colorB) +
+                       get_color_distance(self.square3.rawcolor, colorA))
+
         distanceBCA = (get_color_distance(self.square1.rawcolor, colorB) +
                        get_color_distance(self.square2.rawcolor, colorC) +
                        get_color_distance(self.square3.rawcolor, colorA))
-        return (distanceABC, distanceCAB, distanceBCA)
+
+        distanceBAC = (get_color_distance(self.square1.rawcolor, colorB) +
+                       get_color_distance(self.square2.rawcolor, colorA) +
+                       get_color_distance(self.square3.rawcolor, colorC))
+
+        return (distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC)
 
     def color_distance(self, colorA, colorB, colorC):
         """
@@ -443,8 +456,14 @@ class Corner(object):
             return value
 
     def update_colors(self, colorA, colorB, colorC):
-        (distanceABC, distanceCAB, distanceBCA) = self._get_color_distances(colorA, colorB, colorC)
-        min_distance = min(distanceABC, distanceCAB, distanceBCA)
+        (distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC) = self._get_color_distances(colorA, colorB, colorC)
+        min_distance = min(distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC)
+
+        log.warning("%s vs %s/%s/%s, distanceABC %s, distanceACB %s, distanceCAB %s, distanceCBA %s, distanceBCA %s, distanceBAC %s, min %s" %
+                    (self, colorA.name, colorB.name, colorC.name,
+                    distanceABC, distanceACB,
+                    distanceCAB, distanceCBA,
+                    distanceBCA, distanceBAC, min_distance))
 
         if min_distance == distanceABC:
             self.square1.color = colorA
@@ -454,6 +473,14 @@ class Corner(object):
             self.square3.color = colorC
             self.square3.color_name = colorC.name
 
+        elif min_distance == distanceACB:
+            self.square1.color = colorA
+            self.square1.color_name = colorA.name
+            self.square2.color = colorC
+            self.square2.color_name = colorC.name
+            self.square3.color = colorB
+            self.square3.color_name = colorB.name
+
         elif min_distance == distanceCAB:
             self.square1.color = colorC
             self.square1.color_name = colorC.name
@@ -462,6 +489,14 @@ class Corner(object):
             self.square3.color = colorB
             self.square3.color_name = colorB.name
 
+        elif min_distance == distanceCBA:
+            self.square1.color = colorC
+            self.square1.color_name = colorC.name
+            self.square2.color = colorB
+            self.square2.color_name = colorB.name
+            self.square3.color = colorA
+            self.square3.color_name = colorA.name
+
         elif min_distance == distanceBCA:
             self.square1.color = colorB
             self.square1.color_name = colorB.name
@@ -469,6 +504,17 @@ class Corner(object):
             self.square2.color_name = colorC.name
             self.square3.color = colorA
             self.square3.color_name = colorA.name
+
+        elif min_distance == distanceBAC:
+            self.square1.color = colorB
+            self.square1.color_name = colorB.name
+            self.square2.color = colorA
+            self.square2.color_name = colorA.name
+            self.square3.color = colorC
+            self.square3.color_name = colorC.name
+
+        else:
+            raise Exception("We should not be here")
 
     def validate(self):
 
