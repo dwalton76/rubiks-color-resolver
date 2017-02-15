@@ -8,6 +8,7 @@ Against Rubiks cube RGB values
 I skipped hilbert, that one was more trouble than it was worth
 """
 
+from sklearn.cluster import KMeans
 from copy import deepcopy
 from pprint import pprint, pformat
 from scipy.spatial import distance
@@ -16,6 +17,7 @@ import colorsys
 import json
 import logging
 import math
+import sys
 
 
 def convert_key_strings_to_int(data):
@@ -196,10 +198,11 @@ if __name__ == '__main__':
     logging.addLevelName(logging.ERROR, "\033[91m   %s\033[0m" % logging.getLevelName(logging.ERROR))
     logging.addLevelName(logging.WARNING, "\033[91m %s\033[0m" % logging.getLevelName(logging.WARNING))
 
-    filename = 'test/test-data/5x5x5-random-01.txt'
-    filename = 'test/test-data/3x3x3-checkerboard.txt'
     filename = 'test/test-data/3x3x3-solved.txt'
-    filename = 'test/test-data/4x4x4-solved.txt'
+    filename = 'test/test-data/2x2x2-solved-02.txt'
+    filename = 'test/test-data/5x5x5-random-01.txt'
+    filename = 'test/test-data/3x3x3-cross.txt'
+    filename = 'test/test-data/3x3x3-checkerboard.txt'
     with open(filename, 'r') as fh:
         data = convert_key_strings_to_int(json.load(fh))
         #pprint(data)
@@ -210,7 +213,8 @@ if __name__ == '__main__':
     with open('foo.html', 'w') as fh:
         write_header(fh)
         #for algorithm in ('none', 'rgb', 'hsv', 'hls', 'luminosity', 'step', 'travelling-salesman'):
-        for algorithm in ('none', ):
+        #for algorithm in ('none', 'hsv', 'step', 'kmeans'):
+        for algorithm in ('none', 'kmeans'):
 
             if algorithm == 'none':
                 tmp_colors = colors
@@ -236,6 +240,16 @@ if __name__ == '__main__':
 
             elif algorithm == 'travelling-salesman':
                 tmp_colors = travelling_salesman(deepcopy(colors))
+
+            elif algorithm == 'kmeans':
+                clt = KMeans(n_clusters=6)
+                clt.fit(deepcopy(colors))
+
+                tmp_colors = []
+                for target_cluster in range(6):
+                    for (index, cluster) in enumerate(clt.labels_):
+                        if cluster == target_cluster:
+                            tmp_colors.append(colors[index])
 
             else:
                 log.warning("Implement %s" % algorithm)

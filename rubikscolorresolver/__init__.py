@@ -713,7 +713,6 @@ class RubiksColorSolverGeneric(object):
         log.info("Cube\n\n%s\n" % '\n'.join(output))
 
     def cube_for_kociemba_strict(self):
-        data = []
 
         if self.sideU.mid_pos is not None:
             color_to_side_name = {}
@@ -738,6 +737,7 @@ class RubiksColorSolverGeneric(object):
                 'Bu' : 'B'
             }
 
+        data = []
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 color_name = side.squares[x].color_name
