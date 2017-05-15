@@ -1041,18 +1041,6 @@ div.square span {
 
             # odd cube - 3x3x3, 5x5x5, etc
             if self.sideU.mid_pos:
-                # TODO - fix T-centers vs X-centers for 5x5x5
-
-                # Build a list of the center squares from all six sides excluding the mid_pos center squares
-                all_center_squares = []
-                for side_name in self.side_order:
-                    side = self.sides[side_name]
-
-                    for square in side.center_squares:
-                        if square != side.squares[side.mid_pos]:
-                            all_center_squares.append(square)
-
-                # log.info("all_center_squares: %s" % ', '.join(map(str, all_center_squares)))
 
                 for side_name in self.side_order:
                     side = self.sides[side_name]
@@ -1060,15 +1048,47 @@ div.square span {
                     self.anchor_squares.append(anchor_square)
                     log.info("center anchor square %s (odd) with color %s" % (anchor_square, anchor_square.color_name))
 
-                    # to_keep will be 0 for a 3x3x3
-                    if to_keep:
-                        closest = self.sort_squares(anchor_square, all_center_squares)[0:to_keep]
+                if self.width == 3:
+                    pass
+
+                elif self.width == 5:
+
+                    # Build a list of the T-center squares from all six sides
+                    all_t_center_squares = []
+
+                    for side_name in self.side_order:
+                        side = self.sides[side_name]
+                        all_t_center_squares.append(side.center_squares[1])
+                        all_t_center_squares.append(side.center_squares[3])
+                        all_t_center_squares.append(side.center_squares[5])
+                        all_t_center_squares.append(side.center_squares[7])
+
+                    for anchor_square in self.anchor_squares:
+                        closest = self.sort_squares(anchor_square, all_t_center_squares)[0:4]
 
                         for square in closest:
                             square.anchor_square = anchor_square
-                            all_center_squares.remove(square)
-                    #        log.info("%s anchor square is %s" % (square, anchor_square))
-                    #log.info('\n\n')
+                            all_t_center_squares.remove(square)
+
+                    # Build a list of the X-center squares from all six sides
+                    all_x_center_squares = []
+
+                    for side_name in self.side_order:
+                        side = self.sides[side_name]
+                        all_x_center_squares.append(side.center_squares[0])
+                        all_x_center_squares.append(side.center_squares[2])
+                        all_x_center_squares.append(side.center_squares[6])
+                        all_x_center_squares.append(side.center_squares[8])
+
+                    for anchor_square in self.anchor_squares:
+                        closest = self.sort_squares(anchor_square, all_x_center_squares)[0:4]
+
+                        for square in closest:
+                            square.anchor_square = anchor_square
+                            all_x_center_squares.remove(square)
+
+                else:
+                    raise Exception("Add anchor support for %dx%dx%d cubes" % (self.width, self.width, self.width))
 
             # even cube - 4x4x4, 6x6x6, etc
             else:

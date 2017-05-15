@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
 from rubikscolorresolver import RubiksColorSolverGeneric
 from math import sqrt
@@ -36,6 +36,7 @@ test_cases = (
     ('4x4x4 random 01',    'test-data/4x4x4-random-01.txt',    'LUFLUBLBRBLFBFFLBDRFLUURLUUUFDFDRLRURFLBRFLBUDUDRLRRBBBBFFFLLLRBDBUUUDDDUDDBDDDFUULBFRRFLRRBRDDF'),
     ('5x5x5 random 01',    'test-data/5x5x5-random-01.txt',    'RRURRDDUFFDDULLDDLDDDDLDDLLBRBLLBRBRRRUURRDBBUUDBBFFFFFFFFFFRRFBBLLRBBLLRLLDDUFFDDUFFFFDLLLLDURLLDURFRBRRFRBRRUFLDDUURBBUURBBUUFUUUUBUUBUBLLDLFBBDLFBB'),
     ('5x5x5 random 02',    'test-data/5x5x5-random-02.txt',    'RFFFUDUDURBFULULFDBLRLDUFDBLUBBBDDURLRDRFRUDDBFUFLFURRLDFRRRUBFUUDUFLLBLBBULDDRRUFUUUBUDFFDRFLRBBLRFDLLUUBBRFRFRLLBFRLBRRFRBDLLDDFBLRDLFBBBLBLBDUUFDDD'),
+    ('6x6x6 random 01',    'test-data/6x6x6-random-01.txt',    'BDUFBLUDBULFFURRFFUDDDLUFRURFFDDLRUURRLRLBDBRBBRDBBLUDRUBRFUDDFBULUURUBLFBBBFFBRLFLLBRUFDBRDFRLDLBRRFLRFURLLUDFFFFUBFFFFBBDFUBFUUFLLFLDLRRLLDDUUDRDRDRRURRDLFRBLFLFDUBUUDRLFUUDRDDBBDRUBBRDDLDFULDLLBLBBUDBLUUDLLRBBRLBF'),
 )
 
 #test_cases = (
@@ -64,7 +65,7 @@ for (desc, filename, expected) in test_cases:
             output = ''.join(cube.cube_for_kociemba_strict())
         except Exception as e:
             log.exception(e)
-            output = 'Excepption'
+            output = 'Exception'
 
         if output == expected:
             results.append("\033[92mPASS\033[0m: %s" % desc)
