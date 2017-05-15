@@ -1041,6 +1041,7 @@ div.square span {
 
             # odd cube - 3x3x3, 5x5x5, etc
             if self.sideU.mid_pos:
+                # TODO - fix T-centers vs X-centers for 5x5x5
 
                 # Build a list of the center squares from all six sides excluding the mid_pos center squares
                 all_center_squares = []
@@ -1072,26 +1073,86 @@ div.square span {
             # even cube - 4x4x4, 6x6x6, etc
             else:
 
-                # Build a list of the center squares from all six sides
-                all_center_squares = []
-                for side_name in self.side_order:
-                    side = self.sides[side_name]
-                    all_center_squares.extend(side.center_squares)
+                # Build a list of the inside center squares from all six sides
+                all_inside_center_squares = []
 
-                # Take the first center square on the list and for a 4x4x4 cube find
-                # the 3 (see 'to_keep' above) other center squares that are closest in color
-                while all_center_squares:
-                    anchor_square = all_center_squares.pop(0)
+                if self.width == 4:
+                    for side_name in self.side_order:
+                        side = self.sides[side_name]
+                        all_inside_center_squares.extend(side.center_squares)
+                elif self.width == 6:
+                    for side_name in self.side_order:
+                        side = self.sides[side_name]
+                        all_inside_center_squares.append(side.center_squares[5])
+                        all_inside_center_squares.append(side.center_squares[6])
+                        all_inside_center_squares.append(side.center_squares[9])
+                        all_inside_center_squares.append(side.center_squares[10])
+                else:
+                    raise Exception("Add anchor support for %dx%dx%d cubes" % (self.width, self.width, self.width))
+
+                # Take the first square on the list and find the 3 other inside center squares that are closest in color
+                while all_inside_center_squares:
+                    anchor_square = all_inside_center_squares.pop(0)
                     self.anchor_squares.append(anchor_square)
                     log.info("center anchor square %s (even) with color %s" % (anchor_square, anchor_square.color_name))
-
-                    closest = self.sort_squares(anchor_square, all_center_squares)[0:to_keep]
+                    closest = self.sort_squares(anchor_square, all_inside_center_squares)[0:3]
 
                     for square in closest:
                         square.anchor_square = anchor_square
-                        all_center_squares.remove(square)
-                    #    log.info("%s anchor square is %s" % (square, anchor_square))
-                    #log.info('\n\n')
+                        all_inside_center_squares.remove(square)
+
+                if self.width == 6:
+
+                    # Build a list of the outside center squares from all six sides
+                    all_outside_center_squares = []
+
+                    for side_name in self.side_order:
+                        side = self.sides[side_name]
+                        all_outside_center_squares.append(side.center_squares[0])
+                        all_outside_center_squares.append(side.center_squares[3])
+                        all_outside_center_squares.append(side.center_squares[12])
+                        all_outside_center_squares.append(side.center_squares[15])
+
+                    for anchor_square in self.anchor_squares:
+                        closest = self.sort_squares(anchor_square, all_outside_center_squares)[0:4]
+
+                        for square in closest:
+                            square.anchor_square = anchor_square
+                            all_outside_center_squares.remove(square)
+
+                    # Left oblique edges
+                    all_left_oblique_center_squares = []
+
+                    for side_name in self.side_order:
+                        side = self.sides[side_name]
+                        all_left_oblique_center_squares.append(side.center_squares[1])
+                        all_left_oblique_center_squares.append(side.center_squares[7])
+                        all_left_oblique_center_squares.append(side.center_squares[8])
+                        all_left_oblique_center_squares.append(side.center_squares[14])
+
+                    for anchor_square in self.anchor_squares:
+                        closest = self.sort_squares(anchor_square, all_left_oblique_center_squares)[0:4]
+
+                        for square in closest:
+                            square.anchor_square = anchor_square
+                            all_left_oblique_center_squares.remove(square)
+
+                    # Right oblique edges
+                    all_right_oblique_center_squares = []
+
+                    for side_name in self.side_order:
+                        side = self.sides[side_name]
+                        all_right_oblique_center_squares.append(side.center_squares[2])
+                        all_right_oblique_center_squares.append(side.center_squares[4])
+                        all_right_oblique_center_squares.append(side.center_squares[11])
+                        all_right_oblique_center_squares.append(side.center_squares[13])
+
+                    for anchor_square in self.anchor_squares:
+                        closest = self.sort_squares(anchor_square, all_right_oblique_center_squares)[0:4]
+
+                        for square in closest:
+                            square.anchor_square = anchor_square
+                            all_right_oblique_center_squares.remove(square)
 
         # use corners
         else:
@@ -1151,7 +1212,7 @@ div.square span {
         if use_centers:
             # Now that our anchor squares have been assigned a color/color_name, go back and
             # assign the same color/color_name to all of the other center_squares. This ends
-            # up being a no-op for 2x2x2 and 3x3x3 but 4x4x4 and up larger this does something.
+            # up being a no-op for 2x2x2 and 3x3x3 but for 4x4x4 and up larger this does something.
             for side_name in self.side_order:
                 side = self.sides[side_name]
 

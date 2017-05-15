@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 from rubikscolorresolver import RubiksColorSolverGeneric
 from math import sqrt
