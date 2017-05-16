@@ -958,11 +958,11 @@ div.square span {
         else:
             color_to_side_name = {
                 'Wh' : 'U',
-                'OR' : 'L',
-                'Gr' : 'F',
-                'Rd' : 'R',
+                'OR' : 'B',
+                'Gr' : 'L',
+                'Rd' : 'F',
                 'Ye' : 'D',
-                'Bu' : 'B'
+                'Bu' : 'R'
             }
 
         data = []
