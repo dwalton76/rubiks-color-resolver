@@ -1,0 +1,4 @@
+
+- need to work with a wider range of lighting
+- work without a big light at all?
+- explore how to get the raw data from fswebcam?
