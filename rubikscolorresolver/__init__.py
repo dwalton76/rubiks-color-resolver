@@ -1497,12 +1497,12 @@ div.square span {
             # tuple distance is the greatest.  Think of it as the higher this delta
             # is the more important it is that we resolve this edge to the color tuple
             # that came in first place.
-            max_delta = 0
+            max_delta = None
             max_delta_edge = None
             max_delta_distance = None
 
             for edge in unresolved_edges:
-                if edge.first_vs_second_delta > max_delta:
+                if max_delta is None or edge.first_vs_second_delta > max_delta:
                     max_delta = edge.first_vs_second_delta
                     max_delta_edge = edge
                     max_delta_distance = edge.first_distance
@@ -1566,12 +1566,12 @@ div.square span {
             # tuple distance is the greatest.  Think of it as the higher this delta
             # is the more important it is that we resolve this corner to the color tuple
             # that came in first place.
-            max_delta = 0
+            max_delta = None
             max_delta_corner = None
             max_delta_distance = None
 
             for corner in unresolved_corners:
-                if corner.first_vs_second_delta > max_delta:
+                if max_delta is None or corner.first_vs_second_delta > max_delta:
                     max_delta = corner.first_vs_second_delta
                     max_delta_corner = corner
                     max_delta_distance = corner.first_distance
