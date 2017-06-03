@@ -25,6 +25,7 @@ test_cases = (
     ('2x2x2 solved 02',    'test-data/2x2x2-solved-02.txt',    'DDDDFFFFLLLLUUUUBBBBRRRR'),
     ('2x2x2 random 01',    'test-data/2x2x2-random-01.txt',    'BFBUFLDLDLRRFFRBURBUDLDU'),
     ('2x2x2 random 02',    'test-data/2x2x2-random-02.txt',    'LRFULURBRBFDDBDUUDLLFFRB'),
+    ('2x2x2 random 03',    'test-data/2x2x2-random-03.txt',    'DDULURBBRFBRUDBULFDLFFRL'),
     ('3x3x3 solved',       'test-data/3x3x3-solved.txt',       'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'),
     ('3x3x3 checkerboard', 'test-data/3x3x3-checkerboard.txt', 'UDUDUDUDURLRLRLRLRFBFBFBFBFDUDUDUDUDLRLRLRLRLBFBFBFBFB'),
     ('3x3x3 cross',        'test-data/3x3x3-cross.txt',        'DUDUUUDUDFRFRRRFRFRFRFFFRFRUDUDDDUDUBLBLLLBLBLBLBBBLBL'),
@@ -36,7 +37,6 @@ test_cases = (
     ('4x4x4 random 01',    'test-data/4x4x4-random-01.txt',    'BULBURBRFRBLRLLBRDFLBUUFBUUULDLDFBFUFLBRFLBRUDUDFBFFRRRRLLLBBBFRDRUUUDDDUDDRDDDLUUBRLFFLBFFRFDDL'),
     ('5x5x5 random 01',    'test-data/5x5x5-random-01.txt',    'RRURRDDUFFDDULLDDLDDDDLDDLLBRBLLBRBRRRUURRDBBUUDBBFFFFFFFFFFRRFBBLLRBBLLRLLDDUFFDDUFFFFDLLLLDURLLDURFRBRRFRBRRUFLDDUURBBUURBBUUFUUUUBUUBUBLLDLFBBDLFBB'),
     ('5x5x5 random 02',    'test-data/5x5x5-random-02.txt',    'RFFFUDUDURBFULULFDBLRLDUFDBLUBBBDDURLRDRFRUDDBFUFLFURRLDFRRRUBFUUDUFLLBLBBULDDRRUFUUUBUDFFDRFLRBBLRFDLLUUBBRFRFRLLBFRLBRRFRBDLLDDFBLRDLFBBBLBLBDUUFDDD'),
-    ('6x6x6 random 01',    'test-data/6x6x6-random-01.txt',    'RDULRBUDRUBLLUFFLLUDDDBULFUFLLDDBFUUFFBFBRDRFRRFDRRBUDFURFLUDDLRUBUUFURBLRRRLLRFBLBBRFULDRFDLFBDBRFFLBFLUFBBUDLLLLURLLLLRRDLURLUULBBLBDBFFBBDDUUDFDFDFFUFFDBLFRBLBLDURUUDFBLUUDFDDRRDFURRFDDBDLUBDBBRBRRUDRBUUDBBFRRFBRL'),
 )
 
 #test_cases = (
@@ -65,7 +65,9 @@ for (desc, filename, expected) in test_cases:
             output = ''.join(cube.cube_for_kociemba_strict())
         except Exception as e:
             log.exception(e)
+            log.info(json.dumps(scan_data))
             output = 'Exception'
+            #break
 
         if output == expected:
             results.append("\033[92mPASS\033[0m: %s" % desc)
