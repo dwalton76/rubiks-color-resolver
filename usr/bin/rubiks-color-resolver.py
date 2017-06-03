@@ -8,8 +8,10 @@ import logging
 import sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument('rgb', help='RGB json', default=None)
 parser.add_argument('-j', '--json', help='Print json results', action='store_true')
+parser.add_argument('--filename', help='Print json results', type=str, default=None)
+parser.add_argument('--rgb', help='RGB json', type=str, default=None)
+
 args = parser.parse_args()
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
@@ -22,7 +24,17 @@ logging.addLevelName(logging.ERROR, "\033[91m  %s\033[0m" % logging.getLevelName
 logging.addLevelName(logging.WARNING, "\033[91m%s\033[0m" % logging.getLevelName(logging.WARNING))
 
 try:
-    scan_data_str_keys = json.loads(args.rgb)
+    if args.filename:
+        file_as_string = []
+        with open(args.filename, 'r') as fh:
+            rgb = ''.join(fh.readlines())
+    elif args.rgb:
+        rgb = args.rgb
+    else:
+        print("ERROR: Neither --filename or --rgb was specified")
+        sys.exit(1)
+
+    scan_data_str_keys = json.loads(rgb)
     scan_data = {}
 
     for (key, value) in scan_data_str_keys.items():
