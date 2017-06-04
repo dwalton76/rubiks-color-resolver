@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 from itertools import permutations
-from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt
+from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
 from pprint import pformat
 import colorsys
 import json
@@ -358,14 +358,41 @@ class Square(object):
         return (color_obj, distance)
 
 
+def get_orbit_id(cube_size, edge_index):
+    orbit = None
+
+    if cube_size == 3 or cube_size == 4:
+        orbit = 0
+
+    elif cube_size == 5:
+
+        if edge_index == 0 or edge_index == 2:
+            orbit = 0
+        else:
+            orbit = 1
+
+    elif cube_size == 6:
+
+        if edge_index == 0 or edge_index == 3:
+            orbit = 0
+        else:
+            orbit = 1
+
+    else:
+        raise Exception("Add orbit support for %dx%dx%d cubes" % (cube_size, cube_size, cube_size))
+
+    return orbit
+
+
 class Edge(object):
 
-    def __init__(self, cube, pos1, pos2):
+    def __init__(self, cube, pos1, pos2, edge_index):
         self.valid = False
         self.square1 = cube.get_square(pos1)
         self.square2 = cube.get_square(pos2)
         self.cube = cube
         self.dcache = {}
+        self.orbit_id = get_orbit_id(self.cube.width, edge_index)
 
     def __str__(self):
         result = "%s%d/%s%d" %\
@@ -698,6 +725,14 @@ class RubiksColorSolverGeneric(object):
         self.height = width
         self.squares_per_side = self.width * self.width
         self.scan_data = {}
+        self.orbits = int(ceil((self.width - 2) / 2.0))
+
+        if self.width % 2 == 0:
+            self.even = True
+            self.odd = False
+        else:
+            self.even = False
+            self.odd = True
 
         self.sides = {
             'U': CubeSide(self, self.width, 'U'),
@@ -1181,7 +1216,6 @@ div.square span {
                     all_outside_center_squares.remove(square)
                 anchor_square_index += 1
 
-            # dwalton here now
             # Left oblique edges
             all_left_oblique_center_squares = []
             for side_name in self.side_order:
@@ -1192,6 +1226,7 @@ div.square span {
                 all_left_oblique_center_squares.append(side.center_squares[14])
 
             # For each anchor square find the 4 left oblique center squares that are closest in color
+            # TODO make a function of the next ~10 lines...it was cut-n-pasted several times in here
             anchor_square_index = 0
             while all_left_oblique_center_squares:
                 anchor_square = self.anchor_squares[anchor_square_index]
@@ -1257,19 +1292,17 @@ div.square span {
         for anchor_square in self.anchor_squares:
             log.info("anchor square %s with color %s" % (anchor_square, anchor_square.color_name))
 
-        # dwalton
-        if True or use_centers:
-            # Now that our anchor squares have been assigned a color/color_name, go back and
-            # assign the same color/color_name to all of the other center_squares. This ends
-            # up being a no-op for 2x2x2 and 3x3x3 but for 4x4x4 and up larger this does something.
-            for side_name in self.side_order:
-                side = self.sides[side_name]
+        # Now that our anchor squares have been assigned a color/color_name, go back and
+        # assign the same color/color_name to all of the other center_squares. This ends
+        # up being a no-op for 2x2x2 and 3x3x3 but for 4x4x4 and up larger this does something.
+        for side_name in self.side_order:
+            side = self.sides[side_name]
 
-                for square in side.center_squares:
-                    if square.anchor_square:
-                        square.color = square.anchor_square.color
-                        square.color_name = square.anchor_square.color_name
-                        square.color.name = square.anchor_square.color.name
+            for square in side.center_squares:
+                if square.anchor_square:
+                    square.color = square.anchor_square.color
+                    square.color_name = square.anchor_square.color_name
+                    square.color.name = square.anchor_square.color.name
 
         # Assign each Side a color
         if self.sideU.mid_pos:
@@ -1383,73 +1416,74 @@ div.square span {
             return
 
         # For a 3x3x3 there is only one edge between F and U but for a 4x4x4
-        # there are 2 of them and for a 5x5x5 there are 3 of them...so loop
-        # so that we add the correct number
-        for x in range(int(num_of_edge_squares_per_side/4)):
-            self.valid_edges.append((self.sideU.color, self.sideB.color))
-            self.valid_edges.append((self.sideU.color, self.sideL.color))
-            self.valid_edges.append((self.sideU.color, self.sideF.color))
-            self.valid_edges.append((self.sideU.color, self.sideR.color))
+        # there are 2 of them and for a 5x5x5 there are 3 of them...loop to
+        # add the correct number
+        for (edge_index, x) in enumerate(range(int(num_of_edge_squares_per_side/4))):
+            orbit_id = get_orbit_id(self.width, edge_index)
+            self.valid_edges.append((self.sideU.color, self.sideB.color, orbit_id))
+            self.valid_edges.append((self.sideU.color, self.sideL.color, orbit_id))
+            self.valid_edges.append((self.sideU.color, self.sideF.color, orbit_id))
+            self.valid_edges.append((self.sideU.color, self.sideR.color, orbit_id))
 
-            self.valid_edges.append((self.sideF.color, self.sideL.color))
-            self.valid_edges.append((self.sideF.color, self.sideR.color))
+            self.valid_edges.append((self.sideF.color, self.sideL.color, orbit_id))
+            self.valid_edges.append((self.sideF.color, self.sideR.color, orbit_id))
 
-            self.valid_edges.append((self.sideB.color, self.sideL.color))
-            self.valid_edges.append((self.sideB.color, self.sideR.color))
+            self.valid_edges.append((self.sideB.color, self.sideL.color, orbit_id))
+            self.valid_edges.append((self.sideB.color, self.sideR.color, orbit_id))
 
-            self.valid_edges.append((self.sideD.color, self.sideF.color))
-            self.valid_edges.append((self.sideD.color, self.sideL.color))
-            self.valid_edges.append((self.sideD.color, self.sideR.color))
-            self.valid_edges.append((self.sideD.color, self.sideB.color))
+            self.valid_edges.append((self.sideD.color, self.sideF.color, orbit_id))
+            self.valid_edges.append((self.sideD.color, self.sideL.color, orbit_id))
+            self.valid_edges.append((self.sideD.color, self.sideR.color, orbit_id))
+            self.valid_edges.append((self.sideD.color, self.sideB.color, orbit_id))
         self.valid_edges = sorted(self.valid_edges)
 
         # U and B
-        for (pos1, pos2) in zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos))):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # U and L
-        for (pos1, pos2) in zip(self.sideU.edge_west_pos, self.sideL.edge_north_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_west_pos, self.sideL.edge_north_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # U and F
-        for (pos1, pos2) in zip(self.sideU.edge_south_pos, self.sideF.edge_north_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_south_pos, self.sideF.edge_north_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # U and R
-        for (pos1, pos2) in zip(self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos)):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos))):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # F and L
-        for (pos1, pos2) in zip(self.sideF.edge_west_pos, self.sideL.edge_east_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideF.edge_west_pos, self.sideL.edge_east_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # F and R
-        for (pos1, pos2) in zip(self.sideF.edge_east_pos, self.sideR.edge_west_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideF.edge_east_pos, self.sideR.edge_west_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # F and D
-        for (pos1, pos2) in zip(self.sideF.edge_south_pos, self.sideD.edge_north_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideF.edge_south_pos, self.sideD.edge_north_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # L and B
-        for (pos1, pos2) in zip(self.sideL.edge_west_pos, self.sideB.edge_east_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideL.edge_west_pos, self.sideB.edge_east_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # L and D
-        for (pos1, pos2) in zip(self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos)):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos))):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # R and D
-        for (pos1, pos2) in zip(self.sideR.edge_south_pos, self.sideD.edge_east_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideR.edge_south_pos, self.sideD.edge_east_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # R and B
-        for (pos1, pos2) in zip(self.sideR.edge_east_pos, self.sideB.edge_west_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideR.edge_east_pos, self.sideB.edge_west_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # B and D
-        for (pos1, pos2) in zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos):
-            self.edges.append(Edge(self, pos1, pos2))
+        for (edge_index, (pos1, pos2)) in enumerate(zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos)):
+            self.edges.append(Edge(self, pos1, pos2, edge_index))
 
     def resolve_edge_squares(self):
 
@@ -1457,87 +1491,95 @@ div.square span {
         if not self.edges:
             return
 
-        log.info('Resolve edges')
-
         # Initially we flag all of our Edge objects as invalid
         for edge in self.edges:
             edge.valid = False
-        unresolved_edges = [edge for edge in self.edges if edge.valid is False]
 
-        # And our 'needed' list of colors will hold the colors of every edge color pair
-        needed_edge_color_tuple = sorted(self.valid_edges)
-        for (edge1, edge2) in needed_edge_color_tuple:
-            assert edge1.name != edge2.name,\
-                "Both sides of an edge cannot be the same color, edge1 %s and edge2 %s are both %s" %\
-                (edge1, edge2, edge1.name)
+        for target_orbit_id in range(self.orbits):
+            log.info('Resolve edges for orbit %d' % target_orbit_id)
 
-        while unresolved_edges:
+            unresolved_edges = []
+            for edge in self.edges:
+                if edge.orbit_id == target_orbit_id:
+                    unresolved_edges.append(edge)
 
-            # Calculate the color distance for each edge vs each of the needed color tuples
-            for edge in unresolved_edges:
-                edge.first_vs_second_delta = 0
-                foo = []
-                colors_checked = []
+            # And our 'needed' list of colors will hold the colors of every edge color pair
+            needed_edge_color_tuple = []
 
-                for (colorA, colorB) in needed_edge_color_tuple:
+            for (edge1, edge2, orbit_id) in sorted(self.valid_edges):
+                if orbit_id == target_orbit_id:
+                    needed_edge_color_tuple.append((edge1, edge2, orbit_id))
+                assert edge1.name != edge2.name,\
+                    "Both sides of an edge cannot be the same color, edge1 %s and edge2 %s are both %s" %\
+                    (edge1, edge2, edge1.name)
 
-                    # For 4x4x4 and larger there are multiple edges with the
-                    # same pair of colors so if we've already calculated the
-                    # distance for one of the edges with this color tuple
-                    # don't calculate it again
-                    if (colorA, colorB) in colors_checked:
-                        continue
+            while unresolved_edges:
 
-                    distance = edge.color_distance(colorA, colorB)
-                    foo.append((distance, (colorA, colorB)))
-                    colors_checked.append((colorA, colorB))
+                # Calculate the color distance for each edge vs each of the needed color tuples
+                for edge in unresolved_edges:
+                    edge.first_vs_second_delta = 0
+                    foo = []
+                    colors_checked = []
 
-                # Now sort the distance...
-                foo = sorted(foo)
+                    for (colorA, colorB, orbit) in needed_edge_color_tuple:
 
-                if len(foo) >= 2:
-                    (first_distance, (first_colorA, first_colorB)) = foo[0]
-                    (second_distance, (second_colorA, second_colorB)) = foo[1]
+                        # For 4x4x4 and larger there are multiple edges with the
+                        # same pair of colors so if we've already calculated the
+                        # distance for one of the edges with this color tuple
+                        # don't calculate it again
+                        if (colorA, colorB) in colors_checked:
+                            continue
 
-                    # ...and note the delta from the color pair this edge is the closest
-                    # match with vs the color pair this edge is the second closest match with
-                    edge.first_vs_second_delta = second_distance - first_distance
-                    edge.first_place_colors = (first_colorA, first_colorB)
-                    edge.first_distance = first_distance
-                    log.debug("%s 1st vs 2nd delta %d (%d - %d)" % (edge, edge.first_vs_second_delta, second_distance, first_distance))
-                else:
-                    (first_distance, (first_colorA, first_colorB)) = foo[0]
-                    edge.first_vs_second_delta = first_distance
-                    edge.first_place_colors = (first_colorA, first_colorB)
-                    edge.first_distance = first_distance
-                    log.debug("%s 1st vs 2nd delta %d" % (edge, edge.first_vs_second_delta))
+                        distance = edge.color_distance(colorA, colorB)
+                        foo.append((distance, (colorA, colorB)))
+                        colors_checked.append((colorA, colorB))
 
-            # Now look at all of the edges and resolve the one whose 1st vs 2nd color
-            # tuple distance is the greatest.  Think of it as the higher this delta
-            # is the more important it is that we resolve this edge to the color tuple
-            # that came in first place.
-            max_delta = None
-            max_delta_edge = None
-            max_delta_distance = None
+                    # Now sort the distance...
+                    foo = sorted(foo)
 
-            for edge in unresolved_edges:
-                if max_delta is None or edge.first_vs_second_delta > max_delta:
-                    max_delta = edge.first_vs_second_delta
-                    max_delta_edge = edge
-                    max_delta_distance = edge.first_distance
+                    if len(foo) >= 2:
+                        (first_distance, (first_colorA, first_colorB)) = foo[0]
+                        (second_distance, (second_colorA, second_colorB)) = foo[1]
 
-            distance = max_delta_distance
-            edge = max_delta_edge
-            (colorA, colorB) = edge.first_place_colors
+                        # ...and note the delta from the color pair this edge is the closest
+                        # match with vs the color pair this edge is the second closest match with
+                        edge.first_vs_second_delta = second_distance - first_distance
+                        edge.first_place_colors = (first_colorA, first_colorB)
+                        edge.first_distance = first_distance
+                        log.debug("%s 1st vs 2nd delta %d (%d - %d)" % (edge, edge.first_vs_second_delta, second_distance, first_distance))
+                    else:
+                        (first_distance, (first_colorA, first_colorB)) = foo[0]
+                        edge.first_vs_second_delta = first_distance
+                        edge.first_place_colors = (first_colorA, first_colorB)
+                        edge.first_distance = first_distance
+                        log.debug("%s 1st vs 2nd delta %d" % (edge, edge.first_vs_second_delta))
 
-            edge.update_colors(colorA, colorB)
-            edge.valid = True
-            edge.first_vs_second_delta = None
-            edge.first_place_colors = None
-            edge.first_distance = None
-            needed_edge_color_tuple.remove((colorA, colorB))
-            unresolved_edges.remove(edge)
-            log.info("edge %s 1st vs 2nd delta of %d was the highest" % (edge, max_delta))
+                # Now look at all of the edges and resolve the one whose 1st vs 2nd color
+                # tuple distance is the greatest.  Think of it as the higher this delta
+                # is the more important it is that we resolve this edge to the color tuple
+                # that came in first place.
+                max_delta = None
+                max_delta_edge = None
+                max_delta_distance = None
+
+                for edge in unresolved_edges:
+                    if max_delta is None or edge.first_vs_second_delta > max_delta:
+                        max_delta = edge.first_vs_second_delta
+                        max_delta_edge = edge
+                        max_delta_distance = edge.first_distance
+
+                distance = max_delta_distance
+                edge = max_delta_edge
+                (colorA, colorB) = edge.first_place_colors
+
+                edge.update_colors(colorA, colorB)
+                edge.valid = True
+                edge.first_vs_second_delta = None
+                edge.first_place_colors = None
+                edge.first_distance = None
+                needed_edge_color_tuple.remove((colorA, colorB, target_orbit_id))
+                unresolved_edges.remove(edge)
+                log.info("edge %s 1st vs 2nd delta of %d was the highest" % (edge, max_delta))
 
     def resolve_corner_squares(self):
         log.info('Resolve corners')
