@@ -198,11 +198,8 @@ if __name__ == '__main__':
     logging.addLevelName(logging.ERROR, "\033[91m   %s\033[0m" % logging.getLevelName(logging.ERROR))
     logging.addLevelName(logging.WARNING, "\033[91m %s\033[0m" % logging.getLevelName(logging.WARNING))
 
-    filename = 'test/test-data/5x5x5-random-01.txt'
-    filename = 'test/test-data/3x3x3-cross.txt'
-    filename = 'test/test-data/3x3x3-checkerboard.txt'
-    filename = 'test/test-data/2x2x2-solved-02.txt'
-    filename = 'test/test-data/3x3x3-solved.txt'
+    filename = sys.argv[1]
+
     with open(filename, 'r') as fh:
         data = convert_key_strings_to_int(json.load(fh))
         #pprint(data)
@@ -214,7 +211,7 @@ if __name__ == '__main__':
         write_header(fh)
         #for algorithm in ('none', 'rgb', 'hsv', 'hls', 'luminosity', 'step', 'travelling-salesman'):
         #for algorithm in ('none', 'hsv', 'step', 'kmeans'):
-        for algorithm in ('none', 'kmeans'):
+        for algorithm in ('none', 'hsv', 'kmeans'):
 
             if algorithm == 'none':
                 tmp_colors = colors

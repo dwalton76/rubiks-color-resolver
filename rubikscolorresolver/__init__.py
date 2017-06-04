@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from copy import deepcopy
+from sklearn.cluster import KMeans
+from copy import deepcopy, copy
 from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
 from pprint import pformat
@@ -14,6 +15,30 @@ log = logging.getLogger(__name__)
 # Calculating color distances is expensive in terms of CPU so
 # cache the results
 dcache = {}
+
+
+def kmeans_sort_colors(colors):
+    """
+    Sort 'colors' into 6 buckets
+    """
+    clt = KMeans(n_clusters=6)
+
+    # TODO we need to force this to put the same number of entries in each buck
+    # test/test-data/6x6x6-random-01.txt fails due to this, square 172 becomes
+    # red instead of orange
+    clt.fit(copy(colors))
+
+    all_buckets = []
+
+    for target_cluster in range(6):
+        current_bucket = []
+
+        for (index, cluster) in enumerate(clt.labels_):
+            if cluster == target_cluster:
+                current_bucket.append(colors[index])
+        all_buckets.append(current_bucket)
+
+    return all_buckets
 
 
 def get_cube_layout(size):
@@ -190,16 +215,24 @@ def same_hue(lab1, lab2):
 
     HUE_THRESHOLD = 60
 
-    # white is a little odd
-    if H1 <= 50 or  H1 >= 310:
-        if H2 > 50 and H2 < 310:
+    if H1 == H2:
+        return True
+
+    elif H1 < H2:
+        normal = abs(H1 - H2)
+        wrap_around = H1 + (360 - H2)
+        hue_distance = min(normal, wrap_around)
+
+        if hue_distance > HUE_THRESHOLD:
             return False
 
     else:
-        if abs(H1 - H2) > HUE_THRESHOLD:
-            return False
+        normal = abs(H1 - H2)
+        wrap_around = H2 + (360 - H1)
+        hue_distance = min(normal, wrap_around)
 
-        # look at saturation for orange/red?
+        if hue_distance > HUE_THRESHOLD:
+            return False
 
     return True
 
@@ -270,16 +303,6 @@ def delta_e_cie2000(lab1, lab2):
                    pow(delta_cp / (s_c * kc), 2) +
                    pow(delta_hp / (s_h * kh), 2) +
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
-
-    # This is a sanity check that I (daniel) added to catch some extreme
-    # cases where two colors can have a low distance even though one of
-    # their RGB values differ greatly
-    if (abs(lab1.red - lab2.red) > 100 or
-        abs(lab1.green - lab2.green) > 100 or
-        abs(lab1.blue - lab2.blue) > 100):
-        delta_e += 1000
-    elif not same_hue(lab1, lab2):
-        delta_e += 1000
 
     return delta_e
 
@@ -1068,6 +1091,45 @@ div.square span {
             result.append(square)
         return result
 
+    def bind_center_squares_to_anchor(self, square_indexes, desc):
+
+        center_colors = [anchor_square.rgb for anchor_square in self.anchor_squares]
+
+        for side_name in self.side_order:
+            side = self.sides[side_name]
+
+            for square_index in square_indexes:
+                center_colors.append(side.center_squares[square_index].rgb)
+
+        sorted_center_colors = kmeans_sort_colors(center_colors)
+
+        for rgb_list in sorted_center_colors:
+            anchor_square = None
+
+            # each of these list should have an anchor square
+            for rgb in rgb_list:
+                for x in self.anchor_squares:
+                    if x.rgb == rgb:
+                        anchor_square = x
+                        break
+
+                if anchor_square:
+                    break
+
+            if anchor_square:
+                for side_name in self.side_order:
+                    for square_index in square_indexes:
+                        square = self.sides[side_name].center_squares[square_index]
+                        if square.rgb in rgb_list:
+                            square.anchor_square = anchor_square
+                            log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
+
+            else:
+                for x in self.anchor_squares:
+                    log.info("anchor square %s" % x)
+                log.info("rgb_list: %s" % pformat(rgb_list))
+                raise Exception("Could not find an anchor square")
+
     def identify_anchor_squares(self):
 
         # Odd cube, use the centers
@@ -1086,27 +1148,65 @@ div.square span {
             self.anchor_squares.append(self.sideL.corner_squares[1])
             self.anchor_squares.append(self.sideF.corner_squares[0])
             self.anchor_squares.append(self.sideU.corner_squares[2])
-            colorA = self.sideL.corner_squares[1].rawcolor
-            colorB = self.sideF.corner_squares[0].rawcolor
-            colorC = self.sideU.corner_squares[2].rawcolor
+            anchor1 = self.sideL.corner_squares[1]
+            anchor2 = self.sideF.corner_squares[0]
+            anchor3 = self.sideU.corner_squares[2]
+            anchor1_rgb = (anchor1.red, anchor1.green, anchor1.blue)
+            anchor2_rgb = (anchor2.red, anchor2.green, anchor2.blue)
+            anchor3_rgb = (anchor3.red, anchor3.green, anchor3.blue)
+            #log.info("anchor1_rgb %s" % pformat(anchor1_rgb))
+            #log.info("anchor2_rgb %s" % pformat(anchor2_rgb))
+            #log.info("anchor3_rgb %s" % pformat(anchor3_rgb))
 
-            # Now compare the LFU corner against the other 7 corners. The corner that
-            # produces the greatest color distance vs LFU is the corner that we will
-            # use to ID the other three anchor squares.
-            max_distance = None
-            max_distance_corner = None
-
+            # Find the other three anchor squares...first group all corner squares via kmeans
+            corner_colors = []
             for corner in self.corners:
-                distance = corner.color_distance(colorA, colorB, colorC)
-                log.info("LFU vs %s has distance %d" % (corner, distance))
+                corner_colors.append((corner.square1.red, corner.square1.green, corner.square1.blue))
+                corner_colors.append((corner.square2.red, corner.square2.green, corner.square2.blue))
+                corner_colors.append((corner.square3.red, corner.square3.green, corner.square3.blue))
+            sorted_corner_colors = kmeans_sort_colors(corner_colors)
 
-                if max_distance is None or distance > max_distance:
-                    max_distance = distance
-                    max_distance_corner = corner
+            anchor4_list = None
+            anchor5_list = None
+            anchor6_list = None
 
-            self.anchor_squares.append(max_distance_corner.square1)
-            self.anchor_squares.append(max_distance_corner.square2)
-            self.anchor_squares.append(max_distance_corner.square3)
+            # Find the "buckets" that contain the 4th, 5th and 6th anchor squares, these are the
+            # buckets that do not contain the 1st, 2nd or 3rd anchor squares.
+            for rgb_list in sorted_corner_colors:
+                # Ignore the three groups that contain our first three anchor squares
+                if anchor1_rgb in rgb_list or anchor2_rgb in rgb_list or anchor3_rgb in rgb_list:
+                    continue
+
+                if anchor4_list is None:
+                    anchor4_list = rgb_list
+
+                elif anchor5_list is None:
+                    anchor5_list = rgb_list
+
+                elif anchor6_list is None:
+                    anchor6_list = rgb_list
+
+            #log.info("anchor4_list %s" % pformat(anchor4_list))
+            #log.info("anchor5_list %s" % pformat(anchor5_list))
+            #log.info("anchor6_list %s" % pformat(anchor6_list))
+
+            # Now find the other corner that has a square in anchor4_list,
+            # anchor5_list, and anchor6_list
+            for corner in self.corners:
+                square1_rgb = (corner.square1.red, corner.square1.green, corner.square1.blue)
+                square2_rgb = (corner.square2.red, corner.square2.green, corner.square2.blue)
+                square3_rgb = (corner.square3.red, corner.square3.green, corner.square3.blue)
+
+                if ((square1_rgb in anchor4_list or square1_rgb in anchor5_list or square1_rgb in anchor6_list) and
+                    (square2_rgb in anchor4_list or square2_rgb in anchor5_list or square2_rgb in anchor6_list) and
+                    (square3_rgb in anchor4_list or square3_rgb in anchor5_list or square3_rgb in anchor6_list)):
+
+                    self.anchor_squares.append(corner.square1)
+                    self.anchor_squares.append(corner.square2)
+                    self.anchor_squares.append(corner.square3)
+                    break
+            else:
+                raise Exception("Unable to ID the final three anchor squares")
 
         for anchor_square in self.anchor_squares:
             log.info("%s is an anchor square" % anchor_square)
@@ -1120,142 +1220,28 @@ div.square span {
             pass
 
         elif self.width == 4:
-
-            # Build a list of all of the inside centers
-            all_inside_center_squares = []
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_inside_center_squares.extend(side.center_squares)
-
-            # For each anchor square find the 4 inside center squares that are closest in color
-            anchor_square_index = 0
-            while all_inside_center_squares:
-                anchor_square = self.anchor_squares[anchor_square_index]
-                closest = self.sort_squares(anchor_square, all_inside_center_squares)[0:4]
-
-                for square in closest:
-                    square.anchor_square = anchor_square
-                    all_inside_center_squares.remove(square)
-                anchor_square_index += 1
+            self.bind_center_squares_to_anchor((0, 1, 2, 3), '4x4x4 centers')
 
         elif self.width == 5:
+            # t-centers
+            self.bind_center_squares_to_anchor((1, 3, 5, 7), '5x5x5 t-centers')
 
-            # Build a list of the T-center squares from all six sides
-            all_t_center_squares = []
-
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_t_center_squares.append(side.center_squares[1])
-                all_t_center_squares.append(side.center_squares[3])
-                all_t_center_squares.append(side.center_squares[5])
-                all_t_center_squares.append(side.center_squares[7])
-
-            for anchor_square in self.anchor_squares:
-                closest = self.sort_squares(anchor_square, all_t_center_squares)[0:4]
-
-                for square in closest:
-                    square.anchor_square = anchor_square
-                    all_t_center_squares.remove(square)
-
-            # Build a list of the X-center squares from all six sides
-            all_x_center_squares = []
-
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_x_center_squares.append(side.center_squares[0])
-                all_x_center_squares.append(side.center_squares[2])
-                all_x_center_squares.append(side.center_squares[6])
-                all_x_center_squares.append(side.center_squares[8])
-
-            for anchor_square in self.anchor_squares:
-                closest = self.sort_squares(anchor_square, all_x_center_squares)[0:4]
-
-                for square in closest:
-                    square.anchor_square = anchor_square
-                    all_x_center_squares.remove(square)
+            # x-centers
+            self.bind_center_squares_to_anchor((0, 2, 6, 8), '5x5x5 x-centers')
 
         elif self.width == 6:
 
-            # Build a list of all of the inside centers
-            all_inside_center_squares = []
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_inside_center_squares.append(side.center_squares[5])
-                all_inside_center_squares.append(side.center_squares[6])
-                all_inside_center_squares.append(side.center_squares[9])
-                all_inside_center_squares.append(side.center_squares[10])
+            # inside centers
+            self.bind_center_squares_to_anchor((5, 6, 9, 10), '6x6x6 inside centers')
 
-            # For each anchor square find the 4 inside center squares that are closest in color
-            anchor_square_index = 0
-            while all_inside_center_squares:
-                anchor_square = self.anchor_squares[anchor_square_index]
-                closest = self.sort_squares(anchor_square, all_inside_center_squares)[0:4]
+            # outside centers
+            self.bind_center_squares_to_anchor((0, 3, 12, 15), '6x6x6 outside centers')
 
-                for square in closest:
-                    square.anchor_square = anchor_square
-                    all_inside_center_squares.remove(square)
-                anchor_square_index += 1
+            # left oblique edges
+            self.bind_center_squares_to_anchor((1, 7, 8, 14), '6x6x6 left oblique edges')
 
-            # Build a list of all of the outside centers
-            all_outside_center_squares = []
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_outside_center_squares.append(side.center_squares[0])
-                all_outside_center_squares.append(side.center_squares[3])
-                all_outside_center_squares.append(side.center_squares[12])
-                all_outside_center_squares.append(side.center_squares[15])
-
-            # For each anchor square find the 4 outside center squares that are closest in color
-            anchor_square_index = 0
-            while all_outside_center_squares:
-                anchor_square = self.anchor_squares[anchor_square_index]
-                closest = self.sort_squares(anchor_square, all_outside_center_squares)[0:4]
-
-                for square in closest:
-                    square.anchor_square = anchor_square
-                    all_outside_center_squares.remove(square)
-                anchor_square_index += 1
-
-            # Left oblique edges
-            all_left_oblique_center_squares = []
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_left_oblique_center_squares.append(side.center_squares[1])
-                all_left_oblique_center_squares.append(side.center_squares[7])
-                all_left_oblique_center_squares.append(side.center_squares[8])
-                all_left_oblique_center_squares.append(side.center_squares[14])
-
-            # For each anchor square find the 4 left oblique center squares that are closest in color
-            # TODO make a function of the next ~10 lines...it was cut-n-pasted several times in here
-            anchor_square_index = 0
-            while all_left_oblique_center_squares:
-                anchor_square = self.anchor_squares[anchor_square_index]
-                closest = self.sort_squares(anchor_square, all_left_oblique_center_squares)[0:4]
-
-                for square in closest:
-                    square.anchor_square = anchor_square
-                    all_left_oblique_center_squares.remove(square)
-                anchor_square_index += 1
-
-            # Right oblique edges
-            all_right_oblique_center_squares = []
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_right_oblique_center_squares.append(side.center_squares[2])
-                all_right_oblique_center_squares.append(side.center_squares[4])
-                all_right_oblique_center_squares.append(side.center_squares[11])
-                all_right_oblique_center_squares.append(side.center_squares[13])
-
-            # For each anchor square find the 4 right oblique center squares that are closest in color
-            anchor_square_index = 0
-            while all_right_oblique_center_squares:
-                anchor_square = self.anchor_squares[anchor_square_index]
-                closest = self.sort_squares(anchor_square, all_right_oblique_center_squares)[0:4]
-
-                for square in closest:
-                    square.anchor_square = anchor_square
-                    all_right_oblique_center_squares.remove(square)
-                anchor_square_index += 1
+            # right oblique edges
+            self.bind_center_squares_to_anchor((2, 4, 11, 13), '6x6x6 right oblique edges')
 
         else:
             raise Exception("Add anchor/center support for %dx%dx%d cubes" % (self.width, self.width, self.width))
