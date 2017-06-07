@@ -8,6 +8,7 @@ Against Rubiks cube RGB values
 I skipped hilbert, that one was more trouble than it was worth
 """
 
+from rubikscolorresolver import k_means_colors_dictionary
 from sklearn.cluster import KMeans
 from copy import deepcopy
 from pprint import pprint, pformat
@@ -26,6 +27,10 @@ def convert_key_strings_to_int(data):
     """
     result = {}
     for (key, value) in data.items():
+
+        if isinstance(value, list):
+            value = tuple(value)
+
         if key.isdigit():
             result[int(key)] = value
         else:
@@ -44,7 +49,8 @@ div.clear {
 }
 
 div.colors span {
-    width: 20px;
+    width: 40px;
+    height: 40px;
     white-space-collapsing: discard;
     display: inline-block;
 }
@@ -61,6 +67,10 @@ def write_colors(fh, algorithm, colors):
     fh.write("<div class='clear colors'>\n")
     for (index, (red, green, blue)) in enumerate(colors):
 
+        if red is None and green is None and blue is None:
+            fh.write("<br>")
+            continue
+
         # to use python coloursys convertion we have to rescale to range 0-1
         (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
 
@@ -68,11 +78,12 @@ def write_colors(fh, algorithm, colors):
         H = int(H * 360)
         S = int(S * 100)
         V = int(V * 100)
-        log.info("%3d: RGB (%3d, %3d, %3d) -> HSV (%3d, %3d, %3d)" % (index+1, red, green, blue, H, S, V))
+        # log.info("%3d: RGB (%3d, %3d, %3d) -> HSV (%3d, %3d, %3d)" % (index+1, red, green, blue, H, S, V))
         fh.write("<span style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s)'>&nbsp;</span>\n" %
             (red, green, blue, red, green, blue, H, S, V))
-        if (index+1) % squares_per_side == 0:
-            log.info('')
+        #if (index+1) % squares_per_side == 0:
+        #    log.info('')
+
 
     fh.write("</div>\n")
     log.info('\n\n')
@@ -204,14 +215,14 @@ if __name__ == '__main__':
         data = convert_key_strings_to_int(json.load(fh))
         #pprint(data)
 
-    colors = list(data.values())
-    # pprint(colors)
+    colors = sorted(list(data.values()))
 
     with open('foo.html', 'w') as fh:
         write_header(fh)
         #for algorithm in ('none', 'rgb', 'hsv', 'hls', 'luminosity', 'step', 'travelling-salesman'):
         #for algorithm in ('none', 'hsv', 'step', 'kmeans'):
-        for algorithm in ('none', 'hsv', 'kmeans'):
+        #for algorithm in ('none', 'hsv', 'kmeans'):
+        for algorithm in ('kmeans', 'kmeans2'):
 
             if algorithm == 'none':
                 tmp_colors = colors
@@ -239,6 +250,7 @@ if __name__ == '__main__':
                 tmp_colors = travelling_salesman(deepcopy(colors))
 
             elif algorithm == 'kmeans':
+                # http://www.pyimagesearch.com/2014/05/26/opencv-python-k-means-color-clustering/
                 clt = KMeans(n_clusters=6)
                 clt.fit(deepcopy(colors))
 
@@ -247,6 +259,15 @@ if __name__ == '__main__':
                     for (index, cluster) in enumerate(clt.labels_):
                         if cluster == target_cluster:
                             tmp_colors.append(colors[index])
+                    tmp_colors.append((None, None, None))
+
+            elif algorithm == 'kmeans2':
+                tmp_colors = []
+                #for rgb_list in k_means_colors_dictionary(deepcopy(data), (13, 38, 63, 88, 113, 138)):
+                for rgb_list in k_means_colors_dictionary(deepcopy(data), (31, 42, 73, 108, 139, 186)):
+                    for rgb in rgb_list:
+                        tmp_colors.append(rgb)
+                    tmp_colors.append((None, None, None))
 
             else:
                 log.warning("Implement %s" % algorithm)

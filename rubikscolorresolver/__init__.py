@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
+from collections import OrderedDict
 from sklearn.cluster import KMeans
 from copy import deepcopy, copy
 from itertools import permutations
@@ -15,22 +16,148 @@ log = logging.getLogger(__name__)
 # Calculating color distances is expensive in terms of CPU so
 # cache the results
 dcache = {}
+SIDES_COUNT = 6
 
 
-def kmeans_sort_colors(colors):
+# Not used, I experimented with this for kmeans clustering distance
+def get_euclidean_rgb_distance(rgb1, rgb2):
+    return sqrt(sum([(a - b) ** 2 for a, b in zip(rgb1, rgb2)]))
+
+
+# Not used, I experimented with this for kmeans clustering distance
+def get_euclidean_lab_distance(rgb1, rgb2):
     """
-    Sort 'colors' into 6 buckets
-    """
-    clt = KMeans(n_clusters=6)
+    http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
 
-    # TODO we need to force this to put the same number of entries in each buck
-    # test/test-data/6x6x6-random-01.txt fails due to this, square 172 becomes
-    # red instead of orange
+    In mathematics, the Euclidean distance or Euclidean metric is the "ordinary"
+    (i.e. straight-line) distance between two points in Euclidean space. With this
+    distance, Euclidean space becomes a metric space. The associated norm is called
+    the Euclidean norm.
+    """
+    lab1 = rgb2lab(rgb1)
+    lab2 = rgb2lab(rgb2)
+    lab1_tuple = (lab1.L, lab1.a, lab1.b)
+    lab2_tuple = (lab2.L, lab2.a, lab2.b)
+    return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
+
+
+class ClusterSquare(object):
+
+    def __init__(self, index, rgb):
+        self.index = index
+        self.rgb = rgb
+        self.distance_to_anchor = 0
+
+    def __str__(self):
+        if self.index:
+            return str(self.index)
+        else:
+            return str(self.rgb)
+
+    def __lt__(self, other):
+        return self.index < other.index
+
+
+class Cluster(object):
+
+    def __init__(self, anchor):
+        self.anchor = anchor
+        self.members = []
+        self.empty_count = 0
+
+    def __str__(self):
+        return "cluster %s" % self.anchor
+
+    def calculate_distances(self, data_points, use_sort):
+        self.distances = []
+        has_143 = False
+
+        for square in data_points:
+            lab1 = rgb2lab(square.rgb)
+            lab2 = rgb2lab(self.anchor.rgb)
+            distance = delta_e_cie2000(lab1, lab2)
+            self.distances.append((distance, square))
+
+            if square.index == 143:
+                has_143 = True
+
+        if use_sort:
+            self.distances = sorted(self.distances)
+            # dwalton
+            if self.anchor.index in (63, 13) and has_143:
+                for (distance, square) in self.distances:
+                    log.warning("%s to %s is %d" % (self, square, distance))
+
+
+def assign_points(data_points, anchors, squares_per_side):
+    """
+    For each anchor color find the squares_per_side-1 entries in data_points with the lowest distance
+    """
+    clusters = {}
+    all_distances = []
+
+    for anchor in anchors:
+        clusters[anchor] = Cluster(anchor)
+        cluster = clusters[anchor]
+        cluster.calculate_distances(data_points, True)
+
+        for (distance, square) in cluster.distances:
+            all_distances.append((distance, square, cluster))
+
+    all_distances = sorted(all_distances)
+    used = []
+
+    for (distance, square, cluster) in all_distances:
+        if len(cluster.members) < squares_per_side and square not in used:
+            cluster.members.append(square)
+            used.append(square)
+
+    assignments = []
+    for anchor in anchors:
+        assigments_for_cluster = []
+        cluster = clusters[anchor]
+
+        for cluster_square in cluster.members:
+            assigments_for_cluster.append(cluster_square)
+        assignments.append(assigments_for_cluster)
+
+    return assignments
+
+
+def kmeans_sort_colors_static_anchors(colors):
+    """
+    colors is an OrderedDict where the key is the square index and the value a RGB tuple
+    Started from https://github.com/stuntgoat/kmeans/blob/master/kmeans.py
+    """
+    #assert len(anchor_square_indexes) == SIDES_COUNT, "The are %d anchor_square_indexes, there must be %s" % (len(anchor_square_indexes), SIDES_COUNT)
+    #assert len(colors.keys()) % SIDES_COUNT == 0, "The are %d color entries, must be divisible by %s" % (len(colors.keys()), SIDES_COUNT)
+
+    dataset = []
+    anchors = []
+    squares_per_side = int(len(colors.keys())/SIDES_COUNT)
+
+    for (index, (square_index, rgb)) in enumerate(colors.items()):
+        square = ClusterSquare(square_index, rgb)
+        dataset.append(square)
+
+        if index < SIDES_COUNT:
+            anchors.append(square)
+
+    #assert len(anchors) == SIDES_COUNT, "The are %d anchors, there must be %s" % (len(anchors), SIDES_COUNT)
+    return assign_points(dataset, anchors, squares_per_side)
+
+
+def kmeans_sort_colors_dynamic_anchors(colors):
+    """
+    'colors is a list of RGB tuples, sort them into SIDES_COUNT buckets
+    """
+    clt = KMeans(n_clusters=SIDES_COUNT)
     clt.fit(copy(colors))
 
+    # all_buckets will be a list of list
     all_buckets = []
 
-    for target_cluster in range(6):
+    for target_cluster in range(SIDES_COUNT):
         current_bucket = []
 
         for (index, cluster) in enumerate(clt.labels_):
@@ -168,6 +295,7 @@ def rgb2lab(inputColor):
         RGB[num] = value * 100.0
 
     # http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+    # sRGB
     # 0.4124564  0.3575761  0.1804375
     # 0.2126729  0.7151522  0.0721750
     # 0.0193339  0.1191920  0.9503041
@@ -197,44 +325,6 @@ def rgb2lab(inputColor):
 
     (red, green, blue) = inputColor
     return LabColor(L, a, b, red, green, blue)
-
-
-def same_hue(lab1, lab2):
-    # to use python coloursys convertion we have to rescale to range 0-1
-    (H1, S1, V1) = colorsys.rgb_to_hsv(float(lab1.red/255), float(lab1.green/255), float(lab1.blue/255))
-    (H2, S2, V2) = colorsys.rgb_to_hsv(float(lab2.red/255), float(lab2.green/255), float(lab2.blue/255))
-
-    # rescale H to 360 degrees and S, V to percent of 100%
-    H1 = int(H1 * 360)
-    S1 = int(S1 * 100)
-    V1 = int(V1 * 100)
-
-    H2 = int(H2 * 360)
-    S2 = int(S2 * 100)
-    V2 = int(V2 * 100)
-
-    HUE_THRESHOLD = 60
-
-    if H1 == H2:
-        return True
-
-    elif H1 < H2:
-        normal = abs(H1 - H2)
-        wrap_around = H1 + (360 - H2)
-        hue_distance = min(normal, wrap_around)
-
-        if hue_distance > HUE_THRESHOLD:
-            return False
-
-    else:
-        normal = abs(H1 - H2)
-        wrap_around = H2 + (360 - H1)
-        hue_distance = min(normal, wrap_around)
-
-        if hue_distance > HUE_THRESHOLD:
-            return False
-
-    return True
 
 
 def delta_e_cie2000(lab1, lab2):
@@ -845,6 +935,17 @@ div#down {
        (size * square_size) + (size * side_margin)))
 
             fh.write("""
+span.square {
+    width: %dpx;
+    height: %dpx;
+    white-space-collapsing: discard;
+    display: inline-block;
+    color: black;
+    font-weight: bold;
+    line-height: %dpx;
+    text-align: center;
+}
+
 div.square {
     width: %dpx;
     height: %dpx;
@@ -864,7 +965,7 @@ div.square span {
 <title>CraneCuber</title>
 </head>
 <body>
-""" % (square_size, square_size, square_size))
+""" % (square_size, square_size, square_size, square_size, square_size, square_size))
 
     def write_cube(self, desc, cube):
         """
@@ -891,9 +992,13 @@ div.square span {
                 H = int(H * 360)
                 S = int(S * 100)
                 V = int(V * 100)
+                lab = rgb2lab((red, green, blue))
 
-                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d) HSV (%d, %d, %d)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
-                    (col, red, green, blue, H, S, V,
+                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d) HSV (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                    (col,
+                     red, green, blue,
+                     H, S, V,
+                     lab.L, lab.a, lab.b,
                      red, green, blue,
                      index))
 
@@ -907,6 +1012,38 @@ div.square span {
 
                 if col == self.width + 1:
                     col = 1
+
+    def write_colors(self, desc, colors):
+        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+            squares_per_side = int(len(colors)/6)
+            fh.write("<h2>%s</h2>\n" % desc)
+            fh.write("<div class='clear colors'>\n")
+
+            for cluster_square_list in colors:
+                for cluster_square in cluster_square_list:
+                    (red, green, blue) = cluster_square.rgb
+
+                    # to use python coloursys convertion we have to rescale to range 0-1
+                    (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
+
+                    # rescale H to 360 degrees and S, V to percent of 100%
+                    H = int(H * 360)
+                    S = int(S * 100)
+                    V = int(V * 100)
+                    lab = rgb2lab((red, green, blue))
+
+                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s), Lab (%s, %s, %s) Distance %d'>%d</span>\n" %
+                        (red, green, blue,
+                         red, green, blue,
+                         H, S, V,
+                         lab.L, lab.a, lab.b,
+                         cluster_square.distance_to_anchor,
+                         cluster_square.index))
+
+                fh.write("<br>")
+
+            fh.write("</div>\n")
+            log.info('\n\n')
 
     def www_footer(self):
         with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
@@ -1092,43 +1229,32 @@ div.square span {
         return result
 
     def bind_center_squares_to_anchor(self, square_indexes, desc):
+        center_colors = OrderedDict()
 
-        center_colors = [anchor_square.rgb for anchor_square in self.anchor_squares]
+        # We must add the anchor squares first
+        for anchor_square in self.anchor_squares:
+            center_colors[anchor_square.position] = anchor_square.rgb
 
         for side_name in self.side_order:
             side = self.sides[side_name]
 
             for square_index in square_indexes:
-                center_colors.append(side.center_squares[square_index].rgb)
+                square = side.center_squares[square_index]
+                if square not in self.anchor_squares:
+                    center_colors[square.position] = square.rgb
 
-        sorted_center_colors = kmeans_sort_colors(center_colors)
+        sorted_center_colors = kmeans_sort_colors_static_anchors(center_colors)
+        self.write_colors(desc, sorted_center_colors)
 
-        for rgb_list in sorted_center_colors:
-            anchor_square = None
+        # The first entry on each list is the anchor square
+        for cluster_square_list in sorted_center_colors:
+            anchor_square_index = cluster_square_list[0].index
+            anchor_square = self.get_square(anchor_square_index)
 
-            # each of these list should have an anchor square
-            for rgb in rgb_list:
-                for x in self.anchor_squares:
-                    if x.rgb == rgb:
-                        anchor_square = x
-                        break
-
-                if anchor_square:
-                    break
-
-            if anchor_square:
-                for side_name in self.side_order:
-                    for square_index in square_indexes:
-                        square = self.sides[side_name].center_squares[square_index]
-                        if square.rgb in rgb_list:
-                            square.anchor_square = anchor_square
-                            log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
-
-            else:
-                for x in self.anchor_squares:
-                    log.info("anchor square %s" % x)
-                log.info("rgb_list: %s" % pformat(rgb_list))
-                raise Exception("Could not find an anchor square")
+            for cluster_square in cluster_square_list[1:]:
+                square = self.get_square(cluster_square.index)
+                square.anchor_square = anchor_square
+                log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
 
     def identify_anchor_squares(self):
 
@@ -1164,7 +1290,7 @@ div.square span {
                 corner_colors.append((corner.square1.red, corner.square1.green, corner.square1.blue))
                 corner_colors.append((corner.square2.red, corner.square2.green, corner.square2.blue))
                 corner_colors.append((corner.square3.red, corner.square3.green, corner.square3.blue))
-            sorted_corner_colors = kmeans_sort_colors(corner_colors)
+            sorted_corner_colors = kmeans_sort_colors_dynamic_anchors(corner_colors)
 
             anchor4_list = None
             anchor5_list = None
@@ -1207,9 +1333,6 @@ div.square span {
                     break
             else:
                 raise Exception("Unable to ID the final three anchor squares")
-
-        for anchor_square in self.anchor_squares:
-            log.info("%s is an anchor square" % anchor_square)
 
         # No center squares
         if self.width == 2:
