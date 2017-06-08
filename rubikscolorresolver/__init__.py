@@ -105,14 +105,14 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
 
     # Assign the anchor squares as the initial members
     for cluster in clusters:
-        log.warning("%s %s: anchor member %s" % (desc, cluster, cluster.anchor))
+        log.info("%s %s: anchor member %s" % (desc, cluster, cluster.anchor))
         cluster.members.append(cluster.anchor)
         used.append(cluster.anchor)
 
     # First pass, assign squares to clusters, lowest distance first until the cluster has squares_per_side entries
     for (distance_2000, square, cluster) in all_distances:
         if len(cluster.members) < squares_per_side and square not in used:
-            log.warning("%s %s: next member %s with cie2000 %d" % (desc, cluster, square, distance_2000))
+            log.info("%s %s: next member %s with cie2000 %d" % (desc, cluster, square, distance_2000))
             cluster.members.append(square)
             used.append(square)
 
@@ -999,7 +999,7 @@ div#down {
 """ % (size-1,
        size,
        (size - 1) * square_size,
-       (size * square_size) + (size * side_margin)))
+       (size * square_size) + (3 * side_margin)))
 
             fh.write("""
 span.square {
