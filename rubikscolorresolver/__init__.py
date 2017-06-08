@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+#from colormath.color_objects import sRGBColor, LabColor as OfficialLabColor
+#from colormath.color_diff import delta_e_cie1994
+#from colormath.color_conversions import convert_color
+
+from colormath.color_objects import sRGBColor
 from collections import OrderedDict
 from sklearn.cluster import KMeans
 from copy import deepcopy, copy
@@ -7,6 +12,7 @@ from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
 from pprint import pformat
 import colorsys
+import itertools
 import json
 import logging
 import sys
@@ -15,7 +21,8 @@ log = logging.getLogger(__name__)
 
 # Calculating color distances is expensive in terms of CPU so
 # cache the results
-dcache = {}
+dcache_cie1994 = {}
+dcache_cie2000 = {}
 SIDES_COUNT = 6
 
 
@@ -41,12 +48,18 @@ def get_euclidean_lab_distance(rgb1, rgb2):
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
 
 
+#def rgb_to_labcolor(red, green, blue):
+#    rgb_obj = sRGBColor(red, green, blue)
+#    return convert_color(rgb_obj, OfficialLabColor)
+
+
 class ClusterSquare(object):
 
     def __init__(self, index, rgb):
         self.index = index
         self.rgb = rgb
-        self.distance_to_anchor = 0
+        self.lab = rgb2lab(rgb)
+        #self.lab_official = rgb_to_labcolor(rgb[0], rgb[1], rgb[2])
 
     def __str__(self):
         if self.index:
@@ -68,63 +81,124 @@ class Cluster(object):
     def __str__(self):
         return "cluster %s" % self.anchor
 
+    def __lt__(self, other):
+        return self.anchor.index < other.anchor.index
+
     def calculate_distances(self, data_points, use_sort):
         self.distances = []
-        has_143 = False
 
         for square in data_points:
-            lab1 = rgb2lab(square.rgb)
-            lab2 = rgb2lab(self.anchor.rgb)
-            distance = delta_e_cie2000(lab1, lab2)
-            self.distances.append((distance, square))
-
-            if square.index == 143:
-                has_143 = True
+            distance_2000 = get_cie2000(square.lab, self.anchor.lab)
+            #distance_1994 = get_cie1994(square.lab_official, self.anchor.lab_official)
+            #self.distances.append((distance_2000, distance_1994, square))
+            self.distances.append((distance_2000, square))
 
         if use_sort:
             self.distances = sorted(self.distances)
-            # dwalton
-            if self.anchor.index in (63, 13) and has_143:
-                for (distance, square) in self.distances:
-                    log.warning("%s to %s is %d" % (self, square, distance))
 
 
-def assign_points(data_points, anchors, squares_per_side):
+def assign_points(desc, cube, data_points, anchors, squares_per_side):
     """
     For each anchor color find the squares_per_side-1 entries in data_points with the lowest distance
     """
-    clusters = {}
+    clusters = []
     all_distances = []
 
     for anchor in anchors:
-        clusters[anchor] = Cluster(anchor)
-        cluster = clusters[anchor]
+        cluster = Cluster(anchor)
         cluster.calculate_distances(data_points, True)
+        clusters.append(cluster)
 
-        for (distance, square) in cluster.distances:
-            all_distances.append((distance, square, cluster))
+        #for (distance_2000, distance_1994, square) in cluster.distances:
+        #    all_distances.append((distance_2000, distance_1994, square, cluster))
+        for (distance_2000, square) in cluster.distances:
+            all_distances.append((distance_2000, square, cluster))
 
     all_distances = sorted(all_distances)
+    #log.info("all_distance:\n%s\n" % pformat(all_distances))
     used = []
 
-    for (distance, square, cluster) in all_distances:
+    # Assign the anchor squares as the initial members
+    for cluster in clusters:
+        log.warning("%s %s: anchor member %s" % (desc, cluster, cluster.anchor))
+        cluster.members.append(cluster.anchor)
+        used.append(cluster.anchor)
+
+    # First pass, assign squares to clusters, lowest distance first until the cluster has squares_per_side entries
+    #for (distance_2000, distance_1994, square, cluster) in all_distances:
+    for (distance_2000, square, cluster) in all_distances:
         if len(cluster.members) < squares_per_side and square not in used:
+            #log.warning("%s %s: next member %s with cie2000 %d, cie1994 %d" % (desc, cluster, square, distance_2000, distance_1994))
+            log.warning("%s %s: next member %s with cie2000 %d" % (desc, cluster, square, distance_2000))
             cluster.members.append(square)
             used.append(square)
 
-    assignments = []
-    for anchor in anchors:
-        assigments_for_cluster = []
-        cluster = clusters[anchor]
+    # Second pass, see if swapping members between two clusters lowers total color distance
+    # This is only coded for orange/red...will do white/yellow and blue/green if needed
 
+    # Find the orange and red clusters
+    orange_cluster = None
+    red_cluster = None
+
+    for cluster in clusters:
+        square = cube.get_square(cluster.anchor.index)
+        #log.info("%s %s anchor %s color %s %s" % (desc, cluster, square, square.color, square.color_name))
+
+        if square.color_name == 'OR':
+            orange_cluster = cluster
+        elif square.color_name == 'Rd':
+            red_cluster = cluster
+
+    # Build a list of the non-anchor squares in the orange/red clusters
+    non_anchor_orange_red = []
+    for member in orange_cluster.members[1:]:
+        non_anchor_orange_red.append(member)
+
+    for member in red_cluster.members[1:]:
+        non_anchor_orange_red.append(member)
+
+    # Now try all combinations of assigning those squares to the orange/red clusters
+    # Use the combination that results in the lowest color distance
+    min_cie2000_distance = None
+    #min_cie1994_distance = None
+    min_distance_orange_combo = None
+
+    for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
+        total_cie2000_distance = 0
+        #total_cie1994_distance = 0
+
+        for member in combo:
+            total_cie2000_distance += get_cie2000(orange_cluster.anchor.lab, member.lab)
+            #total_cie1994_distance += get_cie1994(orange_cluster.anchor.lab_official, member.lab_official)
+
+        for member in non_anchor_orange_red:
+            if member not in combo:
+                total_cie2000_distance += get_cie2000(red_cluster.anchor.lab, member.lab)
+                #total_cie1994_distance += get_cie1994(red_cluster.anchor.lab_official, member.lab_official)
+
+        #log.info("cie2000 %s, cie1994 %s" % (total_cie2000_distance, total_cie1994_distance))
+        if min_cie2000_distance is None or total_cie2000_distance < min_cie2000_distance:
+            min_cie2000_distance = total_cie2000_distance
+            min_distance_orange_combo = combo
+        #elif total_cie2000_distance == min_cie2000_distance:
+        #    log.info("TIE - implement 1994 tie")
+        #    sys.exit(0)
+
+    #log.info("%s orange_cluster: %s, total distance %d" % (desc, orange_cluster, orange_distance))
+    #log.info("%s red_cluster: %s, total distance %d" % (desc, red_cluster, red_distance))
+    #log.info("%s min distance %s" % (desc, min_cie2000_distance))
+
+    # Build a 2D list to return
+    assignments = []
+    for cluster in clusters:
+        assigments_for_cluster = []
         for cluster_square in cluster.members:
             assigments_for_cluster.append(cluster_square)
         assignments.append(assigments_for_cluster)
-
     return assignments
 
 
-def kmeans_sort_colors_static_anchors(colors):
+def kmeans_sort_colors_static_anchors(desc, cube, colors):
     """
     colors is an OrderedDict where the key is the square index and the value a RGB tuple
     Started from https://github.com/stuntgoat/kmeans/blob/master/kmeans.py
@@ -144,7 +218,7 @@ def kmeans_sort_colors_static_anchors(colors):
             anchors.append(square)
 
     #assert len(anchors) == SIDES_COUNT, "The are %d anchors, there must be %s" % (len(anchors), SIDES_COUNT)
-    return assign_points(dataset, anchors, squares_per_side)
+    return assign_points(desc, cube, dataset, anchors, squares_per_side)
 
 
 def kmeans_sort_colors_dynamic_anchors(colors):
@@ -397,15 +471,27 @@ def delta_e_cie2000(lab1, lab2):
     return delta_e
 
 
-def get_color_distance(c1, c2):
+#def get_cie1994(c1, c2):
+#    try:
+#        return dcache_cie1994[(c1, c2)]
+#    except KeyError:
+#        try:
+#            return dcache_cie1994[(c2, c1)]
+#        except KeyError:
+#            distance = int(delta_e_cie1994(c1, c2))
+#            dcache_cie1994[(c1, c2)] = distance
+#            return distance
+
+
+def get_cie2000(c1, c2):
     try:
-        return dcache[(c1, c2)]
+        return dcache_cie2000[(c1, c2)]
     except KeyError:
         try:
-            return dcache[(c2, c1)]
+            return dcache_cie2000[(c2, c1)]
         except KeyError:
-            distance = delta_e_cie2000(c1, c2)
-            dcache[(c1, c2)] = distance
+            distance = int(round(delta_e_cie2000(c1, c2)))
+            dcache_cie2000[(c1, c2)] = distance
             return distance
 
 
@@ -452,7 +538,7 @@ class Square(object):
         cie_data = []
 
         for (color_name, color_obj) in crayon_box.items():
-            distance = get_color_distance(self.rawcolor, color_obj)
+            distance = get_cie2000(self.rawcolor, color_obj)
             cie_data.append((distance, color_name, color_obj))
         cie_data = sorted(cie_data)
 
@@ -504,7 +590,7 @@ class Edge(object):
         self.square1 = cube.get_square(pos1)
         self.square2 = cube.get_square(pos2)
         self.cube = cube
-        self.dcache = {}
+        self.dcache_cie2000 = {}
         self.orbit_id = get_orbit_id(self.cube.width, edge_index)
 
     def __str__(self):
@@ -531,11 +617,11 @@ class Edge(object):
         return False
 
     def _get_color_distances(self, colorA, colorB):
-        distanceAB = (get_color_distance(self.square1.rawcolor, colorA) +
-                      get_color_distance(self.square2.rawcolor, colorB))
+        distanceAB = (get_cie2000(self.square1.rawcolor, colorA) +
+                      get_cie2000(self.square2.rawcolor, colorB))
 
-        distanceBA = (get_color_distance(self.square1.rawcolor, colorB) +
-                      get_color_distance(self.square2.rawcolor, colorA))
+        distanceBA = (get_cie2000(self.square1.rawcolor, colorB) +
+                      get_cie2000(self.square2.rawcolor, colorA))
 
         return (distanceAB, distanceBA)
 
@@ -544,10 +630,10 @@ class Edge(object):
         Given two colors, return our total color distance
         """
         try:
-            return self.dcache[(colorA, colorB)]
+            return self.dcache_cie2000[(colorA, colorB)]
         except KeyError:
             value = min(self._get_color_distances(colorA, colorB))
-            self.dcache[(colorA, colorB)] = value
+            self.dcache_cie2000[(colorA, colorB)] = value
             return value
 
     def update_colors(self, colorA, colorB):
@@ -585,7 +671,7 @@ class Corner(object):
         self.square2 = cube.get_square(pos2)
         self.square3 = cube.get_square(pos3)
         self.cube = cube
-        self.dcache = {}
+        self.dcache_cie2000 = {}
 
     def __str__(self):
         if self.square1.color and self.square2.color and self.square3.color:
@@ -611,29 +697,29 @@ class Corner(object):
         return False
 
     def _get_color_distances(self, colorA, colorB, colorC):
-        distanceABC = (get_color_distance(self.square1.rawcolor, colorA) +
-                       get_color_distance(self.square2.rawcolor, colorB) +
-                       get_color_distance(self.square3.rawcolor, colorC))
+        distanceABC = (get_cie2000(self.square1.rawcolor, colorA) +
+                       get_cie2000(self.square2.rawcolor, colorB) +
+                       get_cie2000(self.square3.rawcolor, colorC))
 
-        distanceACB = (get_color_distance(self.square1.rawcolor, colorA) +
-                       get_color_distance(self.square2.rawcolor, colorC) +
-                       get_color_distance(self.square3.rawcolor, colorB))
+        distanceACB = (get_cie2000(self.square1.rawcolor, colorA) +
+                       get_cie2000(self.square2.rawcolor, colorC) +
+                       get_cie2000(self.square3.rawcolor, colorB))
 
-        distanceCAB = (get_color_distance(self.square1.rawcolor, colorC) +
-                       get_color_distance(self.square2.rawcolor, colorA) +
-                       get_color_distance(self.square3.rawcolor, colorB))
+        distanceCAB = (get_cie2000(self.square1.rawcolor, colorC) +
+                       get_cie2000(self.square2.rawcolor, colorA) +
+                       get_cie2000(self.square3.rawcolor, colorB))
 
-        distanceCBA = (get_color_distance(self.square1.rawcolor, colorC) +
-                       get_color_distance(self.square2.rawcolor, colorB) +
-                       get_color_distance(self.square3.rawcolor, colorA))
+        distanceCBA = (get_cie2000(self.square1.rawcolor, colorC) +
+                       get_cie2000(self.square2.rawcolor, colorB) +
+                       get_cie2000(self.square3.rawcolor, colorA))
 
-        distanceBCA = (get_color_distance(self.square1.rawcolor, colorB) +
-                       get_color_distance(self.square2.rawcolor, colorC) +
-                       get_color_distance(self.square3.rawcolor, colorA))
+        distanceBCA = (get_cie2000(self.square1.rawcolor, colorB) +
+                       get_cie2000(self.square2.rawcolor, colorC) +
+                       get_cie2000(self.square3.rawcolor, colorA))
 
-        distanceBAC = (get_color_distance(self.square1.rawcolor, colorB) +
-                       get_color_distance(self.square2.rawcolor, colorA) +
-                       get_color_distance(self.square3.rawcolor, colorC))
+        distanceBAC = (get_cie2000(self.square1.rawcolor, colorB) +
+                       get_cie2000(self.square2.rawcolor, colorA) +
+                       get_cie2000(self.square3.rawcolor, colorC))
 
         return (distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC)
 
@@ -642,10 +728,10 @@ class Corner(object):
         Given three colors, return our total color distance
         """
         try:
-            return self.dcache[(colorA, colorB, colorC)]
+            return self.dcache_cie2000[(colorA, colorB, colorC)]
         except KeyError:
             value = min(self._get_color_distances(colorA, colorB, colorC))
-            self.dcache[(colorA, colorB, colorC)] = value
+            self.dcache_cie2000[(colorA, colorB, colorC)] = value
             return value
 
     def update_colors(self, colorA, colorB, colorC):
@@ -1020,7 +1106,17 @@ div.square span {
             fh.write("<div class='clear colors'>\n")
 
             for cluster_square_list in colors:
+                anchor = None
+
                 for cluster_square in cluster_square_list:
+
+                    # The anchor is always the first one on the list
+                    if anchor is None:
+                        anchor = cluster_square
+                        distance_to_anchor = 0
+                    else:
+                        distance_to_anchor = get_cie2000(cluster_square.lab, anchor.lab)
+
                     (red, green, blue) = cluster_square.rgb
 
                     # to use python coloursys convertion we have to rescale to range 0-1
@@ -1037,7 +1133,7 @@ div.square span {
                          red, green, blue,
                          H, S, V,
                          lab.L, lab.a, lab.b,
-                         cluster_square.distance_to_anchor,
+                         distance_to_anchor,
                          cluster_square.index))
 
                 fh.write("<br>")
@@ -1218,7 +1314,7 @@ div.square span {
     def sort_squares(self, target_square, squares_to_sort):
         rank = []
         for square in squares_to_sort:
-            distance = get_color_distance(target_square.rawcolor, square.rawcolor)
+            distance = get_cie2000(target_square.rawcolor, square.rawcolor)
             rank.append((distance, square))
         rank = list(sorted(rank))
 
@@ -1243,7 +1339,7 @@ div.square span {
                 if square not in self.anchor_squares:
                     center_colors[square.position] = square.rgb
 
-        sorted_center_colors = kmeans_sort_colors_static_anchors(center_colors)
+        sorted_center_colors = kmeans_sort_colors_static_anchors(desc, self, center_colors)
         self.write_colors(desc, sorted_center_colors)
 
         # The first entry on each list is the anchor square
@@ -1334,6 +1430,39 @@ div.square span {
             else:
                 raise Exception("Unable to ID the final three anchor squares")
 
+        # Assign color names to each anchor_square. We compute which naming
+        # scheme results in the least total color distance in terms of the anchor
+        # square colors vs the colors in crayola_colors
+        min_distance = None
+        min_distance_permutation = None
+
+        for permutation in permutations(self.crayola_colors.keys()):
+            distance = 0
+
+            for (anchor_square, color_name) in zip(self.anchor_squares, permutation):
+                color_obj = self.crayola_colors[color_name]
+                distance += get_cie2000(anchor_square.rawcolor, color_obj)
+
+            if min_distance is None or distance < min_distance:
+                min_distance = distance
+                min_distance_permutation = permutation
+
+        log.info('assign color names to anchor squares and sides')
+        for (anchor_square, color_name) in zip(self.anchor_squares, min_distance_permutation):
+            color_obj = self.crayola_colors[color_name]
+            # I used to set this to the crayola_color object but I don't think
+            # that buys us anything, it is better to use our rawcolor as our color
+            # since other squares will be comparing themselves to our 'color'.  They
+            # will line up more closely with it than they will the crayola_color object.
+            # anchor_square.color = color_obj
+            anchor_square.color = anchor_square.rawcolor
+            anchor_square.color.name = color_name
+            anchor_square.color_name = color_name
+
+        for anchor_square in self.anchor_squares:
+            log.info("anchor square %s with color %s" % (anchor_square, anchor_square.color_name))
+
+
         # No center squares
         if self.width == 2:
             pass
@@ -1368,38 +1497,6 @@ div.square span {
 
         else:
             raise Exception("Add anchor/center support for %dx%dx%d cubes" % (self.width, self.width, self.width))
-
-        # Assign color names to each anchor_square. We compute which naming
-        # scheme results in the least total color distance in terms of the anchor
-        # square colors vs the colors in crayola_colors
-        min_distance = None
-        min_distance_permutation = None
-
-        for permutation in permutations(self.crayola_colors.keys()):
-            distance = 0
-
-            for (anchor_square, color_name) in zip(self.anchor_squares, permutation):
-                color_obj = self.crayola_colors[color_name]
-                distance += get_color_distance(anchor_square.rawcolor, color_obj)
-
-            if min_distance is None or distance < min_distance:
-                min_distance = distance
-                min_distance_permutation = permutation
-
-        log.info('assign color names to anchor squares and sides')
-        for (anchor_square, color_name) in zip(self.anchor_squares, min_distance_permutation):
-            color_obj = self.crayola_colors[color_name]
-            # I used to set this to the crayola_color object but I don't think
-            # that buys us anything, it is better to use our rawcolor as our color
-            # since other squares will be comparing themselves to our 'color'.  They
-            # will line up more closely with it than they will the crayola_color object.
-            # anchor_square.color = color_obj
-            anchor_square.color = anchor_square.rawcolor
-            anchor_square.color.name = color_name
-            anchor_square.color_name = color_name
-
-        for anchor_square in self.anchor_squares:
-            log.info("anchor square %s with color %s" % (anchor_square, anchor_square.color_name))
 
         # Now that our anchor squares have been assigned a color/color_name, go back and
         # assign the same color/color_name to all of the other center_squares. This ends
@@ -1593,6 +1690,52 @@ div.square span {
         # B and D
         for (edge_index, (pos1, pos2)) in enumerate(zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos)):
             self.edges.append(Edge(self, pos1, pos2, edge_index))
+
+    def resolve_edge_squares_experiment(self):
+        """
+        This only uses kmeans to assign colors, it can produce some invalid cube by doing
+        things like creating two white/red edge pieces on 3x3x3...it needs some more work.
+        """
+
+        # A 2x2x2 will not have edges
+        if not self.edges:
+            return
+
+        for target_orbit_id in range(self.orbits):
+            log.info('Resolve edges for orbit %d' % target_orbit_id)
+            desc = 'edges - orbit %d' % target_orbit_id
+
+            # We must add the anchor squares first
+            edge_colors = OrderedDict()
+            for anchor_square in self.anchor_squares:
+                edge_colors[anchor_square.position] = anchor_square.rgb
+
+            for edge in self.edges:
+                if edge.orbit_id == target_orbit_id:
+                    edge_colors[edge.square1.position] = edge.square1.rgb
+                    edge_colors[edge.square2.position] = edge.square2.rgb
+
+            sorted_edge_colors = kmeans_sort_colors_static_anchors(desc, self, edge_colors)
+            self.write_colors(desc, sorted_edge_colors)
+
+            # The first entry on each list is the anchor square
+            for cluster_square_list in sorted_edge_colors:
+                anchor_square_index = cluster_square_list[0].index
+                anchor_square = self.get_square(anchor_square_index)
+
+                for cluster_square in cluster_square_list[1:]:
+                    square = self.get_square(cluster_square.index)
+                    square.anchor_square = anchor_square
+                    log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
+
+            # edge.update_colors(colorA, colorB)
+            for edge in self.edges:
+                if edge.orbit_id == target_orbit_id:
+                    log.info("%s square1 %s, square2 %s" % (edge, edge.square1, edge.square2))
+                    edge.square1.color      = edge.square1.anchor_square.color
+                    edge.square1.color_name = edge.square1.anchor_square.color_name
+                    edge.square2.color      = edge.square2.anchor_square.color
+                    edge.square2.color_name = edge.square2.anchor_square.color_name
 
     def resolve_edge_squares(self):
 
