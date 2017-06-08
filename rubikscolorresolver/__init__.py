@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-#from colormath.color_objects import sRGBColor, LabColor as OfficialLabColor
-#from colormath.color_diff import delta_e_cie1994
-#from colormath.color_conversions import convert_color
-
 from colormath.color_objects import sRGBColor
 from collections import OrderedDict
 from sklearn.cluster import KMeans
@@ -21,7 +17,6 @@ log = logging.getLogger(__name__)
 
 # Calculating color distances is expensive in terms of CPU so
 # cache the results
-dcache_cie1994 = {}
 dcache_cie2000 = {}
 SIDES_COUNT = 6
 
@@ -46,11 +41,6 @@ def get_euclidean_lab_distance(rgb1, rgb2):
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
-
-
-#def rgb_to_labcolor(red, green, blue):
-#    rgb_obj = sRGBColor(red, green, blue)
-#    return convert_color(rgb_obj, OfficialLabColor)
 
 
 class ClusterSquare(object):
@@ -89,8 +79,6 @@ class Cluster(object):
 
         for square in data_points:
             distance_2000 = get_cie2000(square.lab, self.anchor.lab)
-            #distance_1994 = get_cie1994(square.lab_official, self.anchor.lab_official)
-            #self.distances.append((distance_2000, distance_1994, square))
             self.distances.append((distance_2000, square))
 
         if use_sort:
@@ -109,13 +97,10 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
         cluster.calculate_distances(data_points, True)
         clusters.append(cluster)
 
-        #for (distance_2000, distance_1994, square) in cluster.distances:
-        #    all_distances.append((distance_2000, distance_1994, square, cluster))
         for (distance_2000, square) in cluster.distances:
             all_distances.append((distance_2000, square, cluster))
 
     all_distances = sorted(all_distances)
-    #log.info("all_distance:\n%s\n" % pformat(all_distances))
     used = []
 
     # Assign the anchor squares as the initial members
@@ -125,10 +110,8 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
         used.append(cluster.anchor)
 
     # First pass, assign squares to clusters, lowest distance first until the cluster has squares_per_side entries
-    #for (distance_2000, distance_1994, square, cluster) in all_distances:
     for (distance_2000, square, cluster) in all_distances:
         if len(cluster.members) < squares_per_side and square not in used:
-            #log.warning("%s %s: next member %s with cie2000 %d, cie1994 %d" % (desc, cluster, square, distance_2000, distance_1994))
             log.warning("%s %s: next member %s with cie2000 %d" % (desc, cluster, square, distance_2000))
             cluster.members.append(square)
             used.append(square)
@@ -160,33 +143,31 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
     # Now try all combinations of assigning those squares to the orange/red clusters
     # Use the combination that results in the lowest color distance
     min_cie2000_distance = None
-    #min_cie1994_distance = None
     min_distance_orange_combo = None
 
     for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
         total_cie2000_distance = 0
-        #total_cie1994_distance = 0
 
         for member in combo:
             total_cie2000_distance += get_cie2000(orange_cluster.anchor.lab, member.lab)
-            #total_cie1994_distance += get_cie1994(orange_cluster.anchor.lab_official, member.lab_official)
 
         for member in non_anchor_orange_red:
             if member not in combo:
                 total_cie2000_distance += get_cie2000(red_cluster.anchor.lab, member.lab)
-                #total_cie1994_distance += get_cie1994(red_cluster.anchor.lab_official, member.lab_official)
 
-        #log.info("cie2000 %s, cie1994 %s" % (total_cie2000_distance, total_cie1994_distance))
         if min_cie2000_distance is None or total_cie2000_distance < min_cie2000_distance:
             min_cie2000_distance = total_cie2000_distance
             min_distance_orange_combo = combo
-        #elif total_cie2000_distance == min_cie2000_distance:
-        #    log.info("TIE - implement 1994 tie")
-        #    sys.exit(0)
 
-    #log.info("%s orange_cluster: %s, total distance %d" % (desc, orange_cluster, orange_distance))
-    #log.info("%s red_cluster: %s, total distance %d" % (desc, red_cluster, red_distance))
-    #log.info("%s min distance %s" % (desc, min_cie2000_distance))
+    # Now apply the members to oragne and red to get the minimum color distance
+    for (index, member) in enumerate(min_distance_orange_combo):
+        orange_cluster.members[index+1] = member
+
+    index = 0
+    for member in non_anchor_orange_red:
+        if member not in min_distance_orange_combo:
+            red_cluster.members[index+1] = member
+            index += 1
 
     # Build a 2D list to return
     assignments = []
@@ -1702,7 +1683,7 @@ div.square span {
             return
 
         for target_orbit_id in range(self.orbits):
-            log.info('Resolve edges for orbit %d' % target_orbit_id)
+            log.warning('Resolve edges for orbit %d' % target_orbit_id)
             desc = 'edges - orbit %d' % target_orbit_id
 
             # We must add the anchor squares first
@@ -1748,7 +1729,7 @@ div.square span {
             edge.valid = False
 
         for target_orbit_id in range(self.orbits):
-            log.info('Resolve edges for orbit %d' % target_orbit_id)
+            log.warning('Resolve edges for orbit %d' % target_orbit_id)
 
             unresolved_edges = []
             for edge in self.edges:
