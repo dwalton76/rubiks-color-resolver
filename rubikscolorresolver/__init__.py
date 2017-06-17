@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from colormath.color_objects import sRGBColor
 from collections import OrderedDict
 from sklearn.cluster import KMeans
 from copy import deepcopy, copy
