@@ -132,42 +132,43 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
         elif square.color_name == 'Rd':
             red_cluster = cluster
 
-    # Build a list of the non-anchor squares in the orange/red clusters
-    non_anchor_orange_red = []
-    for member in orange_cluster.members[1:]:
-        non_anchor_orange_red.append(member)
+    if orange_cluster and red_cluster:
+        # Build a list of the non-anchor squares in the orange/red clusters
+        non_anchor_orange_red = []
+        for member in orange_cluster.members[1:]:
+            non_anchor_orange_red.append(member)
 
-    for member in red_cluster.members[1:]:
-        non_anchor_orange_red.append(member)
+        for member in red_cluster.members[1:]:
+            non_anchor_orange_red.append(member)
 
-    # Now try all combinations of assigning those squares to the orange/red clusters
-    # Use the combination that results in the lowest color distance
-    min_cie2000_distance = None
-    min_distance_orange_combo = None
+        # Now try all combinations of assigning those squares to the orange/red clusters
+        # Use the combination that results in the lowest color distance
+        min_cie2000_distance = None
+        min_distance_orange_combo = None
 
-    for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
-        total_cie2000_distance = 0
+        for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
+            total_cie2000_distance = 0
 
-        for member in combo:
-            total_cie2000_distance += get_cie2000(orange_cluster.anchor.lab, member.lab)
+            for member in combo:
+                total_cie2000_distance += get_cie2000(orange_cluster.anchor.lab, member.lab)
 
+            for member in non_anchor_orange_red:
+                if member not in combo:
+                    total_cie2000_distance += get_cie2000(red_cluster.anchor.lab, member.lab)
+
+            if min_cie2000_distance is None or total_cie2000_distance < min_cie2000_distance:
+                min_cie2000_distance = total_cie2000_distance
+                min_distance_orange_combo = combo
+
+        # Now apply the members to oragne and red to get the minimum color distance
+        for (index, member) in enumerate(min_distance_orange_combo):
+            orange_cluster.members[index+1] = member
+
+        index = 0
         for member in non_anchor_orange_red:
-            if member not in combo:
-                total_cie2000_distance += get_cie2000(red_cluster.anchor.lab, member.lab)
-
-        if min_cie2000_distance is None or total_cie2000_distance < min_cie2000_distance:
-            min_cie2000_distance = total_cie2000_distance
-            min_distance_orange_combo = combo
-
-    # Now apply the members to oragne and red to get the minimum color distance
-    for (index, member) in enumerate(min_distance_orange_combo):
-        orange_cluster.members[index+1] = member
-
-    index = 0
-    for member in non_anchor_orange_red:
-        if member not in min_distance_orange_combo:
-            red_cluster.members[index+1] = member
-            index += 1
+            if member not in min_distance_orange_combo:
+                red_cluster.members[index+1] = member
+                index += 1
 
     # Build a 2D list to return
     assignments = []
@@ -179,40 +180,36 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
     return assignments
 
 
-def kmeans_sort_colors_static_anchors(desc, cube, colors):
+def kmeans_sort_colors_static_anchors(desc, cube, colors, buckets_count=SIDES_COUNT):
     """
     colors is an OrderedDict where the key is the square index and the value a RGB tuple
     Started from https://github.com/stuntgoat/kmeans/blob/master/kmeans.py
     """
-    #assert len(anchor_square_indexes) == SIDES_COUNT, "The are %d anchor_square_indexes, there must be %s" % (len(anchor_square_indexes), SIDES_COUNT)
-    #assert len(colors.keys()) % SIDES_COUNT == 0, "The are %d color entries, must be divisible by %s" % (len(colors.keys()), SIDES_COUNT)
-
     dataset = []
     anchors = []
-    squares_per_side = int(len(colors.keys())/SIDES_COUNT)
+    squares_per_side = int(len(colors.keys())/buckets_count)
 
     for (index, (square_index, rgb)) in enumerate(colors.items()):
         square = ClusterSquare(square_index, rgb)
         dataset.append(square)
 
-        if index < SIDES_COUNT:
+        if index < buckets_count:
             anchors.append(square)
 
-    #assert len(anchors) == SIDES_COUNT, "The are %d anchors, there must be %s" % (len(anchors), SIDES_COUNT)
     return assign_points(desc, cube, dataset, anchors, squares_per_side)
 
 
-def kmeans_sort_colors_dynamic_anchors(colors):
+def kmeans_sort_colors_dynamic_anchors(colors, buckets_count=SIDES_COUNT):
     """
     'colors is a list of RGB tuples, sort them into SIDES_COUNT buckets
     """
-    clt = KMeans(n_clusters=SIDES_COUNT)
+    clt = KMeans(n_clusters=buckets_count)
     clt.fit(copy(colors))
 
     # all_buckets will be a list of list
     all_buckets = []
 
-    for target_cluster in range(SIDES_COUNT):
+    for target_cluster in range(buckets_count):
         current_bucket = []
 
         for (index, cluster) in enumerate(clt.labels_):
@@ -940,14 +937,14 @@ class RubiksColorSolverGeneric(object):
             #   green = (20, 105, 74)
             #   yellow = (210, 208, 2)
             #   orange = (148, 53, 9)
-            #   blue = (3, 40, 146)
+            #   blue = (22, 57, 103)
             #   red = (104, 4, 2)
             #
             'Wh': hashtag_rgb_to_labcolor('#ebfefa'),
             'Gr': hashtag_rgb_to_labcolor('#14694a'),
             'Ye': hashtag_rgb_to_labcolor('#d2d002'),
             'OR': hashtag_rgb_to_labcolor('#943509'),
-            'Bu': hashtag_rgb_to_labcolor('#032892'),
+            'Bu': hashtag_rgb_to_labcolor('#163967'),
             'Rd': hashtag_rgb_to_labcolor('#680402')
         }
         self.crayon_box = deepcopy(self.crayola_colors)
@@ -1357,59 +1354,66 @@ div.square span {
             anchor1_rgb = (anchor1.red, anchor1.green, anchor1.blue)
             anchor2_rgb = (anchor2.red, anchor2.green, anchor2.blue)
             anchor3_rgb = (anchor3.red, anchor3.green, anchor3.blue)
-            #log.info("anchor1_rgb %s" % pformat(anchor1_rgb))
-            #log.info("anchor2_rgb %s" % pformat(anchor2_rgb))
-            #log.info("anchor3_rgb %s" % pformat(anchor3_rgb))
 
-            # Find the other three anchor squares...first group all corner squares via kmeans
-            corner_colors = []
+            # Build an OrderedDict we can pass to kmeans_sort_colors_static_anchors()
+            # This will contain all corner squares. Add the three anchors first, this
+            # is a must for kmeans_sort_colors_static_anchors().
+            square_by_index = {}
+            corner_colors = OrderedDict()
+            corner_colors[anchor1.position] = anchor1_rgb
+            corner_colors[anchor2.position] = anchor2_rgb
+            corner_colors[anchor3.position] = anchor3_rgb
+
             for corner in self.corners:
-                corner_colors.append((corner.square1.red, corner.square1.green, corner.square1.blue))
-                corner_colors.append((corner.square2.red, corner.square2.green, corner.square2.blue))
-                corner_colors.append((corner.square3.red, corner.square3.green, corner.square3.blue))
-            sorted_corner_colors = kmeans_sort_colors_dynamic_anchors(corner_colors)
+                if corner.square1.position not in corner_colors:
+                    corner_colors[corner.square1.position] = corner.square1.rgb
+                    square_by_index[corner.square1.position] = corner.square1
 
-            anchor4_list = None
-            anchor5_list = None
-            anchor6_list = None
+                if corner.square2.position not in corner_colors:
+                    corner_colors[corner.square2.position] = corner.square2.rgb
+                    square_by_index[corner.square2.position] = corner.square2
 
-            # Find the "buckets" that contain the 4th, 5th and 6th anchor squares, these are the
-            # buckets that do not contain the 1st, 2nd or 3rd anchor squares.
+                if corner.square3.position not in corner_colors:
+                    corner_colors[corner.square3.position] = corner.square3.rgb
+                    square_by_index[corner.square3.position] = corner.square3
+
+            # We know three anchors for sure, group all corner squares into three
+            # groups based on these anchors
+            sorted_corner_colors = kmeans_sort_colors_static_anchors("First Three Anchors", self, corner_colors, 3)
+            self.write_colors("find anchors among corners", sorted_corner_colors)
+
+            # We know the first three matches for each of the three anchors will be
+            # pretty accurate. The last four though are likely to be a different
+            # color.  Build a list of these 12 corners colors (four of them in each
+            # of the three groups) and use kmeans_sort_colors_dynamic_anchors() to
+            # sort those 12 into three group.
+            remaining_corner_colors = []
+            for cluster_square_list in sorted_corner_colors:
+                for cluster_square in cluster_square_list[4:]:
+                    square = square_by_index[cluster_square.index]
+                    remaining_corner_colors.append((square.red, square.green, square.blue))
+            sorted_corner_colors = kmeans_sort_colors_dynamic_anchors(remaining_corner_colors, 3)
+
+            # The first entry in each of the three buckets/rgb_lists will be our other three
+            # anchor squares.
             for rgb_list in sorted_corner_colors:
-                # Ignore the three groups that contain our first three anchor squares
-                if anchor1_rgb in rgb_list or anchor2_rgb in rgb_list or anchor3_rgb in rgb_list:
-                    continue
+                first_rgb = rgb_list[0]
 
-                if anchor4_list is None:
-                    anchor4_list = rgb_list
+                # Find the corner square with this rgb and set it as an anchor
+                for corner in self.corners:
+                    square1_rgb = (corner.square1.red, corner.square1.green, corner.square1.blue)
+                    square2_rgb = (corner.square2.red, corner.square2.green, corner.square2.blue)
+                    square3_rgb = (corner.square3.red, corner.square3.green, corner.square3.blue)
 
-                elif anchor5_list is None:
-                    anchor5_list = rgb_list
-
-                elif anchor6_list is None:
-                    anchor6_list = rgb_list
-
-            #log.info("anchor4_list %s" % pformat(anchor4_list))
-            #log.info("anchor5_list %s" % pformat(anchor5_list))
-            #log.info("anchor6_list %s" % pformat(anchor6_list))
-
-            # Now find the other corner that has a square in anchor4_list,
-            # anchor5_list, and anchor6_list
-            for corner in self.corners:
-                square1_rgb = (corner.square1.red, corner.square1.green, corner.square1.blue)
-                square2_rgb = (corner.square2.red, corner.square2.green, corner.square2.blue)
-                square3_rgb = (corner.square3.red, corner.square3.green, corner.square3.blue)
-
-                if ((square1_rgb in anchor4_list or square1_rgb in anchor5_list or square1_rgb in anchor6_list) and
-                    (square2_rgb in anchor4_list or square2_rgb in anchor5_list or square2_rgb in anchor6_list) and
-                    (square3_rgb in anchor4_list or square3_rgb in anchor5_list or square3_rgb in anchor6_list)):
-
-                    self.anchor_squares.append(corner.square1)
-                    self.anchor_squares.append(corner.square2)
-                    self.anchor_squares.append(corner.square3)
-                    break
-            else:
-                raise Exception("Unable to ID the final three anchor squares")
+                    if square1_rgb == first_rgb:
+                        self.anchor_squares.append(corner.square1)
+                        break
+                    elif square2_rgb == first_rgb:
+                        self.anchor_squares.append(corner.square2)
+                        break
+                    elif square3_rgb == first_rgb:
+                        self.anchor_squares.append(corner.square3)
+                        break
 
         # Assign color names to each anchor_square. We compute which naming
         # scheme results in the least total color distance in terms of the anchor
@@ -1544,6 +1548,7 @@ div.square span {
                 else:
                     raise Exception("%s: could not determine color, target %s" % (side, target_color_name))
 
+        # dwalton
         with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
             fh.write('<h1>Side -> Color Mapping</h1>\n')
             fh.write('<ul>\n')
