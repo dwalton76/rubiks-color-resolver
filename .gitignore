@@ -90,3 +90,4 @@ ENV/
 
 # vim tmp files 
 *.swp
+cache

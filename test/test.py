@@ -77,6 +77,6 @@ for (desc, filename, expected) in test_cases:
             results.append("   expected %s" % expected)
             results.append("   output   %s" % output)
             log.info(json.dumps(scan_data))
-            break
+            #break
 
 print('\n'.join(results))

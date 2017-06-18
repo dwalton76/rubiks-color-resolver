@@ -939,7 +939,7 @@ class RubiksColorSolverGeneric(object):
             #   blue = (22, 57, 103)
             #   red = (104, 4, 2)
             #
-            'Wh': hashtag_rgb_to_labcolor('#ebfefa'),
+            'Wh': hashtag_rgb_to_labcolor('#ffffff'),
             'Gr': hashtag_rgb_to_labcolor('#14694a'),
             'Ye': hashtag_rgb_to_labcolor('#d2d002'),
             'OR': hashtag_rgb_to_labcolor('#943509'),
