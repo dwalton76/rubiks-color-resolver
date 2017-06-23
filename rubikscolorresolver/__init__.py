@@ -25,8 +25,7 @@ def get_euclidean_rgb_distance(rgb1, rgb2):
     return sqrt(sum([(a - b) ** 2 for a, b in zip(rgb1, rgb2)]))
 
 
-# Not used, I experimented with this for kmeans clustering distance
-def get_euclidean_lab_distance(rgb1, rgb2):
+def get_euclidean_lab_distance(lab1, lab2):
     """
     http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
 
@@ -35,8 +34,6 @@ def get_euclidean_lab_distance(rgb1, rgb2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    lab1 = rgb2lab(rgb1)
-    lab2 = rgb2lab(rgb2)
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
@@ -77,8 +74,10 @@ class Cluster(object):
         self.distances = []
 
         for square in data_points:
-            distance_2000 = get_cie2000(square.lab, self.anchor.lab)
-            self.distances.append((distance_2000, square))
+            #distance_2000 = get_cie2000(square.lab, self.anchor.lab)
+            #self.distances.append((distance_2000, square))
+            distance_lab_euclidean = get_euclidean_lab_distance(square.lab, self.anchor.lab)
+            self.distances.append((distance_lab_euclidean, square))
 
         if use_sort:
             self.distances = sorted(self.distances)
@@ -1092,7 +1091,7 @@ div.square span {
                         anchor = cluster_square
                         distance_to_anchor = 0
                     else:
-                        distance_to_anchor = get_cie2000(cluster_square.lab, anchor.lab)
+                        distance_to_anchor = get_euclidean_lab_distance(cluster_square.lab, anchor.lab)
 
                     (red, green, blue) = cluster_square.rgb
 
