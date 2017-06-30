@@ -553,6 +553,15 @@ def get_orbit_id(cube_size, edge_index):
         else:
             orbit = 1
 
+    elif cube_size == 7:
+
+        if edge_index == 0 or edge_index == 4:
+            orbit = 0
+        elif edge_index == 1 or edge_index == 3:
+            orbit = 1
+        else:
+            orbit = 2
+
     else:
         raise Exception("Add orbit support for %dx%dx%d cubes" % (cube_size, cube_size, cube_size))
 
@@ -1466,17 +1475,37 @@ div.square span {
 
         elif self.width == 6:
 
-            # inside centers
-            self.bind_center_squares_to_anchor((5, 6, 9, 10), '6x6x6 inside centers')
+            # inside x-centers
+            self.bind_center_squares_to_anchor((5, 6, 9, 10), '6x6x6 inside x-centers')
 
-            # outside centers
-            self.bind_center_squares_to_anchor((0, 3, 12, 15), '6x6x6 outside centers')
+            # outside x-centers
+            self.bind_center_squares_to_anchor((0, 3, 12, 15), '6x6x6 outside x-centers')
 
             # left oblique edges
             self.bind_center_squares_to_anchor((1, 7, 8, 14), '6x6x6 left oblique edges')
 
             # right oblique edges
             self.bind_center_squares_to_anchor((2, 4, 11, 13), '6x6x6 right oblique edges')
+
+        elif self.width == 7:
+            # dwalton
+            # inside x-centers
+            self.bind_center_squares_to_anchor((6, 8, 16, 18), '7x7x7 inside x-centers')
+
+            # inside t-centers
+            self.bind_center_squares_to_anchor((7, 11, 13, 17), '7x7x7 inside t-centers')
+
+            # left oblique edges
+            self.bind_center_squares_to_anchor((1, 9, 15, 23), '7x7x7 left oblique edges')
+
+            # right oblique edges
+            self.bind_center_squares_to_anchor((3, 5, 19, 21), '7x7x7 right oblique edges')
+
+            # outside x-centers
+            self.bind_center_squares_to_anchor((0, 4, 20, 24), '7x7x7 outside x-centers')
+
+            # outside t-centers
+            self.bind_center_squares_to_anchor((2, 10, 14, 22), '7x7x7 outside t-centers')
 
         else:
             raise Exception("Add anchor/center support for %dx%dx%d cubes" % (self.width, self.width, self.width))
