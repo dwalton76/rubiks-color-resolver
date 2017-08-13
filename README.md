@@ -2,8 +2,7 @@
 
 ## Install
 ```
-$ sudo apt-get install python3-pip scipy python3-sklearn-lib
-$ sudo pip3 install numpy
+$ sudo apt-get install python3-pip python3-sklearn python3-sklearn-lib
 $ sudo pip3 install https://github.com/dwalton76/rubiks-color-resolver.git
 ```
 
