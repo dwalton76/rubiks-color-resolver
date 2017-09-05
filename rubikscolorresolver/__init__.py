@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-
 from collections import OrderedDict
-from sklearn.cluster import KMeans
 from copy import deepcopy, copy
 from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
@@ -11,6 +8,9 @@ import itertools
 import json
 import logging
 import sys
+
+if sys.version_info < (3,4):
+    raise SystemError('Must be using Python 3.4 or higher')
 
 log = logging.getLogger(__name__)
 
@@ -201,6 +201,8 @@ def kmeans_sort_colors_dynamic_anchors(colors, buckets_count=SIDES_COUNT):
     """
     'colors is a list of RGB tuples, sort them into SIDES_COUNT buckets
     """
+    from sklearn.cluster import KMeans
+
     clt = KMeans(n_clusters=buckets_count)
     clt.fit(copy(colors))
 

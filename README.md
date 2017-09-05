@@ -3,11 +3,15 @@
 ## Install
 ```
 $ sudo apt-get install python3-pip
+$ sudo python3 -m pip install git+https://github.com/dwalton76/rubiks-color-resolver.git
+```
+
+If you will be working with cubes that are 4x4x4 or larger you must also
+install the following
+```
 $ sudo python3 -m pip install numpy
 $ sudo python3 -m pip install scikit-learn
 $ sudo python3 -m pip install scipy
-$ sudo python3 -m pip install git+https://github.com/dwalton76/rubiks-color-resolver.git
-
 ```
 
 ## Overview
