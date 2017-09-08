@@ -39,6 +39,61 @@ def get_euclidean_lab_distance(lab1, lab2):
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
 
 
+def find_index_for_value(list_foo, target, min_index):
+    for (index, value) in enumerate(list_foo):
+        if value == target and index >= min_index:
+            return index
+    raise Exception("Did not find %s in list %s" % (target, pformat(list_foo)))
+
+
+def get_swap_count(listA, listB, debug):
+    """
+    How many swaps do we have to make in listB for it to match listA
+    Example:
+
+        A = [1, 2, 3, 0, 4]
+        B = [3, 4, 1, 0, 2]
+
+    would require 2 swaps
+    """
+    A_length = len(listA)
+    B_length = len(listB)
+    swaps = 0
+    index = 0
+
+    if A_length != B_length:
+        log.info("listA %s" % ' '.join(listA))
+        log.info("listB %s" % ' '.join(listB))
+        assert False, "listA (len %d) and listB (len %d) must be the same length" % (A_length, B_length)
+
+    if debug:
+        log.info("INIT")
+        log.info("listA: %s" % ' '.join(listA))
+        log.info("listB: %s" % ' '.join(listB))
+        log.info("")
+
+    while listA != listB:
+        if listA[index] != listB[index]:
+            listA_value = listA[index]
+            listB_index_with_A_value = find_index_for_value(listB, listA_value, index+1)
+            tmp = listB[index]
+            listB[index] = listB[listB_index_with_A_value]
+            listB[listB_index_with_A_value] = tmp
+            swaps += 1
+
+            if debug:
+                log.info("index %d, swaps %d" % (index, swaps))
+                log.info("listA: %s" % ' '.join(listA))
+                log.info("listB: %s" % ' '.join(listB))
+                log.info("")
+        index += 1
+
+    if debug:
+        log.info("swaps: %d" % swaps)
+        log.info("")
+    return swaps
+
+
 class ClusterSquare(object):
 
     def __init__(self, index, rgb):
@@ -815,6 +870,7 @@ class CubeSide(object):
         self.center_squares = []
         self.edge_squares = []
         self.corner_squares = []
+        self.wing_partner = {}
 
         if self.name == 'U':
             index = 0
@@ -903,6 +959,20 @@ class CubeSide(object):
         else:
             raise Exception('Could not determine egde vs corner vs center')
 
+    def calculate_wing_partners(self):
+        for (pos1, pos2) in self.cube.all_edge_positions:
+            if pos1 >= self.min_pos and pos1 <= self.max_pos:
+                self.wing_partner[pos1] = pos2
+            elif pos2 >= self.min_pos and pos2 <= self.max_pos:
+                self.wing_partner[pos2] = pos1
+
+    def get_wing_partner(self, wing_index):
+        try:
+            return self.wing_partner[wing_index]
+        except KeyError:
+            log.info("wing_partner\n%s\n" % pformat(self.wing_partner))
+            raise
+
 
 class RubiksColorSolverGeneric(object):
 
@@ -912,6 +982,8 @@ class RubiksColorSolverGeneric(object):
         self.squares_per_side = self.width * self.width
         self.scan_data = {}
         self.orbits = int(ceil((self.width - 2) / 2.0))
+        self.all_edge_positions = []
+        self.state = []
 
         if self.width % 2 == 0:
             self.even = True
@@ -936,6 +1008,57 @@ class RubiksColorSolverGeneric(object):
         self.sideB = self.sides['B']
         self.sideD = self.sides['D']
         self.side_order = ('U', 'L', 'F', 'R', 'B', 'D')
+
+        # U and B
+        for (pos1, pos2) in zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # U and L
+        for (pos1, pos2) in zip(self.sideU.edge_west_pos, self.sideL.edge_north_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # U and F
+        for (pos1, pos2) in zip(self.sideU.edge_south_pos, self.sideF.edge_north_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # U and R
+        for (pos1, pos2) in zip(self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos)):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # F and L
+        for (pos1, pos2) in zip(self.sideF.edge_west_pos, self.sideL.edge_east_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # F and R
+        for (pos1, pos2) in zip(self.sideF.edge_east_pos, self.sideR.edge_west_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # F and D
+        for (pos1, pos2) in zip(self.sideF.edge_south_pos, self.sideD.edge_north_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # L and B
+        for (pos1, pos2) in zip(self.sideL.edge_west_pos, self.sideB.edge_east_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # L and D
+        for (pos1, pos2) in zip(self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos)):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # R and D
+        for (pos1, pos2) in zip(self.sideR.edge_south_pos, self.sideD.edge_east_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # R and B
+        for (pos1, pos2) in zip(self.sideR.edge_east_pos, self.sideB.edge_west_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        # B and D
+        for (pos1, pos2) in zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos):
+            self.all_edge_positions.append((pos1, pos2))
+
+        for side in self.sides.values():
+            side.calculate_wing_partners()
 
         self.crayola_colors = {
             # Handy website for converting RGB tuples to hex
@@ -1218,7 +1341,11 @@ div.square span {
 
         log.info("Cube\n\n%s\n" % '\n'.join(output))
 
-    def cube_for_kociemba_strict(self):
+    def set_state(self):
+
+        # If we've already set the state the return
+        if self.state:
+            return
 
         if self.sideU.mid_pos is not None:
             color_to_side_name = {}
@@ -1243,11 +1370,22 @@ div.square span {
                 'Bu' : 'R'
             }
 
+        self.state = ['placeholder', ]
+
+        for side_name in self.side_order:
+            side = self.sides[side_name]
+
+            for x in range(side.min_pos, side.max_pos + 1):
+                color_name = side.squares[x].color_name
+                self.state.append(color_to_side_name[color_name])
+
+    def cube_for_kociemba_strict(self):
+        self.set_state()
+
         data = []
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
-                color_name = side.squares[x].color_name
-                data.append(color_to_side_name[color_name])
+                data.append(self.state[x])
 
         return data
 
@@ -1490,7 +1628,6 @@ div.square span {
             self.bind_center_squares_to_anchor((2, 4, 11, 13), '6x6x6 right oblique edges')
 
         elif self.width == 7:
-            # dwalton
             # inside x-centers
             self.bind_center_squares_to_anchor((6, 8, 16, 18), '7x7x7 inside x-centers')
 
@@ -1577,7 +1714,6 @@ div.square span {
                 else:
                     raise Exception("%s: could not determine color, target %s" % (side, target_color_name))
 
-        # dwalton
         with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
             fh.write('<h1>Side -> Color Mapping</h1>\n')
             fh.write('<ul>\n')
@@ -1851,7 +1987,7 @@ div.square span {
     def resolve_corner_squares(self):
         log.info('Resolve corners')
 
-        # Initially we flag all of our Edge objects as invalid
+        # Initially we flag all of our Corner objects as invalid
         for corner in self.corners:
             corner.valid = False
 
@@ -1917,6 +2053,396 @@ div.square span {
             unresolved_corners.remove(corner)
             log.info("corner %s 1st vs 2nd delta of %d was the highest" % (corner, max_delta))
 
+    def get_corner_swap_count(self, debug=False):
+
+        needed_corners = [
+            'BLU',
+            'BRU',
+            'FLU',
+            'FRU',
+            'DFL',
+            'DFR',
+            'BDL',
+            'BDR']
+
+        to_check = [
+            (self.sideU.corner_pos[0], self.sideL.corner_pos[0], self.sideB.corner_pos[1]), # ULB
+            (self.sideU.corner_pos[1], self.sideR.corner_pos[1], self.sideB.corner_pos[0]), # URB
+            (self.sideU.corner_pos[2], self.sideL.corner_pos[1], self.sideF.corner_pos[0]), # ULF
+            (self.sideU.corner_pos[3], self.sideF.corner_pos[1], self.sideR.corner_pos[0]), # UFR
+            (self.sideD.corner_pos[0], self.sideL.corner_pos[3], self.sideF.corner_pos[2]), # DLF
+            (self.sideD.corner_pos[1], self.sideF.corner_pos[3], self.sideR.corner_pos[2]), # DFR
+            (self.sideD.corner_pos[2], self.sideL.corner_pos[2], self.sideB.corner_pos[3]), # DLB
+            (self.sideD.corner_pos[3], self.sideR.corner_pos[3], self.sideB.corner_pos[2])  # DRB
+        ]
+
+        current_corners = []
+        for (square_index1, square_index2, square_index3) in to_check:
+            square1 = self.state[square_index1]
+            square2 = self.state[square_index2]
+            square3 = self.state[square_index3]
+            corner_str = ''.join(sorted([square1, square2, square3]))
+            current_corners.append(corner_str)
+
+        if debug:
+            log.info("to_check:\n%s" % pformat(to_check))
+            to_check_str = ''
+            for (a, b, c) in to_check:
+                to_check_str += "%4s" % a
+
+            log.info("to_check       :%s" % to_check_str)
+            log.info("needed corners : %s" % ' '.join(needed_corners))
+            log.info("currnet corners: %s" % ' '.join(current_corners))
+            log.info("")
+
+        return get_swap_count(needed_corners, current_corners, debug)
+
+    def corner_swaps_even(self, debug=False):
+        if self.get_corner_swap_count(debug) % 2 == 0:
+            return True
+        return False
+
+    def corner_swaps_odd(self, debug=False):
+        if self.get_corner_swap_count(debug) % 2 == 1:
+            return True
+        return False
+
+    def get_edge_swap_count(self, edges_paired, orbit, debug=False):
+        needed_edges = []
+        to_check = []
+
+        # should not happen
+        if edges_paired and orbit is not None:
+            raise Exception("edges_paired is True and orbit is %s" % orbit)
+
+        edges_per_side = len(self.sideU.edge_north_pos)
+
+        # Upper
+        for (edge_index, square_index) in enumerate(self.sideU.edge_north_pos):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('UB')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('UB%d' % edge_index)
+
+        for (edge_index, square_index) in enumerate(reversed(self.sideU.edge_west_pos)):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('UL')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('UL%d' % edge_index)
+
+        # TODO this was not reversed originally
+        for (edge_index, square_index) in enumerate(reversed(self.sideU.edge_south_pos)):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('UF')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('UF%d' % edge_index)
+
+        for (edge_index, square_index) in enumerate(self.sideU.edge_east_pos):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('UR')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('UR%d' % edge_index)
+
+
+        # Left
+        for (edge_index, square_index) in enumerate(reversed(self.sideL.edge_west_pos)):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('LB')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('LB%d' % edge_index)
+
+        for (edge_index, square_index) in enumerate(self.sideL.edge_east_pos):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('LF')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('LF%d' % edge_index)
+
+
+        # Right
+        for (edge_index, square_index) in enumerate(reversed(self.sideR.edge_west_pos)):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('RF')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('RF%d' % edge_index)
+
+        for (edge_index, square_index) in enumerate(self.sideR.edge_east_pos):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('RB')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('RB%d' % edge_index)
+
+        # Down
+        for (edge_index, square_index) in enumerate(self.sideD.edge_north_pos):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('DF')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('DF%d' % edge_index)
+
+        for (edge_index, square_index) in enumerate(reversed(self.sideD.edge_west_pos)):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('DL')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('DL%d' % edge_index)
+
+        for (edge_index, square_index) in enumerate(reversed(self.sideD.edge_south_pos)):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('DB')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('DB%d' % edge_index)
+
+        for (edge_index, square_index) in enumerate(self.sideD.edge_east_pos):
+            if edges_paired:
+                to_check.append(square_index)
+                needed_edges.append('DR')
+                break
+            else:
+                if orbit_matches(edges_per_side, orbit, edge_index):
+                    to_check.append(square_index)
+                    needed_edges.append('DR%d' % edge_index)
+
+        if debug:
+            to_check_str = ''
+
+            for x in to_check:
+                if edges_paired:
+                    to_check_str += "%3s" % x
+                else:
+                    to_check_str += "%4s" % x
+
+            log.info("to_check     :%s" % to_check_str)
+            log.info("needed edges : %s" % ' '.join(needed_edges))
+
+        current_edges = []
+
+        for square_index in to_check:
+            side = self.get_side(square_index)
+            partner_index = side.get_wing_partner(square_index)
+            square1 = self.state[square_index]
+            square2 = self.state[partner_index]
+
+            if square1 in ('U', 'D'):
+                wing_str = square1 + square2
+            elif square2 in ('U', 'D'):
+                wing_str = square2 + square1
+            elif square1 in ('L', 'R'):
+                wing_str = square1 + square2
+            elif square2 in ('L', 'R'):
+                wing_str = square2 + square1
+            else:
+                raise Exception("Could not determine wing_str for (%s, %s)" % (square1, square2))
+
+            if not edges_paired:
+                # - backup the current state
+                # - add an 'x' to the end of the square_index/partner_index
+                # - move square_index/partner_index to its final edge location
+                # - look for the 'x' to determine if this is the '0' vs '1' wing
+                # - restore the original state
+
+                square1_with_x = square1 + 'x'
+                square2_with_x = square2 + 'x'
+
+                original_state = self.state[:]
+                original_solution = self.solution[:]
+                self.state[square_index] = square1_with_x
+                self.state[partner_index] = square2_with_x
+
+                # 'UB0', 'UB1', 'UL0', 'UL1', 'UF0', 'UF1', 'UR0', 'UR1',
+                # 'LB0', 'LB1', 'LF0', 'LF1', 'RF0', 'RF1', 'RB0', 'RB1',
+                # 'DF0', 'DF1', 'DL0', 'DL1', 'DB0', 'DB1', 'DR0', 'DR1
+                if wing_str == 'UB':
+                    self.move_wing_to_U_north(square_index)
+                    edge_to_check = self.sideU.edge_north_pos
+                    target_side = self.sideU
+
+                elif wing_str == 'UL':
+                    self.move_wing_to_U_west(square_index)
+                    edge_to_check = reversed(self.sideU.edge_west_pos)
+                    target_side = self.sideU
+
+                elif wing_str == 'UF':
+                    self.move_wing_to_U_south(square_index)
+                    edge_to_check = reversed(self.sideU.edge_south_pos)
+                    target_side = self.sideU
+
+                elif wing_str == 'UR':
+                    self.move_wing_to_U_east(square_index)
+                    edge_to_check = self.sideU.edge_east_pos
+                    target_side = self.sideU
+
+                elif wing_str == 'LB':
+                    self.move_wing_to_L_west(square_index)
+                    edge_to_check = reversed(self.sideL.edge_west_pos)
+                    target_side = self.sideL
+
+                elif wing_str == 'LF':
+                    self.move_wing_to_L_east(square_index)
+                    edge_to_check = self.sideL.edge_east_pos
+                    target_side = self.sideL
+
+                elif wing_str == 'RF':
+                    self.move_wing_to_R_west(square_index)
+                    edge_to_check = reversed(self.sideR.edge_west_pos)
+                    target_side = self.sideR
+
+                elif wing_str == 'RB':
+                    self.move_wing_to_R_east(square_index)
+                    edge_to_check = self.sideR.edge_east_pos
+                    target_side = self.sideR
+
+                elif wing_str == 'DF':
+                    self.move_wing_to_D_north(square_index)
+                    edge_to_check = self.sideD.edge_north_pos
+                    target_side = self.sideD
+
+                elif wing_str == 'DL':
+                    self.move_wing_to_D_west(square_index)
+                    edge_to_check = reversed(self.sideD.edge_west_pos)
+                    target_side = self.sideD
+
+                elif wing_str == 'DB':
+                    self.move_wing_to_D_south(square_index)
+                    edge_to_check = reversed(self.sideD.edge_south_pos)
+                    target_side = self.sideD
+
+                elif wing_str == 'DR':
+                    self.move_wing_to_D_east(square_index)
+                    edge_to_check = self.sideD.edge_east_pos
+                    target_side = self.sideD
+
+                else:
+                    raise Exception("invalid wing %s" % wing_str)
+
+                for (edge_index, wing_index) in enumerate(edge_to_check):
+                    wing_value = self.state[wing_index]
+
+                    if wing_value.endswith('x'):
+                        if wing_value.startswith(target_side.name):
+                            wing_str += str(edge_index)
+                        else:
+                            max_edge_index = len(target_side.edge_east_pos) - 1
+                            wing_str += str(max_edge_index - edge_index)
+                        break
+                else:
+                    raise Exception("Could not find wing %s (%d, %d) among %s" % (wing_str, square_index, partner_index, str(edge_to_check)))
+
+                self.state = original_state[:]
+                self.solution = original_solution[:]
+
+            current_edges.append(wing_str)
+
+        if debug:
+            log.info("current edges: %s" % ' '.join(current_edges))
+
+        return get_swap_count(needed_edges, current_edges, debug)
+
+    def edge_swaps_even(self, edges_paired, orbit, debug):
+        if self.get_edge_swap_count(edges_paired, orbit, debug) % 2 == 0:
+            return True
+        return False
+
+    def edge_swaps_odd(self, edges_paired, orbit, debug):
+        if self.get_edge_swap_count(edges_paired, orbit, debug) % 2 == 1:
+            return True
+        return False
+
+    def validate_parity(self):
+        self.set_state()
+
+        if self.width == 3:
+            '''
+            http://www.ryanheise.com/cube/parity.html
+
+            When considering the permutation of all edges and corners together, the
+            overall parity must be even, as dictated by laws of the cube. However,
+            when considering only edges or corners alone, it is possible for their
+            parity to be either even or odd. To obey the laws of the cube, if the edge
+            parity is even then the corner parity must also be even, and if the edge
+            parity is odd then the corner parity must also be odd.
+            '''
+            debug = False
+            edges_even = self.edge_swaps_even(True, None, debug)
+            corners_even = self.corner_swaps_even(debug)
+
+            if edges_even != corners_even:
+                log.warning("edges_even %s != corners_even %s, swap one corner to create valid parity" % (edges_even, corners_even))
+
+                distances = []
+                # which two corners are the closest in terms of color
+                for cornerA in self.corners:
+                    for cornerB in self.corners:
+                        if cornerA == cornerB:
+                            continue
+
+                        distance = cornerA.color_distance(cornerB.square1.color, cornerB.square2.color, cornerB.square3.color)
+                        distances.append((distance, cornerA, cornerB))
+
+                distances = sorted(distances)
+                (_, cornerA, cornerB) = distances[0]
+
+                tmp_cornerA_square1_color = cornerA.square1.color
+                tmp_cornerA_square2_color = cornerA.square2.color
+                tmp_cornerA_square3_color = cornerA.square3.color
+                tmp_cornerB_square1_color = cornerB.square1.color
+                tmp_cornerB_square2_color = cornerB.square2.color
+                tmp_cornerB_square3_color = cornerB.square3.color
+
+                #log.info("pre cornerA %s square1 %s, square2 %s, square3 %s" % (cornerA, cornerA.square1.color, cornerA.square2.color, cornerA.square3.color))
+                #log.info("pre cornerB %s square1 %s, square2 %s, square3 %s" % (cornerB, cornerB.square1.color, cornerB.square2.color, cornerB.square3.color))
+                cornerA.update_colors(tmp_cornerB_square1_color, tmp_cornerB_square2_color, tmp_cornerB_square3_color)
+                cornerB.update_colors(tmp_cornerA_square1_color, tmp_cornerA_square2_color, tmp_cornerA_square3_color)
+                #log.info("pst cornerA %s square1 %s, square2 %s, square3 %s" % (cornerA, cornerA.square1.color, cornerA.square2.color, cornerA.square3.color))
+                #log.info("pst cornerB %s square1 %s, square2 %s, square3 %s" % (cornerB, cornerB.square1.color, cornerB.square2.color, cornerB.square3.color))
+
+                self.state = []
+                self.set_state()
+                edges_even = self.edge_swaps_even(True, None, debug)
+                corners_even = self.corner_swaps_even(debug)
+                log.warning("edges_even %s, corners_even %s" % (edges_even, corners_even))
+
     def write_final_cube(self):
         data = self.cube_for_json()
         cube = ['dummy', ]
@@ -1937,6 +2463,7 @@ div.square span {
 
         self.resolve_edge_squares()
         self.resolve_corner_squares()
+        self.validate_parity()
         self.print_cube()
         self.print_layout()
         self.write_final_cube()
