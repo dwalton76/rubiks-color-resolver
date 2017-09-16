@@ -252,29 +252,6 @@ def kmeans_sort_colors_static_anchors(desc, cube, colors, buckets_count=SIDES_CO
     return assign_points(desc, cube, dataset, anchors, squares_per_side)
 
 
-def kmeans_sort_colors_dynamic_anchors(colors, buckets_count=SIDES_COUNT):
-    """
-    'colors is a list of RGB tuples, sort them into SIDES_COUNT buckets
-    """
-    from sklearn.cluster import KMeans
-
-    clt = KMeans(n_clusters=buckets_count)
-    clt.fit(copy(colors))
-
-    # all_buckets will be a list of list
-    all_buckets = []
-
-    for target_cluster in range(buckets_count):
-        current_bucket = []
-
-        for (index, cluster) in enumerate(clt.labels_):
-            if cluster == target_cluster:
-                current_bucket.append(colors[index])
-        all_buckets.append(current_bucket)
-
-    return all_buckets
-
-
 def get_cube_layout(size):
     """
     Example: size is 3, return the following string:
@@ -1529,38 +1506,13 @@ div.square span {
             sorted_corner_colors = kmeans_sort_colors_static_anchors("First Three Anchors", self, corner_colors, 3)
             self.write_colors("find anchors among corners", sorted_corner_colors)
 
-            # We know the first three matches for each of the three anchors will be
-            # pretty accurate. The last four though are likely to be a different
-            # color.  Build a list of these 12 corners colors (four of them in each
-            # of the three groups) and use kmeans_sort_colors_dynamic_anchors() to
-            # sort those 12 into three group.
-            remaining_corner_colors = []
-            for cluster_square_list in sorted_corner_colors:
-                for cluster_square in cluster_square_list[4:]:
-                    square = square_by_index[cluster_square.index]
-                    remaining_corner_colors.append((square.red, square.green, square.blue))
-            sorted_corner_colors = kmeans_sort_colors_dynamic_anchors(remaining_corner_colors, 3)
-
-            # The first entry in each of the three buckets/rgb_lists will be our other three
-            # anchor squares.
-            for rgb_list in sorted_corner_colors:
-                first_rgb = rgb_list[0]
-
-                # Find the corner square with this rgb and set it as an anchor
-                for corner in self.corners:
-                    square1_rgb = (corner.square1.red, corner.square1.green, corner.square1.blue)
-                    square2_rgb = (corner.square2.red, corner.square2.green, corner.square2.blue)
-                    square3_rgb = (corner.square3.red, corner.square3.green, corner.square3.blue)
-
-                    if square1_rgb == first_rgb:
-                        self.anchor_squares.append(corner.square1)
-                        break
-                    elif square2_rgb == first_rgb:
-                        self.anchor_squares.append(corner.square2)
-                        break
-                    elif square3_rgb == first_rgb:
-                        self.anchor_squares.append(corner.square3)
-                        break
+            # Now we have three "rows" of colors where the anchor squares we know
+            # for sure are on the far left.  Use the three squares on the far
+            # right as the other three anchor squares.
+            for cluster_squares_for_anchor in sorted_corner_colors:
+                last_cluster_square = cluster_squares_for_anchor[-1]
+                last_square = square_by_index[last_cluster_square.index]
+                self.anchor_squares.append(last_square)
 
         # Assign color names to each anchor_square. We compute which naming
         # scheme results in the least total color distance in terms of the anchor
