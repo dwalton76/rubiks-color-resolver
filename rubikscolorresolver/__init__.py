@@ -169,59 +169,61 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
             cluster.members.append(square)
             used.append(square)
 
-    # Second pass, see if swapping members between two clusters lowers total color distance
-    # This is only coded for orange/red...will do white/yellow and blue/green if needed
+    # Second pass, see if swapping members between two clusters lowers total
+    # color distance. I originally only did this for orange vs. red but it is
+    # also useful for yellow vs. white and blue vs. green.  Anyway, that is
+    # why all of the variable names below are orange/red.
+    for (orange_color_name, red_color_name) in (('OR', 'Rd'), ('Ye', 'Wh'), ('Bu', 'Gr')):
+        # Find the orange and red clusters
+        orange_cluster = None
+        red_cluster = None
 
-    # Find the orange and red clusters
-    orange_cluster = None
-    red_cluster = None
+        for cluster in clusters:
+            square = cube.get_square(cluster.anchor.index)
+            #log.info("%s %s anchor %s color %s %s" % (desc, cluster, square, square.color, square.color_name))
 
-    for cluster in clusters:
-        square = cube.get_square(cluster.anchor.index)
-        #log.info("%s %s anchor %s color %s %s" % (desc, cluster, square, square.color, square.color_name))
+            if square.color_name == orange_color_name:
+                orange_cluster = cluster
+            elif square.color_name == red_color_name:
+                red_cluster = cluster
 
-        if square.color_name == 'OR':
-            orange_cluster = cluster
-        elif square.color_name == 'Rd':
-            red_cluster = cluster
+        if orange_cluster and red_cluster:
+            # Build a list of the non-anchor squares in the orange/red clusters
+            non_anchor_orange_red = []
+            for member in orange_cluster.members[1:]:
+                non_anchor_orange_red.append(member)
 
-    if orange_cluster and red_cluster:
-        # Build a list of the non-anchor squares in the orange/red clusters
-        non_anchor_orange_red = []
-        for member in orange_cluster.members[1:]:
-            non_anchor_orange_red.append(member)
+            for member in red_cluster.members[1:]:
+                non_anchor_orange_red.append(member)
 
-        for member in red_cluster.members[1:]:
-            non_anchor_orange_red.append(member)
+            # Now try all combinations of assigning those squares to the orange/red clusters
+            # Use the combination that results in the lowest color distance
+            min_euclidean_distance = None
+            min_distance_orange_combo = None
 
-        # Now try all combinations of assigning those squares to the orange/red clusters
-        # Use the combination that results in the lowest color distance
-        min_cie2000_distance = None
-        min_distance_orange_combo = None
+            for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
+                total_euclidean_distance = 0
 
-        for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
-            total_cie2000_distance = 0
+                for member in combo:
+                    total_euclidean_distance += get_euclidean_lab_distance(orange_cluster.anchor.lab, member.lab)
 
-            for member in combo:
-                total_cie2000_distance += get_cie2000(orange_cluster.anchor.lab, member.lab)
+                for member in non_anchor_orange_red:
+                    if member not in combo:
+                        total_euclidean_distance += get_euclidean_lab_distance(red_cluster.anchor.lab, member.lab)
 
+                if min_euclidean_distance is None or total_euclidean_distance < min_euclidean_distance:
+                    min_euclidean_distance = total_euclidean_distance
+                    min_distance_orange_combo = combo
+
+            # Now apply the members to oragne and red to get the minimum color distance
+            for (index, member) in enumerate(min_distance_orange_combo):
+                orange_cluster.members[index+1] = member
+
+            index = 0
             for member in non_anchor_orange_red:
-                if member not in combo:
-                    total_cie2000_distance += get_cie2000(red_cluster.anchor.lab, member.lab)
-
-            if min_cie2000_distance is None or total_cie2000_distance < min_cie2000_distance:
-                min_cie2000_distance = total_cie2000_distance
-                min_distance_orange_combo = combo
-
-        # Now apply the members to oragne and red to get the minimum color distance
-        for (index, member) in enumerate(min_distance_orange_combo):
-            orange_cluster.members[index+1] = member
-
-        index = 0
-        for member in non_anchor_orange_red:
-            if member not in min_distance_orange_combo:
-                red_cluster.members[index+1] = member
-                index += 1
+                if member not in min_distance_orange_combo:
+                    red_cluster.members[index+1] = member
+                    index += 1
 
     # Build a 2D list to return
     assignments = []
