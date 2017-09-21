@@ -47,7 +47,7 @@ results = []
 
 for (desc, filename, expected) in test_cases:
     log.warning("Test: %s" % desc)
-    with open(filename, 'r') as fh:
+    with open('test/' + filename, 'r') as fh:
         scan_data_str_keys = json.load(fh)
         scan_data = {}
 
