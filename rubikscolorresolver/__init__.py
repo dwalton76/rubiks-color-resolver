@@ -597,7 +597,7 @@ def get_orbit_id(cube_size, edge_index):
             orbit = 2
 
     else:
-        raise Exception("Add orbit support for %dx%dx%d cubes" % (cube_size, cube_size, cube_size))
+        raise Exception("Add orbit ID support for %dx%dx%d cubes" % (cube_size, cube_size, cube_size))
 
     return orbit
 
@@ -1698,24 +1698,24 @@ div.square span {
         self.corners.append(Corner(self, self.sideD.corner_pos[3], self.sideR.corner_pos[3], self.sideB.corner_pos[2]))
 
     def identify_corner_squares(self):
-        self.valid_corners = []
-        self.valid_corners.append((self.sideU.color, self.sideF.color, self.sideL.color))
-        self.valid_corners.append((self.sideU.color, self.sideR.color, self.sideF.color))
-        self.valid_corners.append((self.sideU.color, self.sideL.color, self.sideB.color))
-        self.valid_corners.append((self.sideU.color, self.sideB.color, self.sideR.color))
+        self.valid_corner_colors = []
+        self.valid_corner_colors.append((self.sideU.color, self.sideF.color, self.sideL.color))
+        self.valid_corner_colors.append((self.sideU.color, self.sideR.color, self.sideF.color))
+        self.valid_corner_colors.append((self.sideU.color, self.sideL.color, self.sideB.color))
+        self.valid_corner_colors.append((self.sideU.color, self.sideB.color, self.sideR.color))
 
-        self.valid_corners.append((self.sideD.color, self.sideL.color, self.sideF.color))
-        self.valid_corners.append((self.sideD.color, self.sideF.color, self.sideR.color))
-        self.valid_corners.append((self.sideD.color, self.sideB.color, self.sideL.color))
-        self.valid_corners.append((self.sideD.color, self.sideR.color, self.sideB.color))
-        self.valid_corners = sorted(self.valid_corners)
+        self.valid_corner_colors.append((self.sideD.color, self.sideL.color, self.sideF.color))
+        self.valid_corner_colors.append((self.sideD.color, self.sideF.color, self.sideR.color))
+        self.valid_corner_colors.append((self.sideD.color, self.sideB.color, self.sideL.color))
+        self.valid_corner_colors.append((self.sideD.color, self.sideR.color, self.sideB.color))
+        self.valid_corner_colors = sorted(self.valid_corner_colors)
 
     def identify_edge_squares(self):
 
         # valid_edges are the color combos that we need to look for. edges are Edge
         # objects, eventually we try to fill in the colors for each Edge object with
         # a color tuple from valid_edges
-        self.valid_edges = []
+        self.valid_edge_colors = []
         self.edges = []
 
         num_of_edge_squares_per_side = len(self.sideU.edge_squares)
@@ -1729,22 +1729,22 @@ div.square span {
         # add the correct number
         for (edge_index, x) in enumerate(range(int(num_of_edge_squares_per_side/4))):
             orbit_id = get_orbit_id(self.width, edge_index)
-            self.valid_edges.append((self.sideU.color, self.sideB.color, orbit_id))
-            self.valid_edges.append((self.sideU.color, self.sideL.color, orbit_id))
-            self.valid_edges.append((self.sideU.color, self.sideF.color, orbit_id))
-            self.valid_edges.append((self.sideU.color, self.sideR.color, orbit_id))
+            self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id))
+            self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id))
+            self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id))
 
-            self.valid_edges.append((self.sideF.color, self.sideL.color, orbit_id))
-            self.valid_edges.append((self.sideF.color, self.sideR.color, orbit_id))
+            self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id))
 
-            self.valid_edges.append((self.sideB.color, self.sideL.color, orbit_id))
-            self.valid_edges.append((self.sideB.color, self.sideR.color, orbit_id))
+            self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id))
 
-            self.valid_edges.append((self.sideD.color, self.sideF.color, orbit_id))
-            self.valid_edges.append((self.sideD.color, self.sideL.color, orbit_id))
-            self.valid_edges.append((self.sideD.color, self.sideR.color, orbit_id))
-            self.valid_edges.append((self.sideD.color, self.sideB.color, orbit_id))
-        self.valid_edges = sorted(self.valid_edges)
+            self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id))
+            self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id))
+            self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id))
+        self.valid_edge_colors = sorted(self.valid_edge_colors)
 
         # U and B
         for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos))):
@@ -1861,12 +1861,13 @@ div.square span {
             # And our 'needed' list of colors will hold the colors of every edge color pair
             needed_edge_color_tuple = []
 
-            for (edge1, edge2, orbit_id) in sorted(self.valid_edges):
+            for (edge1_color, edge2_color, orbit_id) in sorted(self.valid_edge_colors):
                 if orbit_id == target_orbit_id:
-                    needed_edge_color_tuple.append((edge1, edge2, orbit_id))
-                assert edge1.name != edge2.name,\
+                    needed_edge_color_tuple.append((edge1_color, edge2_color))
+
+                assert edge1_color.name != edge2_color.name,\
                     "Both sides of an edge cannot be the same color, edge1 %s and edge2 %s are both %s" %\
-                    (edge1, edge2, edge1.name)
+                    (edge1_color, edge2_color, edge1_color.name)
 
             while unresolved_edges:
 
@@ -1876,7 +1877,7 @@ div.square span {
                     foo = []
                     colors_checked = []
 
-                    for (colorA, colorB, orbit) in needed_edge_color_tuple:
+                    for (colorA, colorB) in needed_edge_color_tuple:
 
                         # For 4x4x4 and larger there are multiple edges with the
                         # same pair of colors so if we've already calculated the
@@ -1932,7 +1933,7 @@ div.square span {
                 edge.first_vs_second_delta = None
                 edge.first_place_colors = None
                 edge.first_distance = None
-                needed_edge_color_tuple.remove((colorA, colorB, target_orbit_id))
+                needed_edge_color_tuple.remove((colorA, colorB))
                 unresolved_edges.remove(edge)
                 log.info("edge %s 1st vs 2nd delta of %d was the highest" % (edge, max_delta))
 
@@ -1944,7 +1945,7 @@ div.square span {
             corner.valid = False
 
         # And our 'needed' list will hold the colors of all 8 corners
-        needed_corner_color_tuple = self.valid_corners
+        needed_corner_color_tuple = self.valid_corner_colors
 
         unresolved_corners = [corner for corner in self.corners if corner.valid is False]
 
