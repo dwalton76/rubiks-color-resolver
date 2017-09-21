@@ -1194,6 +1194,7 @@ div.square span {
 
             for cluster_square_list in colors:
                 anchor = None
+                total_distance = 0
 
                 for cluster_square in cluster_square_list:
 
@@ -1222,7 +1223,9 @@ div.square span {
                          lab.L, lab.a, lab.b,
                          distance_to_anchor,
                          cluster_square.index))
+                    total_distance += distance_to_anchor
 
+                fh.write("<span class='square'>%d</span>\n" % total_distance)
                 fh.write("<br>")
 
             fh.write("</div>\n")
