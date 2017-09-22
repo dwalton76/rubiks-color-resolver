@@ -16,13 +16,7 @@ log = logging.getLogger(__name__)
 
 # Calculating color distances is expensive in terms of CPU so
 # cache the results
-dcache_cie2000 = {}
 SIDES_COUNT = 6
-
-
-# Not used, I experimented with this for kmeans clustering distance
-def get_euclidean_rgb_distance(rgb1, rgb2):
-    return sqrt(sum([(a - b) ** 2 for a, b in zip(rgb1, rgb2)]))
 
 
 def get_euclidean_lab_distance(lab1, lab2):
@@ -129,8 +123,6 @@ class Cluster(object):
         self.distances = []
 
         for square in data_points:
-            #distance_2000 = get_cie2000(square.lab, self.anchor.lab)
-            #self.distances.append((distance_2000, square))
             distance_lab_euclidean = get_euclidean_lab_distance(square.lab, self.anchor.lab)
             self.distances.append((distance_lab_euclidean, square))
 
@@ -483,30 +475,6 @@ def delta_e_cie2000(lab1, lab2):
     return delta_e
 
 
-#def get_cie1994(c1, c2):
-#    try:
-#        return dcache_cie1994[(c1, c2)]
-#    except KeyError:
-#        try:
-#            return dcache_cie1994[(c2, c1)]
-#        except KeyError:
-#            distance = int(delta_e_cie1994(c1, c2))
-#            dcache_cie1994[(c1, c2)] = distance
-#            return distance
-
-
-def get_cie2000(c1, c2):
-    try:
-        return dcache_cie2000[(c1, c2)]
-    except KeyError:
-        try:
-            return dcache_cie2000[(c2, c1)]
-        except KeyError:
-            distance = int(round(delta_e_cie2000(c1, c2)))
-            dcache_cie2000[(c1, c2)] = distance
-            return distance
-
-
 def hex_to_rgb(rgb_string):
     """
     Takes #112233 and returns the RGB values in decimal
@@ -550,7 +518,7 @@ class Square(object):
         cie_data = []
 
         for (color_name, color_obj) in crayon_box.items():
-            distance = get_cie2000(self.rawcolor, color_obj)
+            distance = get_euclidean_lab_distance(self.rawcolor, color_obj)
             cie_data.append((distance, color_name, color_obj))
         cie_data = sorted(cie_data)
 
@@ -604,6 +572,56 @@ def get_orbit_id(cube_size, edge_index):
     return orbit
 
 
+def get_orbit_index(cube_size, edge_index):
+    """
+    For a given orbit there can only be two edges of a certain color so we
+    label them 0 or 1.  For example the UF edge of a 4x4x4, the first UF edge
+    is UF0 and the second is UF1
+    """
+
+    if cube_size == 3:
+        return 0
+
+    elif cube_size == 4:
+        return edge_index
+
+    elif cube_size == 5:
+
+        if edge_index == 0 or edge_index == 1:
+            return 0
+
+        elif edge_index == 2:
+            return 1
+
+        else:
+            raise Exception("Invalid edge_index %d for %dx%dx%d cube" % (edge_index, cube_size, cube_size, cube_size))
+
+    elif cube_size == 6:
+
+        if edge_index == 0 or edge_index == 1:
+            return 0
+
+        elif edge_index == 2 or edge_index == 3:
+            return 1
+
+        else:
+            raise Exception("Invalid edge_index %d for %dx%dx%d cube" % (edge_index, cube_size, cube_size, cube_size))
+
+    elif cube_size == 7:
+
+        if edge_index == 0 or edge_index == 1 or edge_index == 2:
+            return 0
+
+        elif edge_index == 3 or edge_index == 4:
+            return 1
+
+        else:
+            raise Exception("Invalid edge_index %d for %dx%dx%d cube" % (edge_index, cube_size, cube_size, cube_size))
+
+    else:
+        raise Exception("Add orbit index support for %dx%dx%d cubes" % (cube_size, cube_size, cube_size))
+
+
 class Edge(object):
 
     def __init__(self, cube, pos1, pos2, edge_index):
@@ -611,8 +629,9 @@ class Edge(object):
         self.square1 = cube.get_square(pos1)
         self.square2 = cube.get_square(pos2)
         self.cube = cube
-        self.dcache_cie2000 = {}
+        self.color_distance_cache = {}
         self.orbit_id = get_orbit_id(self.cube.width, edge_index)
+        self.orbit_index = get_orbit_index(self.cube.width, edge_index)
 
     def __str__(self):
         result = "%s%d/%s%d" %\
@@ -638,11 +657,11 @@ class Edge(object):
         return False
 
     def _get_color_distances(self, colorA, colorB):
-        distanceAB = (get_cie2000(self.square1.rawcolor, colorA) +
-                      get_cie2000(self.square2.rawcolor, colorB))
+        distanceAB = (get_euclidean_lab_distance(self.square1.rawcolor, colorA) +
+                      get_euclidean_lab_distance(self.square2.rawcolor, colorB))
 
-        distanceBA = (get_cie2000(self.square1.rawcolor, colorB) +
-                      get_cie2000(self.square2.rawcolor, colorA))
+        distanceBA = (get_euclidean_lab_distance(self.square1.rawcolor, colorB) +
+                      get_euclidean_lab_distance(self.square2.rawcolor, colorA))
 
         return (distanceAB, distanceBA)
 
@@ -651,10 +670,10 @@ class Edge(object):
         Given two colors, return our total color distance
         """
         try:
-            return self.dcache_cie2000[(colorA, colorB)]
+            return self.color_distance_cache[(colorA, colorB)]
         except KeyError:
             value = min(self._get_color_distances(colorA, colorB))
-            self.dcache_cie2000[(colorA, colorB)] = value
+            self.color_distance_cache[(colorA, colorB)] = value
             return value
 
     def update_colors(self, colorA, colorB):
@@ -692,7 +711,7 @@ class Corner(object):
         self.square2 = cube.get_square(pos2)
         self.square3 = cube.get_square(pos3)
         self.cube = cube
-        self.dcache_cie2000 = {}
+        self.color_distance_cache = {}
 
     def __str__(self):
         if self.square1.color and self.square2.color and self.square3.color:
@@ -718,29 +737,29 @@ class Corner(object):
         return False
 
     def _get_color_distances(self, colorA, colorB, colorC):
-        distanceABC = (get_cie2000(self.square1.rawcolor, colorA) +
-                       get_cie2000(self.square2.rawcolor, colorB) +
-                       get_cie2000(self.square3.rawcolor, colorC))
+        distanceABC = (get_euclidean_lab_distance(self.square1.rawcolor, colorA) +
+                       get_euclidean_lab_distance(self.square2.rawcolor, colorB) +
+                       get_euclidean_lab_distance(self.square3.rawcolor, colorC))
 
-        distanceACB = (get_cie2000(self.square1.rawcolor, colorA) +
-                       get_cie2000(self.square2.rawcolor, colorC) +
-                       get_cie2000(self.square3.rawcolor, colorB))
+        distanceACB = (get_euclidean_lab_distance(self.square1.rawcolor, colorA) +
+                       get_euclidean_lab_distance(self.square2.rawcolor, colorC) +
+                       get_euclidean_lab_distance(self.square3.rawcolor, colorB))
 
-        distanceCAB = (get_cie2000(self.square1.rawcolor, colorC) +
-                       get_cie2000(self.square2.rawcolor, colorA) +
-                       get_cie2000(self.square3.rawcolor, colorB))
+        distanceCAB = (get_euclidean_lab_distance(self.square1.rawcolor, colorC) +
+                       get_euclidean_lab_distance(self.square2.rawcolor, colorA) +
+                       get_euclidean_lab_distance(self.square3.rawcolor, colorB))
 
-        distanceCBA = (get_cie2000(self.square1.rawcolor, colorC) +
-                       get_cie2000(self.square2.rawcolor, colorB) +
-                       get_cie2000(self.square3.rawcolor, colorA))
+        distanceCBA = (get_euclidean_lab_distance(self.square1.rawcolor, colorC) +
+                       get_euclidean_lab_distance(self.square2.rawcolor, colorB) +
+                       get_euclidean_lab_distance(self.square3.rawcolor, colorA))
 
-        distanceBCA = (get_cie2000(self.square1.rawcolor, colorB) +
-                       get_cie2000(self.square2.rawcolor, colorC) +
-                       get_cie2000(self.square3.rawcolor, colorA))
+        distanceBCA = (get_euclidean_lab_distance(self.square1.rawcolor, colorB) +
+                       get_euclidean_lab_distance(self.square2.rawcolor, colorC) +
+                       get_euclidean_lab_distance(self.square3.rawcolor, colorA))
 
-        distanceBAC = (get_cie2000(self.square1.rawcolor, colorB) +
-                       get_cie2000(self.square2.rawcolor, colorA) +
-                       get_cie2000(self.square3.rawcolor, colorC))
+        distanceBAC = (get_euclidean_lab_distance(self.square1.rawcolor, colorB) +
+                       get_euclidean_lab_distance(self.square2.rawcolor, colorA) +
+                       get_euclidean_lab_distance(self.square3.rawcolor, colorC))
 
         return (distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC)
 
@@ -749,10 +768,10 @@ class Corner(object):
         Given three colors, return our total color distance
         """
         try:
-            return self.dcache_cie2000[(colorA, colorB, colorC)]
+            return self.color_distance_cache[(colorA, colorB, colorC)]
         except KeyError:
             value = min(self._get_color_distances(colorA, colorB, colorC))
-            self.dcache_cie2000[(colorA, colorB, colorC)] = value
+            self.color_distance_cache[(colorA, colorB, colorC)] = value
             return value
 
     def update_colors(self, colorA, colorB, colorC):
@@ -1421,7 +1440,7 @@ div.square span {
     def sort_squares(self, target_square, squares_to_sort):
         rank = []
         for square in squares_to_sort:
-            distance = get_cie2000(target_square.rawcolor, square.rawcolor)
+            distance = get_euclidean_lab_distance(target_square.rawcolor, square.rawcolor)
             rank.append((distance, square))
         rank = list(sorted(rank))
 
@@ -1515,7 +1534,7 @@ div.square span {
             # for sure are on the far left.  Use the three squares on the far
             # right as the other three anchor squares.
             for cluster_squares_for_anchor in sorted_corner_colors:
-                last_cluster_square = cluster_squares_for_anchor[-1]
+                last_cluster_square = cluster_squares_for_anchor[-2]
                 last_square = square_by_index[last_cluster_square.index]
                 self.anchor_squares.append(last_square)
 
@@ -1530,7 +1549,7 @@ div.square span {
 
             for (anchor_square, color_name) in zip(self.anchor_squares, permutation):
                 color_obj = self.crayola_colors[color_name]
-                distance += get_cie2000(anchor_square.rawcolor, color_obj)
+                distance += get_euclidean_lab_distance(anchor_square.rawcolor, color_obj)
 
             if min_distance is None or distance < min_distance:
                 min_distance = distance
@@ -2419,6 +2438,7 @@ div.square span {
         self.identify_edge_squares()
         self.print_cube()
 
+        #self.resolve_edge_squares_experiment()
         self.resolve_edge_squares()
         self.resolve_corner_squares()
         self.validate_parity()
