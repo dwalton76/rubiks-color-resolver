@@ -28,6 +28,7 @@ def get_euclidean_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
+    # return delta_e_cie2000(lab1, lab2)
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
@@ -741,27 +742,15 @@ class Corner(object):
                        get_euclidean_lab_distance(self.square2.rawcolor, colorB) +
                        get_euclidean_lab_distance(self.square3.rawcolor, colorC))
 
-        distanceACB = (get_euclidean_lab_distance(self.square1.rawcolor, colorA) +
-                       get_euclidean_lab_distance(self.square2.rawcolor, colorC) +
-                       get_euclidean_lab_distance(self.square3.rawcolor, colorB))
-
         distanceCAB = (get_euclidean_lab_distance(self.square1.rawcolor, colorC) +
                        get_euclidean_lab_distance(self.square2.rawcolor, colorA) +
                        get_euclidean_lab_distance(self.square3.rawcolor, colorB))
-
-        distanceCBA = (get_euclidean_lab_distance(self.square1.rawcolor, colorC) +
-                       get_euclidean_lab_distance(self.square2.rawcolor, colorB) +
-                       get_euclidean_lab_distance(self.square3.rawcolor, colorA))
 
         distanceBCA = (get_euclidean_lab_distance(self.square1.rawcolor, colorB) +
                        get_euclidean_lab_distance(self.square2.rawcolor, colorC) +
                        get_euclidean_lab_distance(self.square3.rawcolor, colorA))
 
-        distanceBAC = (get_euclidean_lab_distance(self.square1.rawcolor, colorB) +
-                       get_euclidean_lab_distance(self.square2.rawcolor, colorA) +
-                       get_euclidean_lab_distance(self.square3.rawcolor, colorC))
-
-        return (distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC)
+        return (distanceABC, distanceCAB, distanceBCA)
 
     def color_distance(self, colorA, colorB, colorC):
         """
@@ -775,14 +764,12 @@ class Corner(object):
             return value
 
     def update_colors(self, colorA, colorB, colorC):
-        (distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC) = self._get_color_distances(colorA, colorB, colorC)
-        min_distance = min(distanceABC, distanceACB, distanceCAB, distanceCBA, distanceBCA, distanceBAC)
+        (distanceABC, distanceCAB, distanceBCA) = self._get_color_distances(colorA, colorB, colorC)
+        min_distance = min(distanceABC, distanceCAB, distanceBCA)
 
-        log.debug("%s vs %s/%s/%s, distanceABC %s, distanceACB %s, distanceCAB %s, distanceCBA %s, distanceBCA %s, distanceBAC %s, min %s" %
+        log.debug("%s vs %s/%s/%s, distanceABC %s, distanceCAB %s, distanceBCA %s, min %s" %
                     (self, colorA.name, colorB.name, colorC.name,
-                    distanceABC, distanceACB,
-                    distanceCAB, distanceCBA,
-                    distanceBCA, distanceBAC, min_distance))
+                    distanceABC, distanceCAB, distanceBCA, min_distance))
 
         if min_distance == distanceABC:
             self.square1.color = colorA
@@ -792,14 +779,6 @@ class Corner(object):
             self.square3.color = colorC
             self.square3.color_name = colorC.name
 
-        elif min_distance == distanceACB:
-            self.square1.color = colorA
-            self.square1.color_name = colorA.name
-            self.square2.color = colorC
-            self.square2.color_name = colorC.name
-            self.square3.color = colorB
-            self.square3.color_name = colorB.name
-
         elif min_distance == distanceCAB:
             self.square1.color = colorC
             self.square1.color_name = colorC.name
@@ -808,14 +787,6 @@ class Corner(object):
             self.square3.color = colorB
             self.square3.color_name = colorB.name
 
-        elif min_distance == distanceCBA:
-            self.square1.color = colorC
-            self.square1.color_name = colorC.name
-            self.square2.color = colorB
-            self.square2.color_name = colorB.name
-            self.square3.color = colorA
-            self.square3.color_name = colorA.name
-
         elif min_distance == distanceBCA:
             self.square1.color = colorB
             self.square1.color_name = colorB.name
@@ -823,14 +794,6 @@ class Corner(object):
             self.square2.color_name = colorC.name
             self.square3.color = colorA
             self.square3.color_name = colorA.name
-
-        elif min_distance == distanceBAC:
-            self.square1.color = colorB
-            self.square1.color_name = colorB.name
-            self.square2.color = colorA
-            self.square2.color_name = colorA.name
-            self.square3.color = colorC
-            self.square3.color_name = colorC.name
 
         else:
             raise Exception("We should not be here")
@@ -1070,12 +1033,16 @@ class RubiksColorSolverGeneric(object):
             #   blue = (22, 57, 103)
             #   red = (104, 4, 2)
             #
-            'Wh': hashtag_rgb_to_labcolor('#ffffff'),
+            'Wh': hashtag_rgb_to_labcolor('#FFFFFF'),
             'Gr': hashtag_rgb_to_labcolor('#14694a'),
-            'Ye': hashtag_rgb_to_labcolor('#d2d002'),
+            'Ye': hashtag_rgb_to_labcolor('#FFFF00'),
             'OR': hashtag_rgb_to_labcolor('#943509'),
             'Bu': hashtag_rgb_to_labcolor('#163967'),
             'Rd': hashtag_rgb_to_labcolor('#680402')
+            #'Gr': hashtag_rgb_to_labcolor('#00FF00'),
+            #'OR': hashtag_rgb_to_labcolor('#ff8c00'),
+            #'Bu': hashtag_rgb_to_labcolor('#0000FF'),
+            #'Rd': hashtag_rgb_to_labcolor('#FF0000')
         }
         self.crayon_box = deepcopy(self.crayola_colors)
         self.www_header()
@@ -1877,6 +1844,7 @@ div.square span {
         for target_orbit_id in range(self.orbits):
             log.warning('Resolve edges for orbit %d' % target_orbit_id)
 
+            resolved_edges = []
             unresolved_edges = []
             for edge in self.edges:
                 if edge.orbit_id == target_orbit_id:
@@ -1943,6 +1911,26 @@ div.square span {
                 max_delta_distance = None
 
                 for edge in unresolved_edges:
+
+                    # dwalton...still working on this
+                    '''
+                    (colorA, colorB) = edge.first_place_colors
+
+                    # If there is another edge with this color combo we must
+                    # continue if we have the same orbit_index
+                    orbit_index_already_matched = False
+
+                    for tmp_edge in resolved_edges:
+                        if ((tmp_edge.square1.color == colorA and tmp_edge.square2.color == colorB) or
+                            (tmp_edge.square1.color == colorB and tmp_edge.square2.color == colorA)):
+
+                            if tmp_edge.orbit_index == edge.orbit_index:
+                                orbit_index_already_matched = True
+
+                    if orbit_index_already_matched:
+                        continue
+                    '''
+
                     if max_delta is None or edge.first_vs_second_delta > max_delta:
                         max_delta = edge.first_vs_second_delta
                         max_delta_edge = edge
@@ -1959,6 +1947,7 @@ div.square span {
                 edge.first_distance = None
                 needed_edge_color_tuple.remove((colorA, colorB))
                 unresolved_edges.remove(edge)
+                resolved_edges.append(edge)
                 log.info("edge %s 1st vs 2nd delta of %d was the highest" % (edge, max_delta))
 
     def resolve_corner_squares(self):
