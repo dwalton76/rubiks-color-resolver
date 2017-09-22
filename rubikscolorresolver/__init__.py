@@ -28,7 +28,10 @@ def get_euclidean_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    # return delta_e_cie2000(lab1, lab2)
+
+    # See TODO in resolve_edge_squares()
+    #return delta_e_cie2000(lab1, lab2)
+
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
@@ -1701,6 +1704,18 @@ div.square span {
         self.valid_corner_colors.append((self.sideD.color, self.sideR.color, self.sideB.color))
         self.valid_corner_colors = sorted(self.valid_corner_colors)
 
+    def max_orbit_index(self, orbit_id):
+
+        if (self.width == 4 or self.width == 6 or
+            (self.width == 5 and orbit_id == 0) or
+            (self.width == 7 and (orbit_id == 0 or orbit_id == 1))):
+            return 1
+
+        if self.width > 7:
+            raise Exception("Add max_orbit_index() support for this size cube")
+
+        return 0
+
     def identify_edge_squares(self):
 
         # valid_edges are the color combos that we need to look for. edges are Edge
@@ -1715,26 +1730,41 @@ div.square span {
         if not num_of_edge_squares_per_side:
             return
 
-        # For a 3x3x3 there is only one edge between F and U but for a 4x4x4
-        # there are 2 of them and for a 5x5x5 there are 3 of them...loop to
-        # add the correct number
-        for (edge_index, x) in enumerate(range(int(num_of_edge_squares_per_side/4))):
-            orbit_id = get_orbit_id(self.width, edge_index)
-            self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id))
-            self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id))
-            self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id))
+        for orbit_id in range(self.orbits):
+            orbit_index = 0
+            self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id, orbit_index))
 
-            self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id))
+            self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id, orbit_index))
 
-            self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id))
+            self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id, orbit_index))
 
-            self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id))
-            self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id))
-            self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id))
+            self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id, orbit_index))
+
+            if self.max_orbit_index(orbit_id):
+                orbit_index = 1
+                self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id, orbit_index))
+
+                self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id, orbit_index))
+
+                self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id, orbit_index))
+
+                self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id, orbit_index))
         self.valid_edge_colors = sorted(self.valid_edge_colors)
 
         # U and B
@@ -1842,7 +1872,7 @@ div.square span {
             edge.valid = False
 
         for target_orbit_id in range(self.orbits):
-            log.warning('Resolve edges for orbit %d' % target_orbit_id)
+            log.warning('Resolve edges for orbit id %d' % target_orbit_id)
 
             resolved_edges = []
             unresolved_edges = []
@@ -1853,8 +1883,17 @@ div.square span {
             # And our 'needed' list of colors will hold the colors of every edge color pair
             needed_edge_color_tuple = []
 
-            for (edge1_color, edge2_color, orbit_id) in sorted(self.valid_edge_colors):
+            # TODO: In get_euclidean_lab_distance uncomment the delta_c_cie2000() call and then run
+            # ./usr/bin/rubiks-color-resolver.py --filename test/test-data/4x4x4-random-03.txt
+            #
+            # It will produce an invalid cube because it can assign two pairs of colors to the same
+            # edge. So instead of assigning one pair to UF0 and the other to UF1, it assigns both
+            # to UFO. We need to take the orbit_index (the 0/1 in UF0 and UF1) into account when
+            # assigning colors to edges.
+
+            for (edge1_color, edge2_color, orbit_id, orbit_index) in sorted(self.valid_edge_colors):
                 if orbit_id == target_orbit_id:
+                    #needed_edge_color_tuple.append((edge1_color, edge2_color, orbit_index))
                     needed_edge_color_tuple.append((edge1_color, edge2_color))
 
                 assert edge1_color.name != edge2_color.name,\
@@ -1869,7 +1908,11 @@ div.square span {
                     foo = []
                     colors_checked = []
 
+                    #for (colorA, colorB, orbit_index) in needed_edge_color_tuple:
                     for (colorA, colorB) in needed_edge_color_tuple:
+
+                        #if edge.orbit_index != orbit_index:
+                        #    continue
 
                         # For 4x4x4 and larger there are multiple edges with the
                         # same pair of colors so if we've already calculated the
@@ -1911,26 +1954,6 @@ div.square span {
                 max_delta_distance = None
 
                 for edge in unresolved_edges:
-
-                    # dwalton...still working on this
-                    '''
-                    (colorA, colorB) = edge.first_place_colors
-
-                    # If there is another edge with this color combo we must
-                    # continue if we have the same orbit_index
-                    orbit_index_already_matched = False
-
-                    for tmp_edge in resolved_edges:
-                        if ((tmp_edge.square1.color == colorA and tmp_edge.square2.color == colorB) or
-                            (tmp_edge.square1.color == colorB and tmp_edge.square2.color == colorA)):
-
-                            if tmp_edge.orbit_index == edge.orbit_index:
-                                orbit_index_already_matched = True
-
-                    if orbit_index_already_matched:
-                        continue
-                    '''
-
                     if max_delta is None or edge.first_vs_second_delta > max_delta:
                         max_delta = edge.first_vs_second_delta
                         max_delta_edge = edge
@@ -1945,6 +1968,8 @@ div.square span {
                 edge.first_vs_second_delta = None
                 edge.first_place_colors = None
                 edge.first_distance = None
+
+                #needed_edge_color_tuple.remove((colorA, colorB, edge.orbit_index))
                 needed_edge_color_tuple.remove((colorA, colorB))
                 unresolved_edges.remove(edge)
                 resolved_edges.append(edge)
