@@ -14,8 +14,6 @@ if sys.version_info < (3,4):
 
 log = logging.getLogger(__name__)
 
-# Calculating color distances is expensive in terms of CPU so
-# cache the results
 SIDES_COUNT = 6
 
 
@@ -576,56 +574,6 @@ def get_orbit_id(cube_size, edge_index):
     return orbit
 
 
-def get_orbit_index(cube_size, edge_index):
-    """
-    For a given orbit there can only be two edges of a certain color so we
-    label them 0 or 1.  For example the UF edge of a 4x4x4, the first UF edge
-    is UF0 and the second is UF1
-    """
-
-    if cube_size == 3:
-        return 0
-
-    elif cube_size == 4:
-        return edge_index
-
-    elif cube_size == 5:
-
-        if edge_index == 0 or edge_index == 1:
-            return 0
-
-        elif edge_index == 2:
-            return 1
-
-        else:
-            raise Exception("Invalid edge_index %d for %dx%dx%d cube" % (edge_index, cube_size, cube_size, cube_size))
-
-    elif cube_size == 6:
-
-        if edge_index == 0 or edge_index == 1:
-            return 0
-
-        elif edge_index == 2 or edge_index == 3:
-            return 1
-
-        else:
-            raise Exception("Invalid edge_index %d for %dx%dx%d cube" % (edge_index, cube_size, cube_size, cube_size))
-
-    elif cube_size == 7:
-
-        if edge_index == 0 or edge_index == 1 or edge_index == 2:
-            return 0
-
-        elif edge_index == 3 or edge_index == 4:
-            return 1
-
-        else:
-            raise Exception("Invalid edge_index %d for %dx%dx%d cube" % (edge_index, cube_size, cube_size, cube_size))
-
-    else:
-        raise Exception("Add orbit index support for %dx%dx%d cubes" % (cube_size, cube_size, cube_size))
-
-
 class Edge(object):
 
     def __init__(self, cube, pos1, pos2, edge_index):
@@ -635,12 +583,14 @@ class Edge(object):
         self.cube = cube
         self.color_distance_cache = {}
         self.orbit_id = get_orbit_id(self.cube.width, edge_index)
-        self.orbit_index = get_orbit_index(self.cube.width, edge_index)
+        self.orbit_index = None
+
+        assert self.square1.position < self.square2.position, "square1 pos %d, square2 pos %d" % (self.square1.position, self.square2.position)
 
     def __str__(self):
-        result = "%s%d/%s%d" %\
+        result = "%s%d/%s%d(%d/%s) " %\
             (self.square1.side, self.square1.position,
-             self.square2.side, self.square2.position)
+             self.square2.side, self.square2.position, self.orbit_id, self.orbit_index)
 
         if self.square1.color and self.square2.color:
             result += " %s/%s" % (self.square1.color.name, self.square2.color.name)
@@ -680,6 +630,12 @@ class Edge(object):
             self.color_distance_cache[(colorA, colorB)] = value
             return value
 
+    def reset_colors(self):
+        self.square1.color = None
+        self.square1.color_name = None
+        self.square2.color = None
+        self.square2.color_name = None
+
     def update_colors(self, colorA, colorB):
         (distanceAB, distanceBA) = self._get_color_distances(colorA, colorB)
 
@@ -693,6 +649,50 @@ class Edge(object):
             self.square1.color_name = colorB.name
             self.square2.color = colorA
             self.square2.color_name = colorA.name
+
+    def reset_orbit_index(self):
+        self.orbit_index = None
+
+    def update_orbit_index(self):
+        """
+        Colors have been assigned, we must now determine if this is a UF0 or a UF1 edge
+        """
+        color_to_side_name = {
+            'Wh' : 'U',
+            'Gr' : 'L',
+            'Rd' : 'F',
+            'Bu' : 'R',
+            'OR' : 'B',
+            'Ye' : 'D'
+        }
+
+        square1_side_name = color_to_side_name[self.square1.color.name]
+        square2_side_name = color_to_side_name[self.square2.color.name]
+
+        if self.cube.width == 2 or self.cube.width == 3:
+            pass
+
+        elif self.cube.width == 4:
+            from rubikscolorresolver.cube_444 import orbit_index_444
+            self.orbit_index = orbit_index_444[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
+
+        elif self.cube.width == 5:
+            from rubikscolorresolver.cube_555 import orbit_index_555
+            self.orbit_index = orbit_index_555[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
+
+        elif self.cube.width == 6:
+            from rubikscolorresolver.cube_666 import orbit_index_666
+            self.orbit_index = orbit_index_666[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
+
+        elif self.cube.width == 7:
+            from rubikscolorresolver.cube_777 import orbit_index_777
+            self.orbit_index = orbit_index_777[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
+
+        else:
+            # orbit_index_444, etc were generated via https://github.com/dwalton76/rubiks-cube-NxNxN-solver
+            # If you need to build an orbit_index_XYZ for a larger cube search in "orbit_index_444" in rubikscubennnsolver/__init__.py
+            # for instructions on how to do so.
+            raise Exception("Add update_orbit_index support for %dx%dx%d cubes" % (self.cube.width, self.cube.width, self.cube.width))
 
     def validate(self):
 
@@ -1731,40 +1731,38 @@ div.square span {
             return
 
         for orbit_id in range(self.orbits):
-            orbit_index = 0
-            self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id))
+            self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id))
+            self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id))
 
-            self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id))
 
-            self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id))
 
-            self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id, orbit_index))
-            self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id, orbit_index))
+            self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id))
+            self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id))
+            self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id))
+            self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id))
 
             if self.max_orbit_index(orbit_id):
-                orbit_index = 1
-                self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id))
+                self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id))
+                self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id))
+                self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id))
 
-                self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id))
+                self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id))
 
-                self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id))
+                self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id))
 
-                self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id, orbit_index))
-                self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id, orbit_index))
+                self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id))
+                self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id))
+                self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id))
+                self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id))
         self.valid_edge_colors = sorted(self.valid_edge_colors)
 
         # U and B
@@ -1784,7 +1782,7 @@ div.square span {
             self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # F and L
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideF.edge_west_pos, self.sideL.edge_east_pos)):
+        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideL.edge_east_pos, self.sideF.edge_west_pos)):
             self.edges.append(Edge(self, pos1, pos2, edge_index))
 
         # F and R
@@ -1883,17 +1881,8 @@ div.square span {
             # And our 'needed' list of colors will hold the colors of every edge color pair
             needed_edge_color_tuple = []
 
-            # TODO: In get_euclidean_lab_distance uncomment the delta_c_cie2000() call and then run
-            # ./usr/bin/rubiks-color-resolver.py --filename test/test-data/4x4x4-random-03.txt
-            #
-            # It will produce an invalid cube because it can assign two pairs of colors to the same
-            # edge. So instead of assigning one pair to UF0 and the other to UF1, it assigns both
-            # to UFO. We need to take the orbit_index (the 0/1 in UF0 and UF1) into account when
-            # assigning colors to edges.
-
-            for (edge1_color, edge2_color, orbit_id, orbit_index) in sorted(self.valid_edge_colors):
+            for (edge1_color, edge2_color, orbit_id) in sorted(self.valid_edge_colors):
                 if orbit_id == target_orbit_id:
-                    #needed_edge_color_tuple.append((edge1_color, edge2_color, orbit_index))
                     needed_edge_color_tuple.append((edge1_color, edge2_color))
 
                 assert edge1_color.name != edge2_color.name,\
@@ -1908,11 +1897,7 @@ div.square span {
                     foo = []
                     colors_checked = []
 
-                    #for (colorA, colorB, orbit_index) in needed_edge_color_tuple:
                     for (colorA, colorB) in needed_edge_color_tuple:
-
-                        #if edge.orbit_index != orbit_index:
-                        #    continue
 
                         # For 4x4x4 and larger there are multiple edges with the
                         # same pair of colors so if we've already calculated the
@@ -1921,7 +1906,29 @@ div.square span {
                         if (colorA, colorB) in colors_checked:
                             continue
 
-                        distance = edge.color_distance(colorA, colorB)
+                        # For a 4x4x4 cube there are two UF edges, UF0 and UF1.  We
+                        # have to make sure that we do not resolve edges in a way
+                        # that creates two UF0 edges. If this edge would be UF0 but
+                        # we have already found UF0 then set the distance to be 9999.
+                        orbit_index_already_assigned = False
+
+                        if self.width >= 4:
+                            edge.update_colors(colorA, colorB)
+                            edge.update_orbit_index()
+
+                            for tmp_edge in resolved_edges:
+                                if tmp_edge.orbit_index == edge.orbit_index:
+                                    orbit_index_already_assigned = True
+                                    break
+
+                            edge.reset_colors()
+                            edge.reset_orbit_index()
+
+                        if orbit_index_already_assigned:
+                            distance = 9999
+                        else:
+                            distance = edge.color_distance(colorA, colorB)
+
                         foo.append((distance, (colorA, colorB)))
                         colors_checked.append((colorA, colorB))
 
@@ -1964,12 +1971,12 @@ div.square span {
                 (colorA, colorB) = edge.first_place_colors
 
                 edge.update_colors(colorA, colorB)
+                edge.update_orbit_index()
                 edge.valid = True
                 edge.first_vs_second_delta = None
                 edge.first_place_colors = None
                 edge.first_distance = None
 
-                #needed_edge_color_tuple.remove((colorA, colorB, edge.orbit_index))
                 needed_edge_color_tuple.remove((colorA, colorB))
                 unresolved_edges.remove(edge)
                 resolved_edges.append(edge)
@@ -2129,7 +2136,6 @@ div.square span {
                     to_check.append(square_index)
                     needed_edges.append('UL%d' % edge_index)
 
-        # TODO this was not reversed originally
         for (edge_index, square_index) in enumerate(reversed(self.sideU.edge_south_pos)):
             if edges_paired:
                 to_check.append(square_index)
