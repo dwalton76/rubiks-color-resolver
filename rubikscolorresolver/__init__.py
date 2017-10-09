@@ -601,6 +601,9 @@ class Edge(object):
 
         return result
 
+    def __repr__(self):
+        return self.__str__()
+
     def __lt__(self, other):
         return 0
 
@@ -729,6 +732,9 @@ class Corner(object):
                 (self.square1.side, self.square1.position,
                  self.square2.side, self.square2.position,
                  self.square3.side, self.square3.position)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __lt__(self, other):
         return 0
@@ -2405,9 +2411,9 @@ div.square span {
             corners_even = self.corner_swaps_even(debug)
 
             if edges_even != corners_even:
-                log.warning("edges_even %s != corners_even %s, swap one corner to create valid parity" % (edges_even, corners_even))
-
+                log.warning("edges_even %s != corners_even %s, swap most ambiguous corner or edge to create valid parity" % (edges_even, corners_even))
                 distances = []
+
                 # which two corners are the closest in terms of color
                 for cornerA in self.corners:
                     for cornerB in self.corners:
@@ -2415,24 +2421,48 @@ div.square span {
                             continue
 
                         distance = cornerA.color_distance(cornerB.square1.color, cornerB.square2.color, cornerB.square3.color)
+                        distance = float(distance / 3)
                         distances.append((distance, cornerA, cornerB))
 
+                # which two edges are the closest in terms of color
+                for edgeA in self.edges:
+                    for edgeB in self.edges:
+                        if edgeA == edgeB:
+                            continue
+
+                        distance = edgeA.color_distance(edgeB.square1.color, edgeB.square2.color)
+                        distance = float(distance / 2)
+                        distances.append((distance, edgeA, edgeB))
+
                 distances = sorted(distances)
-                (_, cornerA, cornerB) = distances[0]
+                log.info("distances\n%s\n" % pformat(distances))
+                (_, corner_or_edgeA, corner_or_edgeB) = distances[0]
 
-                tmp_cornerA_square1_color = cornerA.square1.color
-                tmp_cornerA_square2_color = cornerA.square2.color
-                tmp_cornerA_square3_color = cornerA.square3.color
-                tmp_cornerB_square1_color = cornerB.square1.color
-                tmp_cornerB_square2_color = cornerB.square2.color
-                tmp_cornerB_square3_color = cornerB.square3.color
+                if isinstance(corner_or_edgeA, Corner):
+                    cornerA = corner_or_edgeA
+                    cornerB = corner_or_edgeB
 
-                #log.info("pre cornerA %s square1 %s, square2 %s, square3 %s" % (cornerA, cornerA.square1.color, cornerA.square2.color, cornerA.square3.color))
-                #log.info("pre cornerB %s square1 %s, square2 %s, square3 %s" % (cornerB, cornerB.square1.color, cornerB.square2.color, cornerB.square3.color))
-                cornerA.update_colors(tmp_cornerB_square1_color, tmp_cornerB_square2_color, tmp_cornerB_square3_color)
-                cornerB.update_colors(tmp_cornerA_square1_color, tmp_cornerA_square2_color, tmp_cornerA_square3_color)
-                #log.info("pst cornerA %s square1 %s, square2 %s, square3 %s" % (cornerA, cornerA.square1.color, cornerA.square2.color, cornerA.square3.color))
-                #log.info("pst cornerB %s square1 %s, square2 %s, square3 %s" % (cornerB, cornerB.square1.color, cornerB.square2.color, cornerB.square3.color))
+                    tmp_cornerA_square1_color = cornerA.square1.color
+                    tmp_cornerA_square2_color = cornerA.square2.color
+                    tmp_cornerA_square3_color = cornerA.square3.color
+                    tmp_cornerB_square1_color = cornerB.square1.color
+                    tmp_cornerB_square2_color = cornerB.square2.color
+                    tmp_cornerB_square3_color = cornerB.square3.color
+
+                    cornerA.update_colors(tmp_cornerB_square1_color, tmp_cornerB_square2_color, tmp_cornerB_square3_color)
+                    cornerB.update_colors(tmp_cornerA_square1_color, tmp_cornerA_square2_color, tmp_cornerA_square3_color)
+
+                else:
+                    edgeA = corner_or_edgeA
+                    edgeB = corner_or_edgeB
+
+                    tmp_edgeA_square1_color = edgeA.square1.color
+                    tmp_edgeA_square2_color = edgeA.square2.color
+                    tmp_edgeB_square1_color = edgeB.square1.color
+                    tmp_edgeB_square2_color = edgeB.square2.color
+
+                    edgeA.update_colors(tmp_edgeB_square1_color, tmp_edgeB_square2_color)
+                    edgeB.update_colors(tmp_edgeA_square1_color, tmp_edgeA_square2_color)
 
                 self.state = []
                 self.set_state()
