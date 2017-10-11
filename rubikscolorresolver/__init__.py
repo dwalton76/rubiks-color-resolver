@@ -26,9 +26,8 @@ def get_euclidean_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-
-    # See TODO in resolve_edge_squares()
-    #return delta_e_cie2000(lab1, lab2)
+    # I experiment with this sometimes
+    # return delta_e_cie2000(lab1, lab2)
 
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
@@ -776,9 +775,9 @@ class Corner(object):
         (distanceABC, distanceCAB, distanceBCA) = self._get_color_distances(colorA, colorB, colorC)
         min_distance = min(distanceABC, distanceCAB, distanceBCA)
 
-        log.debug("%s vs %s/%s/%s, distanceABC %s, distanceCAB %s, distanceBCA %s, min %s" %
-                    (self, colorA.name, colorB.name, colorC.name,
-                    distanceABC, distanceCAB, distanceBCA, min_distance))
+        #log.debug("%s vs %s/%s/%s, distanceABC %s, distanceCAB %s, distanceBCA %s, min %s" %
+        #            (self, colorA.name, colorB.name, colorC.name,
+        #            distanceABC, distanceCAB, distanceBCA, min_distance))
 
         if min_distance == distanceABC:
             self.square1.color = colorA
@@ -1865,6 +1864,46 @@ div.square span {
                     edge.square2.color      = edge.square2.anchor_square.color
                     edge.square2.color_name = edge.square2.anchor_square.color_name
 
+    def resolve_corner_squares_experiment(self):
+        """
+        This only uses kmeans to assign colors, it can produce some invalid cube by doing
+        things like creating two white/red/blue corner pieces on 3x3x3...it needs some more work.
+        """
+        log.warning('Resolve corners')
+        desc = 'corners'
+
+        # We must add the anchor squares first
+        corner_colors = OrderedDict()
+        for anchor_square in self.anchor_squares:
+            corner_colors[anchor_square.position] = anchor_square.rgb
+
+        for corner in self.corners:
+            corner_colors[corner.square1.position] = corner.square1.rgb
+            corner_colors[corner.square2.position] = corner.square2.rgb
+            corner_colors[corner.square3.position] = corner.square3.rgb
+
+        sorted_corner_colors = kmeans_sort_colors_static_anchors(desc, self, corner_colors)
+        self.write_colors(desc, sorted_corner_colors)
+
+        # The first entry on each list is the anchor square
+        for cluster_square_list in sorted_corner_colors:
+            anchor_square_index = cluster_square_list[0].index
+            anchor_square = self.get_square(anchor_square_index)
+
+            for cluster_square in cluster_square_list[1:]:
+                square = self.get_square(cluster_square.index)
+                square.anchor_square = anchor_square
+                log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
+
+        for corner in self.corners:
+            log.info("%s square1 %s, square2 %s, square3 %s" % (corner, corner.square1, corner.square2, corner.square3))
+            corner.square1.color      = corner.square1.anchor_square.color
+            corner.square1.color_name = corner.square1.anchor_square.color_name
+            corner.square2.color      = corner.square2.anchor_square.color
+            corner.square2.color_name = corner.square2.anchor_square.color_name
+            corner.square3.color      = corner.square3.anchor_square.color
+            corner.square3.color_name = corner.square3.anchor_square.color_name
+
     def resolve_edge_squares(self):
 
         # A 2x2x2 will not have edges
@@ -1950,15 +1989,22 @@ div.square span {
                         edge.first_vs_second_delta = second_distance - first_distance
                         edge.first_place_colors = (first_colorA, first_colorB)
                         edge.first_distance = first_distance
-                        log.debug("%s 1st vs 2nd delta %d (%d - %d)" % (edge, edge.first_vs_second_delta, second_distance, first_distance))
+                        log.debug("%s 2nd (%s/%s) vs 1st (%s/%s) delta %d (%d - %d)" %\
+                            (edge,
+                             second_colorA.name, second_colorB.name,
+                             first_colorA.name, first_colorB.name,
+                             edge.first_vs_second_delta, second_distance, first_distance))
                     else:
                         (first_distance, (first_colorA, first_colorB)) = foo[0]
                         edge.first_vs_second_delta = first_distance
                         edge.first_place_colors = (first_colorA, first_colorB)
                         edge.first_distance = first_distance
-                        log.debug("%s 1st vs 2nd delta %d" % (edge, edge.first_vs_second_delta))
+                        log.debug("%s 1st (%s/%s) delta %d (LAST)" %\
+                            (edge,
+                             first_colorA.name, first_colorB.name,
+                             edge.first_vs_second_delta))
 
-                # Now look at all of the edges and resolve the one whose 1st vs 2nd color
+                # Now look at all of the edges and resolve the one whose 2nd vs 1st color
                 # tuple distance is the greatest.  Think of it as the higher this delta
                 # is the more important it is that we resolve this edge to the color tuple
                 # that came in first place.
@@ -1986,7 +2032,8 @@ div.square span {
                 needed_edge_color_tuple.remove((colorA, colorB))
                 unresolved_edges.remove(edge)
                 resolved_edges.append(edge)
-                log.info("edge %s 1st vs 2nd delta of %d was the highest" % (edge, max_delta))
+                log.info("edge %s 2nd vs 1st delta of %d was the highest" % (edge, max_delta))
+                log.debug("")
 
     def resolve_corner_squares(self):
         log.info('Resolve corners')
@@ -2022,15 +2069,22 @@ div.square span {
                     corner.first_vs_second_delta = second_distance - first_distance
                     corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
                     corner.first_distance = first_distance
-                    log.debug("%s 1st vs 2nd delta %d (%d - %d)" % (corner, corner.first_vs_second_delta, second_distance, first_distance))
+                    log.debug("%s 2nd (%s/%s/%s) vs 1st (%s/%s/%s) delta %d (%d - %d)" %\
+                        (corner,
+                         second_colorA.name, second_colorB.name, second_colorC.name,
+                         first_colorA.name, first_colorB.name, first_colorC.name,
+                         corner.first_vs_second_delta, second_distance, first_distance))
                 else:
                     (first_distance, (first_colorA, first_colorB, first_colorC)) = foo[0]
                     corner.first_vs_second_delta = first_distance
                     corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
                     corner.first_distance = first_distance
-                    log.debug("%s 1st vs 2nd delta %d" % (corner, corner.first_vs_second_delta))
+                    log.debug("%s 1st (%s/%s/%s) delta %d (LAST)" %\
+                        (corner,
+                         second_colorA.name, second_colorB.name, second_colorC.name,
+                         corner.first_vs_second_delta))
 
-            # Now look at all of the corners and resolve the one whose 1st vs 2nd color
+            # Now look at all of the corners and resolve the one whose 2nd vs 1st color
             # tuple distance is the greatest.  Think of it as the higher this delta
             # is the more important it is that we resolve this corner to the color tuple
             # that came in first place.
@@ -2055,7 +2109,8 @@ div.square span {
             corner.first_distance = None
             needed_corner_color_tuple.remove((colorA, colorB, colorC))
             unresolved_corners.remove(corner)
-            log.info("corner %s 1st vs 2nd delta of %d was the highest" % (corner, max_delta))
+            log.info("corner %s 2nd vs 1st delta of %d was the highest" % (corner, max_delta))
+            log.debug("")
 
     def get_corner_swap_count(self, debug=False):
 
@@ -2490,7 +2545,10 @@ div.square span {
 
         #self.resolve_edge_squares_experiment()
         self.resolve_edge_squares()
+
+        #self.resolve_corner_squares_experiment()
         self.resolve_corner_squares()
+
         self.validate_parity()
         self.print_cube()
         self.print_layout()
