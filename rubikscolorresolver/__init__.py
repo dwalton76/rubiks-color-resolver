@@ -661,10 +661,10 @@ class Edge(object):
         """
         color_to_side_name = {
             'Wh' : 'U',
-            'Gr' : 'L',
-            'Rd' : 'F',
-            'Bu' : 'R',
-            'OR' : 'B',
+            'OR' : 'L',
+            'Gr' : 'F',
+            'Rd' : 'R',
+            'Bu' : 'B',
             'Ye' : 'D'
         }
 
@@ -1339,11 +1339,11 @@ div.square span {
         else:
             color_to_side_name = {
                 'Wh' : 'U',
-                'OR' : 'B',
-                'Gr' : 'L',
-                'Rd' : 'F',
-                'Ye' : 'D',
-                'Bu' : 'R'
+                'OR' : 'L',
+                'Gr' : 'F',
+                'Rd' : 'R',
+                'Bu' : 'B',
+                'Ye' : 'D'
             }
 
         self.state = ['placeholder', ]
@@ -1623,16 +1623,6 @@ div.square span {
                 side.color_name = side.squares[side.mid_pos].color_name
 
         else:
-            '''
-            color_to_side_name = {
-                'Ye' : 'U',
-                'Gr' : 'L',
-                'OR' : 'F',
-                'Bu' : 'R',
-                'Wh' : 'D',
-                'Rd' : 'B'
-            }
-            '''
             all_squares = []
             for side_name in self.side_order:
                 side = self.sides[side_name]
