@@ -2518,7 +2518,10 @@ div.square span {
     def write_final_cube(self):
         data = self.cube_for_json()
         cube = ['dummy', ]
-        for (square_index, value) in data['squares'].items():
+
+        for square_index in sorted(data['squares'].keys()):
+            value = data['squares'][square_index]
+            #log.info("write_final_cube square_index %d value %s" % (square_index, pformat(value)))
             html_colors = data['sides'][value['finalSide']]['colorHTML']
             cube.append((html_colors['red'], html_colors['green'], html_colors['blue']))
 
