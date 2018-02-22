@@ -3,11 +3,11 @@ from copy import deepcopy, copy
 from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
 from pprint import pformat
-from os import chmod
 import colorsys
 import itertools
 import json
 import logging
+import os
 import sys
 
 if sys.version_info < (3,4):
@@ -1065,6 +1065,9 @@ class RubiksColorSolverGeneric(object):
         size = self.width # 3 for 3x3x3, etc
         filename = '/tmp/rubiks-color-resolver.html'
 
+        if os.path.exists(filename):
+            os.remove(filename)
+
         with open(filename, 'w') as fh:
             fh.write("""<!DOCTYPE html>
 <html>
@@ -1138,7 +1141,7 @@ div.square span {
 <body>
 """ % (square_size, square_size, square_size, square_size, square_size, square_size))
 
-        chmod(filename, 0o777)
+        os.chmod(filename, 0o777)
 
     def write_cube(self, desc, cube):
         """
