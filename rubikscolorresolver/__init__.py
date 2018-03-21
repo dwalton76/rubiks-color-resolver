@@ -1135,6 +1135,14 @@ div.square span {
   line-height:    normal;
 }
 
+div#colormapping {
+    float: left;
+}
+
+div#anchorsquares {
+    margin-left: 350px;
+}
+
 </style>
 <title>CraneCuber</title>
 </head>
@@ -1663,19 +1671,23 @@ div.square span {
                     raise Exception("%s: could not determine color, target %s" % (side, target_color_name))
 
         with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
-            fh.write('<h1>Side -> Color Mapping</h1>\n')
+            fh.write('<div id="colormapping">\n')
+            fh.write('<h1>Side => Color Mapping</h1>\n')
             fh.write('<ul>\n')
             for side_name in self.side_order:
                 side = self.sides[side_name]
-                fh.write('<li>%s -> %s</li>\n' % (side_name, side.color_name))
+                fh.write('<li>%s => %s</li>\n' % (side_name, side.color_name))
             fh.write('</ul>\n')
+            fh.write('</div>\n')
 
+            fh.write('<div id="anchorsquares">\n')
             fh.write('<h1>Anchor Squares</h1>\n')
             for anchor_square in self.anchor_squares:
                 fh.write("<div class='square' title='RGB (%d, %d, %d)' style='background-color: #%02x%02x%02x;'><span>%02d/%s</span></div>\n" %
                          (anchor_square.color.red, anchor_square.color.green, anchor_square.color.blue,
                           anchor_square.color.red, anchor_square.color.green, anchor_square.color.blue,
                           anchor_square.position, anchor_square.color_name))
+            fh.write('</div>\n')
 
     def create_corner_objects(self):
         # Corners
