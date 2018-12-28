@@ -62,6 +62,75 @@ edge_orbit_id = {
     }
 }
 
+center_groups = {
+    3: (
+        ("centers", (5, 14, 23, 32, 41, 50)),
+    ),
+    4: (
+        ("centers", (
+            6, 7, 10, 11, # Upper
+            22, 23, 26, 27, # Left
+            38, 39, 42, 43, # Front
+            54, 55, 58, 59, # Right
+            70, 71, 74, 75, # Back
+            86, 87, 90, 91, # Down
+        )),
+    ),
+    5: (
+        ("x-centers", (
+            7, 9, 17, 19, # Upper
+            32, 34, 42, 44, # Left
+            57, 59, 67, 69, # Front
+            82, 84, 92, 94, # Right
+            107, 109, 117, 119, # Back
+            132, 134, 142, 144, # Down
+        )),
+        ("t-centers", (
+            8, 12, 14, 18, # Upper
+            33, 37, 39, 43, # Left
+            58, 62, 64, 68, # Front
+            83, 87, 89, 93, # Right
+            108, 112, 114, 118, # Back
+            133, 137, 139, 143, # Down
+        )),
+        ("middle-centers", (13, 38, 63, 88, 113, 138)),
+    ),
+    6: (
+        ("inner x-centers", (
+            15, 16, 21, 22, # Upper
+            51, 52, 57, 58, # Left
+            87, 88, 93, 94, # Front
+            123, 124, 129, 130, # Right
+            159, 160, 165, 166, # Back
+            195, 196, 201, 202, # Down
+        )),
+        ("outer x-centers", (
+            8, 11, 26, 29, # Upper
+            44, 47, 62, 65, # Left
+            80, 83, 98, 101, # Front
+            116, 119, 134, 137, # Right
+            152, 155, 170, 173, # Back
+            188, 191, 206, 209, # Down
+        )),
+        ("left centers (oblique edge)", (
+            9, 17, 28, 20, # Upper
+            45, 53, 64, 56, # Left
+            81, 89, 100, 92, # Front
+            117, 125, 136, 128, # Right
+            153, 161, 172, 164, # Back
+            189, 197, 208, 200, # Down
+        )),
+        ("right centers (oblique edges)", (
+            10, 23, 27, 14, # Upper
+            46, 59, 63, 50, # Left
+            82, 95, 99, 86, # Front
+            118, 131, 135, 122, # Right
+            154, 167, 171, 158, # Back
+            190, 203, 207, 194, # Down
+        )),
+    ),
+}
+
 
 def get_euclidean_lab_distance(lab1, lab2):
     """
@@ -999,27 +1068,28 @@ div#colormapping {
         if self.width == 2:
             return
 
-        log.info('Resolve centers')
-        center_colors = []
+        for (desc, centers_squares) in center_groups[self.width]:
+            log.info('Resolve {}'.format(desc))
+            center_colors = []
 
-        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
-            for square in side.center_squares:
+            for position in centers_squares:
+                square = self.get_square(position)
                 center_colors.append((square.position, square.rgb))
 
-        sorted_center_colors = traveling_salesman(center_colors, "euclidean")
-        sorted_center_colors_cluster_squares = []
-        squares_list = []
-        squares_per_cluster = int(len(sorted_center_colors) / 6)
+            sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+            sorted_center_colors_cluster_squares = []
+            squares_list = []
+            squares_per_cluster = int(len(sorted_center_colors) / 6)
 
-        for (index, (square_index, rgb)) in enumerate(sorted_center_colors):
-            index += 1
-            squares_list.append(ClusterSquare(square_index, rgb))
-            if index % squares_per_cluster == 0:
-                sorted_center_colors_cluster_squares.append(squares_list)
-                squares_list = []
+            for (index, (square_index, rgb)) in enumerate(sorted_center_colors):
+                index += 1
+                squares_list.append(ClusterSquare(square_index, rgb))
+                if index % squares_per_cluster == 0:
+                    sorted_center_colors_cluster_squares.append(squares_list)
+                    squares_list = []
 
-        self.assign_color_names(sorted_center_colors_cluster_squares)
-        self.write_colors('centers', sorted_center_colors_cluster_squares)
+            self.assign_color_names(sorted_center_colors_cluster_squares)
+            self.write_colors(desc, sorted_center_colors_cluster_squares)
 
     def write_final_cube(self):
         data = self.cube_for_json()
