@@ -1,3 +1,5 @@
+
+from tsp_solver.greedy import solve_tsp
 from collections import OrderedDict
 from copy import deepcopy, copy
 from itertools import permutations
@@ -90,162 +92,76 @@ def get_swap_count(listA, listB, debug):
     return swaps
 
 
+def traveling_salesman(colors, alg):
+
+    # build a full matrix of cie2000 distances
+    len_colors = len(colors)
+    matrix = [[0 for i in range(len_colors)] for j in range(len_colors)]
+
+    for x in range(len_colors):
+        (_x_square_index, (x_red, x_green, x_blue)) = colors[x]
+        x_lab = rgb2lab((x_red, x_green, x_blue))
+        x_hsv = colorsys.rgb_to_hsv(x_red, x_green, x_blue)
+        x_hls = colorsys.rgb_to_hls(x_red, x_green, x_blue)
+
+        for y in range(len_colors):
+
+            if x == y:
+                matrix[x][y] = 0
+                matrix[y][x] = 0
+                continue
+
+            if matrix[x][y] or matrix[y][x]:
+                continue
+
+            (_y_square_index, (y_red, y_green, y_blue)) = colors[y]
+
+            if alg == "cie2000":
+                y_lab = rgb2lab((y_red, y_green, y_blue))
+                distance = delta_e_cie2000(x_lab, y_lab)
+
+            elif alg == "HSV":
+                y_hsv = colorsys.rgb_to_hsv(y_red, y_green, y_blue)
+                distance = get_euclidean_distance_two_points(x_hsv, y_hsv)
+
+            elif alg == "HLS":
+                y_hls = colorsys.rgb_to_hls(y_red, y_green, y_blue)
+                distance = get_euclidean_distance_two_points(x_hls, y_hls)
+
+            elif alg == "euclidean":
+                y_lab = rgb2lab((y_red, y_green, y_blue))
+                distance = get_euclidean_lab_distance(x_lab, y_lab)
+
+            else:
+                raise Exception("Implement {}".format(alg))
+
+            matrix[x][y] = distance
+            matrix[y][x] = distance
+
+    path = solve_tsp(matrix)
+    #print(path)
+    return [colors[x] for x in path]
+
+
+
 class ClusterSquare(object):
 
     def __init__(self, index, rgb):
         self.index = index
         self.rgb = rgb
         self.lab = rgb2lab(rgb)
-        #self.lab_official = rgb_to_labcolor(rgb[0], rgb[1], rgb[2])
 
     def __str__(self):
         if self.index:
-            return str(self.index)
+            return "CS" + str(self.index)
         else:
-            return str(self.rgb)
+            return "CS" + str(self.rgb)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __lt__(self, other):
         return self.index < other.index
-
-
-class Cluster(object):
-
-    def __init__(self, anchor):
-        self.anchor = anchor
-        self.members = []
-        self.empty_count = 0
-
-    def __str__(self):
-        return "cluster %s" % self.anchor
-
-    def __lt__(self, other):
-        return self.anchor.index < other.anchor.index
-
-    def calculate_distances(self, data_points, use_sort):
-        self.distances = []
-
-        for square in data_points:
-            distance_lab_euclidean = get_euclidean_lab_distance(square.lab, self.anchor.lab)
-            self.distances.append((distance_lab_euclidean, square))
-
-        if use_sort:
-            self.distances = sorted(self.distances)
-
-
-def assign_points(desc, cube, data_points, anchors, squares_per_side):
-    """
-    For each anchor color find the squares_per_side-1 entries in data_points with the lowest distance
-    """
-    clusters = []
-    all_distances = []
-
-    for anchor in anchors:
-        cluster = Cluster(anchor)
-        cluster.calculate_distances(data_points, True)
-        clusters.append(cluster)
-
-        for (distance_2000, square) in cluster.distances:
-            all_distances.append((distance_2000, square, cluster))
-
-    all_distances = sorted(all_distances)
-    used = []
-
-    # Assign the anchor squares as the initial members
-    for cluster in clusters:
-        log.info("%s %s: anchor member %s" % (desc, cluster, cluster.anchor))
-        cluster.members.append(cluster.anchor)
-        used.append(cluster.anchor)
-
-    # First pass, assign squares to clusters, lowest distance first until the cluster has squares_per_side entries
-    for (distance_2000, square, cluster) in all_distances:
-        if len(cluster.members) < squares_per_side and square not in used:
-            log.info("%s %s: next member %s with cie2000 %d" % (desc, cluster, square, distance_2000))
-            cluster.members.append(square)
-            used.append(square)
-
-    # Second pass, see if swapping members between two clusters lowers total
-    # color distance. I originally only did this for orange vs. red but it is
-    # also useful for yellow vs. white and blue vs. green.  Anyway, that is
-    # why all of the variable names below are orange/red.
-    for (orange_color_name, red_color_name) in (('OR', 'Rd'), ('Ye', 'Wh'), ('Bu', 'Gr')):
-        # Find the orange and red clusters
-        orange_cluster = None
-        red_cluster = None
-
-        for cluster in clusters:
-            square = cube.get_square(cluster.anchor.index)
-            #log.info("%s %s anchor %s color %s %s" % (desc, cluster, square, square.color, square.color_name))
-
-            if square.color_name == orange_color_name:
-                orange_cluster = cluster
-            elif square.color_name == red_color_name:
-                red_cluster = cluster
-
-        if orange_cluster and red_cluster:
-            # Build a list of the non-anchor squares in the orange/red clusters
-            non_anchor_orange_red = []
-            for member in orange_cluster.members[1:]:
-                non_anchor_orange_red.append(member)
-
-            for member in red_cluster.members[1:]:
-                non_anchor_orange_red.append(member)
-
-            # Now try all combinations of assigning those squares to the orange/red clusters
-            # Use the combination that results in the lowest color distance
-            min_euclidean_distance = None
-            min_distance_orange_combo = None
-
-            for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
-                total_euclidean_distance = 0
-
-                for member in combo:
-                    total_euclidean_distance += get_euclidean_lab_distance(orange_cluster.anchor.lab, member.lab)
-
-                for member in non_anchor_orange_red:
-                    if member not in combo:
-                        total_euclidean_distance += get_euclidean_lab_distance(red_cluster.anchor.lab, member.lab)
-
-                if min_euclidean_distance is None or total_euclidean_distance < min_euclidean_distance:
-                    min_euclidean_distance = total_euclidean_distance
-                    min_distance_orange_combo = combo
-
-            # Now apply the members to oragne and red to get the minimum color distance
-            for (index, member) in enumerate(min_distance_orange_combo):
-                orange_cluster.members[index+1] = member
-
-            index = 0
-            for member in non_anchor_orange_red:
-                if member not in min_distance_orange_combo:
-                    red_cluster.members[index+1] = member
-                    index += 1
-
-    # Build a 2D list to return
-    assignments = []
-    for cluster in clusters:
-        assigments_for_cluster = []
-        for cluster_square in cluster.members:
-            assigments_for_cluster.append(cluster_square)
-        assignments.append(assigments_for_cluster)
-    return assignments
-
-
-def kmeans_sort_colors_static_anchors(desc, cube, colors, buckets_count=SIDES_COUNT):
-    """
-    colors is an OrderedDict where the key is the square index and the value a RGB tuple
-    Started from https://github.com/stuntgoat/kmeans/blob/master/kmeans.py
-    """
-    dataset = []
-    anchors = []
-    squares_per_side = int(len(colors.keys())/buckets_count)
-
-    for (index, (square_index, rgb)) in enumerate(colors.items()):
-        square = ClusterSquare(square_index, rgb)
-        dataset.append(square)
-
-        if index < buckets_count:
-            anchors.append(square)
-
-    return assign_points(desc, cube, dataset, anchors, squares_per_side)
 
 
 def get_cube_layout(size):
@@ -354,6 +270,9 @@ class LabColor(object):
 
     def __str__(self):
         return ("Lab (%s, %s, %s)" % (self.L, self.a, self.b))
+
+    def __repr__(self):
+        return self.__str__()
 
     def __lt__(self, other):
         return self.name < other.name
@@ -512,6 +431,9 @@ class Square(object):
 
     def __str__(self):
         return "%s%d" % (self.side, self.position)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __lt__(self, other):
         return self.position < other.position
@@ -912,7 +834,10 @@ class CubeSide(object):
              pformat(self.center_pos)))
 
     def __str__(self):
-        return self.name
+        return "side-" + self.name
+
+    def __repr__(self):
+        return self.__str__()
 
     def set_square(self, position, red, green, blue):
         self.squares[position] = Square(self, self.cube, position, red, green, blue)
@@ -1242,6 +1167,21 @@ div#anchorsquares {
             fh.write("</div>\n")
             log.info('\n\n')
 
+
+    def write_colors2(self, title, colors_to_write):
+        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+            fh.write("<h2>{}</h2>\n".format(title))
+            fh.write("<div class='clear colors'>\n")
+            for (red, green, blue) in colors_to_write:
+                lab = rgb2lab((red, green, blue))
+                hsv = colorsys.rgb_to_hsv(red, green, blue)
+                hls = colorsys.rgb_to_hls(red, green, blue)
+
+                fh.write("<span class='square' style='background-color: #%02x%02x%02x;' title='RGB (%d, %d, %d)) Lab (%s, %s, %s), HSV (%s, %s, %s), HLS (%s, %s, %s)'></span>" % (
+                    red, green, blue, red, green, blue, lab.L, lab.a, lab.b, *hsv, *hls))
+
+            fh.write("<br></div>")
+
     def www_footer(self):
         with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
             fh.write("""
@@ -1339,20 +1279,20 @@ div#anchorsquares {
             return
 
         if self.sideU.mid_pos is not None:
-            color_to_side_name = {}
+            self.color_to_side_name = {}
 
             for side_name in self.side_order:
                 side = self.sides[side_name]
                 mid_square = side.squares[side.mid_pos]
 
-                if mid_square.color_name in color_to_side_name:
-                    log.info("color_to_side_name:\n%s" % pformat(color_to_side_name))
+                if mid_square.color_name in self.color_to_side_name:
+                    log.info("color_to_side_name:\n%s" % pformat(self.color_to_side_name))
                     raise Exception("side %s with color %s, %s is already in color_to_side_name" %\
                         (side, mid_square.color_name, mid_square.color_name))
-                color_to_side_name[mid_square.color_name] = side.name
+                self.color_to_side_name[mid_square.color_name] = side.name
 
         else:
-            color_to_side_name = {
+            self.color_to_side_name = {
                 'Wh' : 'U',
                 'OR' : 'L',
                 'Gr' : 'F',
@@ -1362,13 +1302,15 @@ div#anchorsquares {
             }
 
         self.state = ['placeholder', ]
+        #print("color_to_side_name:\n{}".format(self.color_to_side_name))
 
         for side_name in self.side_order:
             side = self.sides[side_name]
 
             for x in range(side.min_pos, side.max_pos + 1):
                 color_name = side.squares[x].color_name
-                self.state.append(color_to_side_name[color_name])
+                log.info("set_state(): side {}, x {}, color_name {}".format(side, x, color_name))
+                self.state.append(self.color_to_side_name[color_name])
 
     def cube_for_kociemba_strict(self):
         self.set_state()
@@ -1388,7 +1330,7 @@ div#anchorsquares {
         data['kociemba'] = ''.join(self.cube_for_kociemba_strict())
         data['sides'] = {}
         data['squares'] = {}
-        color_to_side = {}
+        #color_to_side = {}
 
         html_color = {
             'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
@@ -1400,7 +1342,7 @@ div#anchorsquares {
         }
 
         for side in self.sides.values():
-            color_to_side[side.color] = side
+            #color_to_side[side.color] = side
             data['sides'][side.name] = {
                 'colorName' : side.color_name,
                 'colorScan' : {
@@ -1411,18 +1353,20 @@ div#anchorsquares {
                 'colorHTML' : html_color[side.color_name]
             }
 
+        #log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
+
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
-                color = square.color
-                final_side = color_to_side[color]
+                color = square.color_name
+                final_side = self.color_to_side_name[color]
                 data['squares'][square.position] = {
                     'colorScan' : {
                         'red'   : square.red,
                         'green' : square.green,
                         'blue'  : square.blue,
                     },
-                    'finalSide' : color_to_side[color].name
+                    'finalSide' : self.color_to_side_name[color]
                 }
 
         return data
@@ -1541,9 +1485,15 @@ div#anchorsquares {
                 color_obj = self.crayola_colors[color_name]
                 distance += get_euclidean_lab_distance(anchor_square.rawcolor, color_obj)
 
+            # TODO for odd cubes there are fewer permutations to eval, white and yellow must
+            # be opposites, etc
             if min_distance is None or distance < min_distance:
                 min_distance = distance
                 min_distance_permutation = permutation
+                log.warning("PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(permutation, int(distance)))
+            else:
+                if str(permutation) == "('Wh', 'Bu', 'OR', 'Gr', 'Rd', 'Ye')":
+                    log.info("PERMUTATION {}, DISTANCE {:,}".format(permutation, int(distance)))
 
         log.info('assign color names to anchor squares and sides')
         for (anchor_square, color_name) in zip(self.anchor_squares, min_distance_permutation):
@@ -1574,10 +1524,11 @@ div#anchorsquares {
 
         elif self.width == 5:
             # t-centers
-            self.bind_center_squares_to_anchor((1, 3, 5, 7), '5x5x5 t-centers')
+            #self.bind_center_squares_to_anchor((1, 3, 5, 7), '5x5x5 t-centers')
 
             # x-centers
-            self.bind_center_squares_to_anchor((0, 2, 6, 8), '5x5x5 x-centers')
+            #self.bind_center_squares_to_anchor((0, 2, 6, 8), '5x5x5 x-centers')
+            pass
 
         elif self.width == 6:
 
@@ -1827,10 +1778,46 @@ div#anchorsquares {
         for (edge_index, (pos1, pos2)) in enumerate(zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos)):
             self.edges.append(Edge(self, pos1, pos2, edge_index))
 
+    def assign_color_names(self, squares_lists):
+        assert len(squares_lists) == 6, "There are %d squares_list, there should be 6" % len(squares_lists)
+        print("SQUARES_LIST: {}".format(squares_lists))
+
+        # Assign a color name to each squares in each square_list. Compute
+        # which naming scheme results in the least total color distance in
+        # terms of the assigned color name vs. the colors in crayola_colors.
+        min_distance = None
+        min_distance_permutation = None
+
+        for permutation in permutations(self.crayola_colors.keys()):
+            distance = 0
+
+            for (index, squares_list) in enumerate(squares_lists):
+                color_name = permutation[index]
+                color_obj = self.crayola_colors[color_name]
+
+                for cluster_square in squares_list:
+                    distance += get_euclidean_lab_distance(cluster_square.lab, color_obj)
+
+            if min_distance is None or distance < min_distance:
+                min_distance = distance
+                min_distance_permutation = permutation
+                log.warning("PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(permutation, int(distance)))
+            #else:
+            #    log.info("PERMUTATION {}, DISTANCE {}".format(permutation, distance))
+
+        for (index, squares_list) in enumerate(squares_lists):
+            color_name = min_distance_permutation[index]
+
+            for cluster_square in squares_list:
+                cluster_square.color_name = color_name
+
+                # Find the Square object for this ClusterSquare
+                square = self.get_square(cluster_square.index)
+                square.color_name = color_name
+
     def resolve_edge_squares_experiment(self):
         """
-        This only uses kmeans to assign colors, it can produce some invalid cube by doing
-        things like creating two white/red edge pieces on 3x3x3...it needs some more work.
+        Use traveling salesman algorithm to sort the colors
         """
 
         # A 2x2x2 will not have edges
@@ -1839,287 +1826,82 @@ div#anchorsquares {
 
         for target_orbit_id in range(self.orbits):
             log.warning('Resolve edges for orbit %d' % target_orbit_id)
-            desc = 'edges - orbit %d' % target_orbit_id
-
-            # We must add the anchor squares first
-            edge_colors = OrderedDict()
-            for anchor_square in self.anchor_squares:
-                edge_colors[anchor_square.position] = anchor_square.rgb
+            edge_colors = []
 
             for edge in self.edges:
                 if edge.orbit_id == target_orbit_id:
-                    edge_colors[edge.square1.position] = edge.square1.rgb
-                    edge_colors[edge.square2.position] = edge.square2.rgb
+                    edge_colors.append((edge.square1.position, edge.square1.rgb))
+                    edge_colors.append((edge.square2.position, edge.square2.rgb))
 
-            sorted_edge_colors = kmeans_sort_colors_static_anchors(desc, self, edge_colors)
-            self.write_colors(desc, sorted_edge_colors)
+            sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+            sorted_edge_colors_cluster_squares = []
+            squares_list = []
+            squares_per_cluster = int(len(sorted_edge_colors) / 6)
 
-            # The first entry on each list is the anchor square
-            for cluster_square_list in sorted_edge_colors:
-                anchor_square_index = cluster_square_list[0].index
-                anchor_square = self.get_square(anchor_square_index)
+            for (index, (square_index, rgb)) in enumerate(sorted_edge_colors):
+                index += 1
+                squares_list.append(ClusterSquare(square_index, rgb))
+                if index % squares_per_cluster == 0:
+                    sorted_edge_colors_cluster_squares.append(squares_list)
+                    squares_list = []
 
-                for cluster_square in cluster_square_list[1:]:
-                    square = self.get_square(cluster_square.index)
-                    square.anchor_square = anchor_square
-                    log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
-
-            # edge.update_colors(colorA, colorB)
-            for edge in self.edges:
-                if edge.orbit_id == target_orbit_id:
-                    log.info("%s square1 %s, square2 %s" % (edge, edge.square1, edge.square2))
-                    edge.square1.color      = edge.square1.anchor_square.color
-                    edge.square1.color_name = edge.square1.anchor_square.color_name
-                    edge.square2.color      = edge.square2.anchor_square.color
-                    edge.square2.color_name = edge.square2.anchor_square.color_name
+            self.assign_color_names(sorted_edge_colors_cluster_squares)
+            self.write_colors(
+                'edges - orbit %d' % target_orbit_id,
+                sorted_edge_colors_cluster_squares)
 
     def resolve_corner_squares_experiment(self):
         """
-        This only uses kmeans to assign colors, it can produce some invalid cube by doing
-        things like creating two white/red/blue corner pieces on 3x3x3...it needs some more work.
+        Use traveling salesman algorithm to sort the colors
         """
         log.warning('Resolve corners')
-        desc = 'corners'
-
-        # We must add the anchor squares first
-        corner_colors = OrderedDict()
-        for anchor_square in self.anchor_squares:
-            corner_colors[anchor_square.position] = anchor_square.rgb
+        corner_colors = []
 
         for corner in self.corners:
-            corner_colors[corner.square1.position] = corner.square1.rgb
-            corner_colors[corner.square2.position] = corner.square2.rgb
-            corner_colors[corner.square3.position] = corner.square3.rgb
+            corner_colors.append((corner.square1.position, corner.square1.rgb))
+            corner_colors.append((corner.square2.position, corner.square2.rgb))
+            corner_colors.append((corner.square3.position, corner.square3.rgb))
 
-        sorted_corner_colors = kmeans_sort_colors_static_anchors(desc, self, corner_colors)
-        self.write_colors(desc, sorted_corner_colors)
+        sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
+        sorted_corner_colors_cluster_squares = []
+        squares_list = []
+        squares_per_cluster = int(len(sorted_corner_colors) / 6)
 
-        # The first entry on each list is the anchor square
-        for cluster_square_list in sorted_corner_colors:
-            anchor_square_index = cluster_square_list[0].index
-            anchor_square = self.get_square(anchor_square_index)
+        for (index, (square_index, rgb)) in enumerate(sorted_corner_colors):
+            index += 1
+            squares_list.append(ClusterSquare(square_index, rgb))
+            if index % squares_per_cluster == 0:
+                sorted_corner_colors_cluster_squares.append(squares_list)
+                squares_list = []
 
-            for cluster_square in cluster_square_list[1:]:
-                square = self.get_square(cluster_square.index)
-                square.anchor_square = anchor_square
-                log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
+        self.assign_color_names(sorted_corner_colors_cluster_squares)
+        self.write_colors('corners', sorted_corner_colors_cluster_squares)
 
-        for corner in self.corners:
-            log.info("%s square1 %s, square2 %s, square3 %s" % (corner, corner.square1, corner.square2, corner.square3))
-            corner.square1.color      = corner.square1.anchor_square.color
-            corner.square1.color_name = corner.square1.anchor_square.color_name
-            corner.square2.color      = corner.square2.anchor_square.color
-            corner.square2.color_name = corner.square2.anchor_square.color_name
-            corner.square3.color      = corner.square3.anchor_square.color
-            corner.square3.color_name = corner.square3.anchor_square.color_name
+    def resolve_center_squares_experiment(self):
+        """
+        Use traveling salesman algorithm to sort the colors
+        """
+        log.warning('Resolve centers')
+        center_colors = []
 
-    def resolve_edge_squares(self):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.center_squares:
+                center_colors.append((square.position, square.rgb))
 
-        # A 2x2x2 will not have edges
-        if not self.edges:
-            return
+        sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+        sorted_center_colors_cluster_squares = []
+        squares_list = []
+        squares_per_cluster = int(len(sorted_center_colors) / 6)
 
-        # Initially we flag all of our Edge objects as invalid
-        for edge in self.edges:
-            edge.valid = False
+        for (index, (square_index, rgb)) in enumerate(sorted_center_colors):
+            index += 1
+            squares_list.append(ClusterSquare(square_index, rgb))
+            if index % squares_per_cluster == 0:
+                sorted_center_colors_cluster_squares.append(squares_list)
+                squares_list = []
 
-        for target_orbit_id in range(self.orbits):
-            log.warning('Resolve edges for orbit id %d' % target_orbit_id)
-
-            resolved_edges = []
-            unresolved_edges = []
-            for edge in self.edges:
-                if edge.orbit_id == target_orbit_id:
-                    unresolved_edges.append(edge)
-
-            # And our 'needed' list of colors will hold the colors of every edge color pair
-            needed_edge_color_tuple = []
-
-            for (edge1_color, edge2_color, orbit_id) in sorted(self.valid_edge_colors):
-                if orbit_id == target_orbit_id:
-                    needed_edge_color_tuple.append((edge1_color, edge2_color))
-
-                assert edge1_color.name != edge2_color.name,\
-                    "Both sides of an edge cannot be the same color, edge1 %s and edge2 %s are both %s" %\
-                    (edge1_color, edge2_color, edge1_color.name)
-
-            while unresolved_edges:
-
-                # Calculate the color distance for each edge vs each of the needed color tuples
-                for edge in unresolved_edges:
-                    edge.first_vs_second_delta = 0
-                    foo = []
-                    colors_checked = []
-
-                    for (colorA, colorB) in needed_edge_color_tuple:
-
-                        # For 4x4x4 and larger there are multiple edges with the
-                        # same pair of colors so if we've already calculated the
-                        # distance for one of the edges with this color tuple
-                        # don't calculate it again
-                        if (colorA, colorB) in colors_checked:
-                            continue
-
-                        # For a 4x4x4 cube there are two UF edges, UF0 and UF1.  We
-                        # have to make sure that we do not resolve edges in a way
-                        # that creates two UF0 edges. If this edge would be UF0 but
-                        # we have already found UF0 then set the distance to be 9999.
-                        orbit_index_already_assigned = False
-
-                        if self.width >= 4:
-                            edge.update_colors(colorA, colorB)
-                            edge.update_orbit_index()
-
-                            for tmp_edge in resolved_edges:
-                                if tmp_edge.orbit_index == edge.orbit_index:
-                                    orbit_index_already_assigned = True
-                                    break
-
-                            edge.reset_colors()
-                            edge.reset_orbit_index()
-
-                        if orbit_index_already_assigned:
-                            distance = 9999
-                        else:
-                            distance = edge.color_distance(colorA, colorB)
-
-                        foo.append((distance, (colorA, colorB)))
-                        colors_checked.append((colorA, colorB))
-
-                    # Now sort the distance...
-                    foo = sorted(foo)
-
-                    if len(foo) >= 2:
-                        (first_distance, (first_colorA, first_colorB)) = foo[0]
-                        (second_distance, (second_colorA, second_colorB)) = foo[1]
-
-                        # ...and note the delta from the color pair this edge is the closest
-                        # match with vs the color pair this edge is the second closest match with
-                        edge.first_vs_second_delta = second_distance - first_distance
-                        edge.first_place_colors = (first_colorA, first_colorB)
-                        edge.first_distance = first_distance
-                        log.debug("%s 2nd (%s/%s) vs 1st (%s/%s) delta %d (%d - %d)" %\
-                            (edge,
-                             second_colorA.name, second_colorB.name,
-                             first_colorA.name, first_colorB.name,
-                             edge.first_vs_second_delta, second_distance, first_distance))
-                    else:
-                        (first_distance, (first_colorA, first_colorB)) = foo[0]
-                        edge.first_vs_second_delta = first_distance
-                        edge.first_place_colors = (first_colorA, first_colorB)
-                        edge.first_distance = first_distance
-                        log.debug("%s 1st (%s/%s) delta %d (LAST)" %\
-                            (edge,
-                             first_colorA.name, first_colorB.name,
-                             edge.first_vs_second_delta))
-
-                # Now look at all of the edges and resolve the one whose 2nd vs 1st color
-                # tuple distance is the greatest.  Think of it as the higher this delta
-                # is the more important it is that we resolve this edge to the color tuple
-                # that came in first place.
-                max_delta = None
-                max_delta_edge = None
-                max_delta_distance = None
-
-                for edge in unresolved_edges:
-                    if max_delta is None or edge.first_vs_second_delta > max_delta:
-                        max_delta = edge.first_vs_second_delta
-                        max_delta_edge = edge
-                        max_delta_distance = edge.first_distance
-
-                distance = max_delta_distance
-                edge = max_delta_edge
-                (colorA, colorB) = edge.first_place_colors
-
-                edge.update_colors(colorA, colorB)
-                edge.update_orbit_index()
-                edge.valid = True
-                edge.first_vs_second_delta = None
-                edge.first_place_colors = None
-                edge.first_distance = None
-
-                needed_edge_color_tuple.remove((colorA, colorB))
-                unresolved_edges.remove(edge)
-                resolved_edges.append(edge)
-                log.info("edge %s 2nd vs 1st delta of %d was the highest" % (edge, max_delta))
-                log.debug("")
-
-    def resolve_corner_squares(self):
-        log.info('Resolve corners')
-
-        # Initially we flag all of our Corner objects as invalid
-        for corner in self.corners:
-            corner.valid = False
-
-        # And our 'needed' list will hold the colors of all 8 corners
-        needed_corner_color_tuple = self.valid_corner_colors
-
-        unresolved_corners = [corner for corner in self.corners if corner.valid is False]
-
-        while unresolved_corners:
-
-            for corner in unresolved_corners:
-                corner.first_vs_second_delta = 0
-                foo = []
-
-                for (colorA, colorB, colorC) in needed_corner_color_tuple:
-                    distance = corner.color_distance(colorA, colorB, colorC)
-                    foo.append((distance, (colorA, colorB, colorC)))
-
-                # Now sort the distances...
-                foo = sorted(foo)
-
-                if len(foo) >= 2:
-                    (first_distance, (first_colorA, first_colorB, first_colorC)) = foo[0]
-                    (second_distance, (second_colorA, second_colorB, second_colorC)) = foo[1]
-
-                    # ...and note the delta from the color pair this corner is the closest
-                    # match with vs the color pair this corner is the second closest match with
-                    corner.first_vs_second_delta = second_distance - first_distance
-                    corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
-                    corner.first_distance = first_distance
-                    log.debug("%s 2nd (%s/%s/%s) vs 1st (%s/%s/%s) delta %d (%d - %d)" %\
-                        (corner,
-                         second_colorA.name, second_colorB.name, second_colorC.name,
-                         first_colorA.name, first_colorB.name, first_colorC.name,
-                         corner.first_vs_second_delta, second_distance, first_distance))
-                else:
-                    (first_distance, (first_colorA, first_colorB, first_colorC)) = foo[0]
-                    corner.first_vs_second_delta = first_distance
-                    corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
-                    corner.first_distance = first_distance
-                    log.debug("%s 1st (%s/%s/%s) delta %d (LAST)" %\
-                        (corner,
-                         second_colorA.name, second_colorB.name, second_colorC.name,
-                         corner.first_vs_second_delta))
-
-            # Now look at all of the corners and resolve the one whose 2nd vs 1st color
-            # tuple distance is the greatest.  Think of it as the higher this delta
-            # is the more important it is that we resolve this corner to the color tuple
-            # that came in first place.
-            max_delta = None
-            max_delta_corner = None
-            max_delta_distance = None
-
-            for corner in unresolved_corners:
-                if max_delta is None or corner.first_vs_second_delta > max_delta:
-                    max_delta = corner.first_vs_second_delta
-                    max_delta_corner = corner
-                    max_delta_distance = corner.first_distance
-
-            distance = max_delta_distance
-            corner = max_delta_corner
-            (colorA, colorB, colorC) = corner.first_place_colors
-
-            corner.update_colors(colorA, colorB, colorC)
-            corner.valid = True
-            corner.first_vs_second_delta = None
-            corner.first_place_colors = None
-            corner.first_distance = None
-            needed_corner_color_tuple.remove((colorA, colorB, colorC))
-            unresolved_corners.remove(corner)
-            log.info("corner %s 2nd vs 1st delta of %d was the highest" % (corner, max_delta))
-            log.debug("")
+        self.assign_color_names(sorted_center_colors_cluster_squares)
+        self.write_colors('centers', sorted_center_colors_cluster_squares)
 
     def get_corner_swap_count(self, debug=False):
 
@@ -2555,13 +2337,11 @@ div#anchorsquares {
         self.identify_edge_squares()
         self.print_cube()
 
-        #self.resolve_edge_squares_experiment()
-        self.resolve_edge_squares()
+        self.resolve_edge_squares_experiment()
+        self.resolve_corner_squares_experiment()
+        self.resolve_center_squares_experiment()
 
-        #self.resolve_corner_squares_experiment()
-        self.resolve_corner_squares()
-
-        self.validate_parity()
+        #self.validate_parity()
         self.print_cube()
         self.print_layout()
         self.write_final_cube()
