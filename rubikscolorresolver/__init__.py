@@ -20,6 +20,51 @@ log = logging.getLogger(__name__)
 SIDES_COUNT = 6
 
 
+edge_orbit_id = {
+    3: {
+        2: 0, 4: 0, 6: 0, 8: 0, # Upper
+        11: 0, 13: 0, 15: 0, 17: 0, # Left
+        20: 0, 22: 0, 24: 0, 26: 0, # Front
+        29: 0, 31: 0, 33: 0, 35: 0, # Right
+        38: 0, 40: 0, 42: 0, 44: 0, # Back
+        47: 0, 49: 0, 51: 0, 53: 0, # Down
+    },
+    4: {
+        2: 0, 3: 0, 5: 0, 9: 0, 8: 0, 12: 0, 14: 0, 15: 0, # Upper
+        18: 0, 19: 0, 21: 0, 25: 0, 24: 0, 28: 0, 30: 0, 31: 0, # Left
+        34: 0, 35: 0, 37: 0, 41: 0, 40: 0, 44: 0, 46: 0, 47: 0, # Front
+        50: 0, 51: 0, 53: 0, 57: 0, 56: 0, 60: 0, 62: 0, 63: 0, # Right
+        66: 0, 67: 0, 69: 0, 73: 0, 72: 0, 76: 0, 78: 0, 79: 0, # Back
+        82: 0, 83: 0, 85: 0, 89: 0, 88: 0, 92: 0, 94: 0, 95: 0, # Down
+    },
+    5: {
+        2: 0, 3: 1, 4: 0, 6: 0, 11: 1, 16: 0, 10: 0, 15: 1, 20: 0, 22: 0, 23: 1, 24: 0, # Upper 
+        27: 0, 28: 1, 29: 0, 31: 0, 36: 1, 41: 0, 35: 0, 40: 1, 45: 0, 47: 0, 48: 1, 49: 0, # Left
+        52: 0, 53: 1, 54: 0, 56: 0, 61: 1, 66: 0, 60: 0, 65: 1, 70: 0, 72: 0, 73: 1, 74: 0, # Front
+        77: 0, 78: 1, 79: 0, 81: 0, 86: 1, 91: 0, 85: 0, 90: 1, 95: 0, 97: 0, 98: 1, 99: 0, # Right
+        102: 0, 103: 1, 104: 0, 106: 0, 111: 1, 116: 0, 110: 0, 115: 1, 120: 0, 122: 0, 123: 1, 124: 0, # Back
+        127: 0, 128: 1, 129: 0, 131: 0, 136: 1, 141: 0, 135: 0, 140: 1, 145: 0, 147: 0, 148: 1, 149: 0, # Down
+    },
+    6: {
+        # oribit 0
+        2: 0, 5: 0, 7: 0, 25: 0, 12: 0, 30: 0, 32: 0, 35: 0, # Upper
+        38: 0, 41: 0, 43: 0, 61: 0, 48: 0, 66: 0, 68: 0, 71: 0, # Left
+        74: 0, 77: 0, 79: 0, 97: 0, 84: 0, 102: 0, 104: 0, 107: 0, # Front
+        110: 0, 113: 0, 115: 0, 133: 0, 120: 0, 138: 0, 140: 0, 143: 0, # Right
+        146: 0, 149: 0, 151: 0, 169: 0, 156: 0, 174: 0, 176: 0, 179: 0, # Back
+        182: 0, 185: 0, 187: 0, 205: 0, 192: 0, 210: 0, 212: 0, 215: 0, # Down
+
+        # oribit 1
+        3: 1, 4: 1, 13: 1, 19: 1, 18: 1, 24: 1, 33: 1, 34: 1, # Upper
+        39: 1, 40: 1, 49: 1, 55: 1, 54: 1, 60: 1, 69: 1, 70: 1, # Left
+        75: 1, 76: 1, 85: 1, 91: 1, 90: 1, 96: 1, 105: 1, 106: 1, # Front
+        111: 1, 112: 1, 121: 1, 127: 1, 126: 1, 132: 1, 141: 1, 142: 1, # Right
+        147: 1, 148: 1, 157: 1, 163: 1, 162: 1, 168: 1, 177: 1, 178: 1, # Back
+        183: 1, 184: 1, 193: 1, 199: 1, 198: 1, 204: 1, 213: 1, 214: 1, # Down
+    }
+}
+
+
 def get_euclidean_lab_distance(lab1, lab2):
     """
     http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
@@ -139,7 +184,6 @@ def traveling_salesman(colors, alg):
             matrix[y][x] = distance
 
     path = solve_tsp(matrix)
-    #print(path)
     return [colors[x] for x in path]
 
 
@@ -1302,14 +1346,14 @@ div#anchorsquares {
             }
 
         self.state = ['placeholder', ]
-        #print("color_to_side_name:\n{}".format(self.color_to_side_name))
+        #log.info("color_to_side_name:\n{}".format(self.color_to_side_name))
 
         for side_name in self.side_order:
             side = self.sides[side_name]
 
             for x in range(side.min_pos, side.max_pos + 1):
                 color_name = side.squares[x].color_name
-                log.info("set_state(): side {}, x {}, color_name {}".format(side, x, color_name))
+                #log.info("set_state(): side {}, x {}, color_name {}".format(side, x, color_name))
                 self.state.append(self.color_to_side_name[color_name])
 
     def cube_for_kociemba_strict(self):
@@ -1330,7 +1374,6 @@ div#anchorsquares {
         data['kociemba'] = ''.join(self.cube_for_kociemba_strict())
         data['sides'] = {}
         data['squares'] = {}
-        #color_to_side = {}
 
         html_color = {
             'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
@@ -1342,14 +1385,34 @@ div#anchorsquares {
         }
 
         for side in self.sides.values():
-            #color_to_side[side.color] = side
+
+            # odd cube use the center square for each side
+            if side.mid_pos:
+                side.color_name = side.squares[side.mid_pos].color_name
+
+            # even cube assume:
+            # - white on top
+            # - orange on left
+            # - green on front
+            # - red on right
+            # - blue on back
+            # - yellow on bottom
+            else:
+                if side.name == "U":
+                    side.color_name = "Wh"
+                elif side.name == "L":
+                    side.color_name = "OR"
+                elif side.name == "F":
+                    side.color_name = "Gr"
+                elif side.name == "R":
+                    side.color_name = "Rd"
+                elif side.name == "B":
+                    side.color_name = "Bu"
+                elif side.name == "D":
+                    side.color_name = "Ye"
+
             data['sides'][side.name] = {
                 'colorName' : side.color_name,
-                'colorScan' : {
-                    'red'   : side.red,
-                    'green' : side.green,
-                    'blue'  : side.blue,
-                },
                 'colorHTML' : html_color[side.color_name]
             }
 
@@ -1361,11 +1424,11 @@ div#anchorsquares {
                 color = square.color_name
                 final_side = self.color_to_side_name[color]
                 data['squares'][square.position] = {
-                    'colorScan' : {
-                        'red'   : square.red,
-                        'green' : square.green,
-                        'blue'  : square.blue,
-                    },
+                    #'colorScan' : {
+                    #    'red'   : square.red,
+                    #    'green' : square.green,
+                    #    'blue'  : square.blue,
+                    #},
                     'finalSide' : self.color_to_side_name[color]
                 }
 
@@ -1780,7 +1843,7 @@ div#anchorsquares {
 
     def assign_color_names(self, squares_lists):
         assert len(squares_lists) == 6, "There are %d squares_list, there should be 6" % len(squares_lists)
-        print("SQUARES_LIST: {}".format(squares_lists))
+        #log.info("SQUARES_LIST:\n{}\n".format(pformat(squares_lists)))
 
         # Assign a color name to each squares in each square_list. Compute
         # which naming scheme results in the least total color distance in
@@ -1801,7 +1864,7 @@ div#anchorsquares {
             if min_distance is None or distance < min_distance:
                 min_distance = distance
                 min_distance_permutation = permutation
-                log.warning("PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(permutation, int(distance)))
+                log.info("PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(permutation, int(distance)))
             #else:
             #    log.info("PERMUTATION {}, DISTANCE {}".format(permutation, distance))
 
@@ -1820,18 +1883,21 @@ div#anchorsquares {
         Use traveling salesman algorithm to sort the colors
         """
 
-        # A 2x2x2 will not have edges
-        if not self.edges:
+        # Nothing to be done for 2x2x2
+        if self.width == 2:
             return
 
         for target_orbit_id in range(self.orbits):
             log.warning('Resolve edges for orbit %d' % target_orbit_id)
             edge_colors = []
 
-            for edge in self.edges:
-                if edge.orbit_id == target_orbit_id:
-                    edge_colors.append((edge.square1.position, edge.square1.rgb))
-                    edge_colors.append((edge.square2.position, edge.square2.rgb))
+            for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+                for square in side.edge_squares:
+                    orbit_id = edge_orbit_id[self.width][square.position]
+                    log.info("{}: {}, position {}, orbit_id {}".format(self.width, square, square.position, orbit_id))
+
+                    if orbit_id == target_orbit_id:
+                        edge_colors.append((square.position, square.rgb))
 
             sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
             sorted_edge_colors_cluster_squares = []
@@ -1857,10 +1923,9 @@ div#anchorsquares {
         log.warning('Resolve corners')
         corner_colors = []
 
-        for corner in self.corners:
-            corner_colors.append((corner.square1.position, corner.square1.rgb))
-            corner_colors.append((corner.square2.position, corner.square2.rgb))
-            corner_colors.append((corner.square3.position, corner.square3.rgb))
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.corner_squares:
+                corner_colors.append((square.position, square.rgb))
 
         sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
         sorted_corner_colors_cluster_squares = []
@@ -1881,6 +1946,11 @@ div#anchorsquares {
         """
         Use traveling salesman algorithm to sort the colors
         """
+
+        # Nothing to be done for 2x2x2
+        if self.width == 2:
+            return
+
         log.warning('Resolve centers')
         center_colors = []
 
@@ -2322,19 +2392,18 @@ div#anchorsquares {
 
         for square_index in sorted(data['squares'].keys()):
             value = data['squares'][square_index]
-            #log.info("write_final_cube square_index %d value %s" % (square_index, pformat(value)))
             html_colors = data['sides'][value['finalSide']]['colorHTML']
             cube.append((html_colors['red'], html_colors['green'], html_colors['blue']))
 
         self.write_cube('Final Cube', cube)
 
     def crunch_colors(self):
-        self.anchor_squares = []
+        #self.anchor_squares = []
 
-        self.create_corner_objects()
-        self.identify_anchor_squares()
-        self.identify_corner_squares()
-        self.identify_edge_squares()
+        #self.create_corner_objects()
+        #self.identify_anchor_squares()
+        #self.identify_corner_squares()
+        #self.identify_edge_squares()
         self.print_cube()
 
         self.resolve_edge_squares_experiment()
