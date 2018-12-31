@@ -5,7 +5,6 @@ from copy import deepcopy, copy
 from itertools import permutations
 from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
 from pprint import pformat
-import colorsys
 import itertools
 import json
 import logging
@@ -60,6 +59,24 @@ edge_orbit_id = {
         147: 1, 148: 1, 157: 1, 163: 1, 162: 1, 168: 1, 177: 1, 178: 1, # Back
         183: 1, 184: 1, 193: 1, 199: 1, 198: 1, 204: 1, 213: 1, 214: 1, # Down
     }
+}
+
+edge_orbit_wing_pairs = {
+    6 : (
+        # orbit 0
+        ((2, 149), (5, 146), (7, 38), (25, 41), (12, 113), (30, 110), (32, 74), (35, 77),
+         (43, 156), (61, 174), (48, 79), (66, 97),
+         (115, 84), (133, 102), (120, 151), (138, 169),
+         (182, 104), (185, 107), (187, 71), (205, 68), (192, 140), (210, 143), (212, 179), (215, 176),
+        ),
+
+        # orbit 1
+        ((3, 148), (4, 147), (13, 39), (19, 40), (18, 112), (24, 111), (33, 75), (34, 76),
+         (49, 162), (55, 168), (54, 85), (60, 91),
+         (90, 121), (96, 127), (126, 157), (132, 163),
+         (183, 105), (184, 106), (193, 70), (199, 69), (198, 141), (204, 142), (213, 178), (214, 177),
+        ),
+    )
 }
 
 center_groups = {
@@ -165,8 +182,6 @@ def traveling_salesman(colors, alg):
     for x in range(len_colors):
         (_x_square_index, (x_red, x_green, x_blue)) = colors[x]
         x_lab = rgb2lab((x_red, x_green, x_blue))
-        x_hsv = colorsys.rgb_to_hsv(x_red, x_green, x_blue)
-        x_hls = colorsys.rgb_to_hls(x_red, x_green, x_blue)
 
         for y in range(len_colors):
 
@@ -179,21 +194,12 @@ def traveling_salesman(colors, alg):
                 continue
 
             (_y_square_index, (y_red, y_green, y_blue)) = colors[y]
+            y_lab = rgb2lab((y_red, y_green, y_blue))
 
             if alg == "cie2000":
-                y_lab = rgb2lab((y_red, y_green, y_blue))
                 distance = delta_e_cie2000(x_lab, y_lab)
 
-            elif alg == "HSV":
-                y_hsv = colorsys.rgb_to_hsv(y_red, y_green, y_blue)
-                distance = get_euclidean_distance_two_points(x_hsv, y_hsv)
-
-            elif alg == "HLS":
-                y_hls = colorsys.rgb_to_hls(y_red, y_green, y_blue)
-                distance = get_euclidean_distance_two_points(x_hls, y_hls)
-
             elif alg == "euclidean":
-                y_lab = rgb2lab((y_red, y_green, y_blue))
                 distance = get_euclidean_lab_distance(x_lab, y_lab)
 
             else:
@@ -696,16 +702,11 @@ div#colormapping {
                     fh.write("<div class='side' id='%s'>\n" % sides[side_index])
 
                 (red, green, blue) = cube[index]
-                (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
-                H = int(H * 360)
-                S = int(S * 100)
-                V = int(V * 100)
                 lab = rgb2lab((red, green, blue))
 
-                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d) HSV (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
                     (col,
                      red, green, blue,
-                     H, S, V,
                      lab.L, lab.a, lab.b,
                      red, green, blue,
                      index))
@@ -732,25 +733,15 @@ div#colormapping {
 
                 for cluster_square in cluster_square_list:
                     (red, green, blue) = cluster_square.rgb
-
-                    # to use python coloursys convertion we have to rescale to range 0-1
-                    (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
-
-                    # rescale H to 360 degrees and S, V to percent of 100%
-                    H = int(H * 360)
-                    S = int(S * 100)
-                    V = int(V * 100)
                     lab = rgb2lab((red, green, blue))
 
-                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s), Lab (%s, %s, %s)'>%d</span>\n" %
+                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s)'>%d</span>\n" %
                         (red, green, blue,
                          red, green, blue,
-                         H, S, V,
                          lab.L, lab.a, lab.b,
                          cluster_square.index))
 
                 fh.write("<br>")
-
             fh.write("</div>\n")
 
     def www_footer(self):
@@ -995,6 +986,32 @@ div#colormapping {
                 square = self.get_square(cluster_square.index)
                 square.color_name = color_name
 
+    def validate_edge_orbit(self, orbit_id):
+        valid = True
+        colors_to_flip = []
+
+        # dwalton here now
+        # We need to see which orange/red we can flip that will make the edges valid
+        wing_pair_counts = {}
+
+        for (square1_position, square2_position) in edge_orbit_wing_pairs[self.width][orbit_id]:
+            square1 = self.get_square(square1_position)
+            square2 = self.get_square(square2_position)
+            wing_pair_string = ", ".join(sorted([square1.color_name, square2.color_name]))
+            #log.info("({}, {}) is ({})".format(square1_position, square2_position, wing_pair_string))
+
+            if wing_pair_string not in wing_pair_counts:
+                wing_pair_counts[wing_pair_string] = 0
+            wing_pair_counts[wing_pair_string] += 1
+
+        for (wing_pair, count) in wing_pair_counts.items():
+            if count != 2:
+                valid = False
+        log.info("wing_pair_counts:\n{}\n".format(pformat(wing_pair_counts)))
+        log.info("valid: {}".format(valid))
+        log.info("colors_to_flip: {}".format(colors_to_flip))
+        return (valid, colors_to_flip)
+
     def resolve_edge_squares(self):
         """
         Use traveling salesman algorithm to sort the colors
@@ -1016,6 +1033,8 @@ div#colormapping {
                     if orbit_id == target_orbit_id:
                         edge_colors.append((square.position, square.rgb))
 
+            #edge_colors.append((0, (0, 0, 0)))
+            #edge_colors.append((999, (255, 255, 255)))
             sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
             sorted_edge_colors_cluster_squares = []
             squares_list = []
@@ -1029,6 +1048,12 @@ div#colormapping {
                     squares_list = []
 
             self.assign_color_names(sorted_edge_colors_cluster_squares)
+            (valid, colors_to_flip) = self.validate_edge_orbit(target_orbit_id)
+
+            # dwalton
+            if not valid:
+                pass
+
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
                 sorted_edge_colors_cluster_squares)
@@ -1103,7 +1128,6 @@ div#colormapping {
         self.write_cube('Final Cube', cube)
 
     def crunch_colors(self):
-        #self.print_cube()
         self.resolve_edge_squares()
         self.resolve_corner_squares()
         self.resolve_center_squares()
