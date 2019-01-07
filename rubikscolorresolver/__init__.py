@@ -62,6 +62,34 @@ edge_orbit_id = {
 }
 
 edge_orbit_wing_pairs = {
+    3 : (
+        ((2, 38), (4, 11), (6, 29), (8, 20),
+         (13, 42), (15, 22),
+         (31, 24), (33, 40),
+         (47, 26), (49, 17), (51, 35), (53, 44)),
+    ),
+
+    4 : (
+        ((2, 67), (3, 66), (5, 18), (9, 19), (8, 51), (12, 50), (14, 34), (15, 35),
+         (21, 72), (25, 76), (24, 37), (28, 41),
+         (53, 40), (57, 44), (56, 69), (60, 73),
+         (82, 46), (83, 47), (85, 31), (89, 30), (88, 62), (92, 63), (94, 79), (95, 78)),
+    ),
+
+    5 : (
+        # orbit 0
+        ((2, 104), (4, 102), (6, 27), (16, 29), (10, 79), (20, 77), (22, 52), (24, 54),
+         (31, 110), (41, 120), (35, 56), (45, 66),
+         (81, 60), (91, 70), (85, 106), (95, 116),
+         (72, 127), (74, 129), (131, 49), (141, 47), (135, 97), (145, 99), (147, 124), (149, 122)),
+
+        # orbit 1
+        ((3, 103), (11, 28), (15, 78), (23, 53),
+         (36, 115), (40, 61),
+         (86, 65), (90, 111),
+         (128, 73), (136, 48), (140, 98), (148, 123)),
+    ),
+
     6 : (
         # orbit 0
         ((2, 149), (5, 146), (7, 38), (25, 41), (12, 113), (30, 110), (32, 74), (35, 77),
@@ -197,7 +225,9 @@ def traveling_salesman(colors, alg):
             y_lab = rgb2lab((y_red, y_green, y_blue))
 
             if alg == "cie2000":
-                distance = delta_e_cie2000(x_lab, y_lab)
+                distance_xy = delta_e_cie2000(x_lab, y_lab)
+                distance_yx = delta_e_cie2000(y_lab, x_lab)
+                distance = max(distance_xy, distance_yx)
 
             elif alg == "euclidean":
                 distance = get_euclidean_lab_distance(x_lab, y_lab)
@@ -275,50 +305,67 @@ class LabColor(object):
 
 
 def rgb2lab(inputColor):
-    """
-    http://stackoverflow.com/questions/13405956/convert-an-image-rgb-lab-with-python
-    """
-    RGB = [0, 0, 0]
-    XYZ = [0, 0, 0]
-
-    for (num, value) in enumerate(inputColor):
-        if value > 0.04045:
-            value = pow(((value + 0.055) / 1.055), 2.4)
-        else:
-            value = value / 12.92
-
-        RGB[num] = value * 100.0
-
-    # http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-    # sRGB
-    # 0.4124564  0.3575761  0.1804375
-    # 0.2126729  0.7151522  0.0721750
-    # 0.0193339  0.1191920  0.9503041
-    X = (RGB[0] * 0.4124564) + (RGB[1] * 0.3575761) + (RGB[2] * 0.1804375)
-    Y = (RGB[0] * 0.2126729) + (RGB[1] * 0.7151522) + (RGB[2] * 0.0721750)
-    Z = (RGB[0] * 0.0193339) + (RGB[1] * 0.1191920) + (RGB[2] * 0.9503041)
-
-    XYZ[0] = X / 95.047   # ref_X =  95.047
-    XYZ[1] = Y / 100.0    # ref_Y = 100.000
-    XYZ[2] = Z / 108.883  # ref_Z = 108.883
-
-    for (num, value) in enumerate(XYZ):
-        if value > 0.008856:
-            value = pow(value, (1.0 / 3.0))
-        else:
-            value = (7.787 * value) + (16 / 116.0)
-
-        XYZ[num] = value
-
-    L = (116.0 * XYZ[1]) - 16
-    a = 500.0 * (XYZ[0] - XYZ[1])
-    b = 200.0 * (XYZ[1] - XYZ[2])
-
-    L = round(L, 4)
-    a = round(a, 4)
-    b = round(b, 4)
-
     (red, green, blue) = inputColor
+
+    # XYZ -> Standard-RGB
+    # https://www.easyrgb.com/en/math.php
+    var_R = red / 255
+    var_G = green / 255
+    var_B = blue / 255
+
+    if var_R > 0.04045:
+        var_R = pow(((var_R + 0.055) / 1.055), 2.4)
+    else:
+        var_R = var_R / 12.92
+
+    if var_G > 0.04045:
+        var_G = pow(((var_G + 0.055 ) / 1.055), 2.4)
+    else:
+        var_G = var_G / 12.92
+
+    if var_B > 0.04045:
+        var_B = pow(((var_B + 0.055 ) / 1.055), 2.4)
+    else:
+        var_B = var_B / 12.92
+
+    var_R = var_R * 100
+    var_G = var_G * 100
+    var_B = var_B * 100
+
+    X = var_R * 0.4124 + var_G * 0.3576 + var_B * 0.1805
+    Y = var_R * 0.2126 + var_G * 0.7152 + var_B * 0.0722
+    Z = var_R * 0.0193 + var_G * 0.1192 + var_B * 0.9505
+
+    reference_X = 95.047
+    reference_Y = 100.0
+    reference_Z = 108.883
+
+    # XYZ -> CIE-L*ab
+    # //www.easyrgb.com/en/math.php
+    var_X = X / reference_X
+    var_Y = Y / reference_Y
+    var_Z = Z / reference_Z
+
+    if var_X > 0.008856:
+        var_X = pow(var_X, 1/3)
+    else:
+        var_X = (7.787 * var_X) + (16 / 116)
+
+    if var_Y > 0.008856:
+        var_Y = pow(var_Y, 1/3)
+    else:
+        var_Y = (7.787 * var_Y) + (16 / 116)
+
+    if var_Z > 0.008856:
+        var_Z = pow(var_Z, 1/3)
+    else:
+        var_Z = (7.787 * var_Z) + (16 / 116)
+
+    L = (116 * var_Y) - 16
+    a = 500 * (var_X - var_Y)
+    b = 200 * (var_Y - var_Z)
+    #log.info("RGB ({}, {}, {}), L {}, a {}, b {}".format(red, green, blue, L, a, b))
+
     return LabColor(L, a, b, red, green, blue)
 
 
@@ -707,7 +754,7 @@ div#colormapping {
                 fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
                     (col,
                      red, green, blue,
-                     lab.L, lab.a, lab.b,
+                     int(lab.L), int(lab.a), int(lab.b),
                      red, green, blue,
                      index))
 
@@ -738,7 +785,7 @@ div#colormapping {
                     fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s)'>%d</span>\n" %
                         (red, green, blue,
                          red, green, blue,
-                         lab.L, lab.a, lab.b,
+                         int(lab.L), int(lab.a), int(lab.b),
                          cluster_square.index))
 
                 fh.write("<br>")
@@ -769,9 +816,56 @@ div#colormapping {
         self.scan_data = scan_data
         cube = ['dummy',]
 
+        max_avg = {
+            'U': 0,
+            'L': 0,
+            'F': 0,
+            'R': 0,
+            'B': 0,
+            'D': 0,
+        }
+        max_avg_rgb = {
+            'U': None,
+            'L': None,
+            'F': None,
+            'R': None,
+            'B': None,
+            'D': None,
+        }
+
         for (position, (red, green, blue)) in sorted(self.scan_data.items()):
             position = int(position)
             side = self.get_side(position)
+            avg = float((red + green + blue) / 3)
+
+            if avg > max_avg[side.name]:
+                max_avg[side.name] = avg
+                max_avg_rgb[side.name] = (red, green, blue)
+
+        for (position, (red, green, blue)) in sorted(self.scan_data.items()):
+            position = int(position)
+            side = self.get_side(position)
+
+            # white balance
+            '''
+            red_offset = 255 - max_avg_rgb[side.name][0]
+            green_offset = 255 - max_avg_rgb[side.name][1]
+            blue_offset = 255 - max_avg_rgb[side.name][2]
+
+            red += red_offset
+            green += green_offset
+            blue += blue_offset
+
+            if red > 255:
+                red = 255
+
+            if green > 255:
+                green = 255
+
+            if blue > 255:
+                blue = 255
+            '''
+
             side.set_square(position, red, green, blue)
             cube.append((red, green, blue))
 
@@ -988,9 +1082,7 @@ div#colormapping {
 
     def validate_edge_orbit(self, orbit_id):
         valid = True
-        colors_to_flip = []
 
-        # dwalton here now
         # We need to see which orange/red we can flip that will make the edges valid
         wing_pair_counts = {}
 
@@ -1007,10 +1099,58 @@ div#colormapping {
         for (wing_pair, count) in wing_pair_counts.items():
             if count != 2:
                 valid = False
-        log.info("wing_pair_counts:\n{}\n".format(pformat(wing_pair_counts)))
-        log.info("valid: {}".format(valid))
-        log.info("colors_to_flip: {}".format(colors_to_flip))
-        return (valid, colors_to_flip)
+                break
+
+        if not valid:
+            log.info("wing_pair_counts:\n{}\n".format(pformat(wing_pair_counts)))
+            log.warning("valid: {}".format(valid))
+
+        return valid
+
+    def resolve_all_squares(self):
+        log.info('Resolve all squares')
+        edge_colors = []
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for x in range(side.min_pos, side.max_pos + 1):
+                square = side.squares[x]
+                edge_colors.append((square.position, square.rgb))
+
+        #sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+        sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
+        sorted_edge_colors_cluster_squares = []
+        squares_list = []
+        squares_per_cluster = int(len(sorted_edge_colors) / 6)
+
+        for (index, (square_index, rgb)) in enumerate(sorted_edge_colors):
+            index += 1
+            squares_list.append(ClusterSquare(square_index, rgb))
+            if index % squares_per_cluster == 0:
+                sorted_edge_colors_cluster_squares.append(squares_list)
+                squares_list = []
+
+        squares_per_side = int(len(edge_colors)/6)
+        for cluster_square_list in sorted_edge_colors_cluster_squares:
+            total_red = 0
+            total_green = 0
+            total_blue = 0
+            for cluster_square in cluster_square_list:
+                (red, green, blue) = cluster_square.rgb
+                total_red += red
+                total_green += green
+                total_blue += blue
+
+            avg_red = int(total_red / squares_per_side)
+            avg_green = int(total_green / squares_per_side)
+            avg_blue = int(total_blue / squares_per_side)
+
+            log.info("avg RGB ({}, {}, {})".format(avg_red, avg_green, avg_blue))
+
+        #self.assign_color_names(sorted_edge_colors_cluster_squares)
+        self.write_colors(
+            'all',
+            sorted_edge_colors_cluster_squares)
+        log.info("\n\n")
 
     def resolve_edge_squares(self):
         """
@@ -1035,7 +1175,8 @@ div#colormapping {
 
             #edge_colors.append((0, (0, 0, 0)))
             #edge_colors.append((999, (255, 255, 255)))
-            sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+            #sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+            sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
             sorted_edge_colors_cluster_squares = []
             squares_list = []
             squares_per_cluster = int(len(sorted_edge_colors) / 6)
@@ -1048,15 +1189,15 @@ div#colormapping {
                     squares_list = []
 
             self.assign_color_names(sorted_edge_colors_cluster_squares)
-            (valid, colors_to_flip) = self.validate_edge_orbit(target_orbit_id)
+            valid = self.validate_edge_orbit(target_orbit_id)
 
-            # dwalton
             if not valid:
                 pass
 
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
                 sorted_edge_colors_cluster_squares)
+            log.info("\n\n")
 
     def resolve_corner_squares(self):
         """
@@ -1069,7 +1210,8 @@ div#colormapping {
             for square in side.corner_squares:
                 corner_colors.append((square.position, square.rgb))
 
-        sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
+        #sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
+        sorted_corner_colors = traveling_salesman(corner_colors, "cie2000")
         sorted_corner_colors_cluster_squares = []
         squares_list = []
         squares_per_cluster = int(len(sorted_corner_colors) / 6)
@@ -1101,7 +1243,8 @@ div#colormapping {
                 square = self.get_square(position)
                 center_colors.append((square.position, square.rgb))
 
-            sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+            #sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+            sorted_center_colors = traveling_salesman(center_colors, "cie2000")
             sorted_center_colors_cluster_squares = []
             squares_list = []
             squares_per_cluster = int(len(sorted_center_colors) / 6)
@@ -1128,6 +1271,7 @@ div#colormapping {
         self.write_cube('Final Cube', cube)
 
     def crunch_colors(self):
+        self.resolve_all_squares()
         self.resolve_edge_squares()
         self.resolve_corner_squares()
         self.resolve_center_squares()
