@@ -17,6 +17,9 @@ log = logging.getLogger(__name__)
 
 SIDES_COUNT = 6
 
+HTML_DIRECTORY = '/tmp/rubiks-color-resolver/'
+HTML_FILENAME = os.path.join(HTML_DIRECTORY, 'index.html')
+
 
 def get_euclidean_lab_distance(lab1, lab2):
     """
@@ -962,6 +965,14 @@ class RubiksColorSolverGeneric(object):
             self.even = False
             self.odd = True
 
+        if not os.path.exists(HTML_DIRECTORY):
+            os.makedirs(HTML_DIRECTORY)
+            os.chmod(HTML_DIRECTORY, 0o777)
+
+        with open(HTML_FILENAME, 'w') as fh:
+            pass
+        os.chmod(HTML_FILENAME, 0o777)
+
         self.sides = {
             'U': CubeSide(self, self.width, 'U'),
             'L': CubeSide(self, self.width, 'L'),
@@ -1063,12 +1074,8 @@ class RubiksColorSolverGeneric(object):
         side_margin = 10
         square_size = 40
         size = self.width # 3 for 3x3x3, etc
-        filename = '/tmp/rubiks-color-resolver.html'
 
-        if os.path.exists(filename):
-            os.remove(filename)
-
-        with open(filename, 'w') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("""<!DOCTYPE html>
 <html>
 <head>
@@ -1149,8 +1156,6 @@ div#anchorsquares {
 <body>
 """ % (square_size, square_size, square_size, square_size, square_size, square_size))
 
-        os.chmod(filename, 0o777)
-
     def write_cube(self, desc, cube):
         """
         'cube' is a list of (R,G,B) tuples
@@ -1164,7 +1169,7 @@ div#anchorsquares {
         side_index = -1
         (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
 
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h1>%s</h1>\n" % desc)
             for index in range(1, max_square + 1):
                 if index in first_squares:
@@ -1198,7 +1203,7 @@ div#anchorsquares {
                     col = 1
 
     def write_colors(self, desc, colors):
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             squares_per_side = int(len(colors)/6)
             fh.write("<h2>%s</h2>\n" % desc)
             fh.write("<div class='clear colors'>\n")
@@ -1243,7 +1248,7 @@ div#anchorsquares {
             log.info('\n\n')
 
     def www_footer(self):
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("""
 </body>
 </html>
@@ -1274,7 +1279,7 @@ div#anchorsquares {
             cube.append((red, green, blue))
 
         # write the input to the web page so we can reproduce bugs, etc just from the web page
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h1>JSON Input</h1>\n")
             fh.write("<pre>%s</pre>\n" % json.dumps(scan_data))
 
@@ -1670,7 +1675,7 @@ div#anchorsquares {
                 else:
                     raise Exception("%s: could not determine color, target %s" % (side, target_color_name))
 
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write('<div id="colormapping">\n')
             fh.write('<h1>Side => Color Mapping</h1>\n')
             fh.write('<ul>\n')
