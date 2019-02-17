@@ -1,22 +1,15 @@
 from collections import OrderedDict
 from copy import deepcopy, copy
-from itertools import permutations
-from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
+from itertools import combinations, permutations
+from math import sqrt, ceil
 from pprint import pformat
-import colorsys
-import itertools
-import json
+from json import dumps as json_dumps
 import logging
 import os
-import sys
-
-if sys.version_info < (3,4):
-    raise SystemError('Must be using Python 3.4 or higher')
 
 log = logging.getLogger(__name__)
 
 SIDES_COUNT = 6
-
 HTML_DIRECTORY = '/tmp/rubiks-color-resolver/'
 HTML_FILENAME = os.path.join(HTML_DIRECTORY, 'index.html')
 
@@ -198,7 +191,7 @@ def assign_points(desc, cube, data_points, anchors, squares_per_side):
             min_euclidean_distance = None
             min_distance_orange_combo = None
 
-            for combo in itertools.combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
+            for combo in combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
                 total_euclidean_distance = 0
 
                 for member in combo:
@@ -410,11 +403,13 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
+    '''
 def delta_e_cie2000(lab1, lab2):
     """
     Ported from this php implementation
     https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
     """
+    from math import atan2, cos, degrees, exp, radians, sin
     l1 = lab1.L
     a1 = lab1.a
     b1 = lab1.b
@@ -478,6 +473,7 @@ def delta_e_cie2000(lab1, lab2):
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
 
     return delta_e
+    '''
 
 
 def hex_to_rgb(rgb_string):
@@ -1177,16 +1173,17 @@ div#anchorsquares {
                     fh.write("<div class='side' id='%s'>\n" % sides[side_index])
 
                 (red, green, blue) = cube[index]
-                (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
-                H = int(H * 360)
-                S = int(S * 100)
-                V = int(V * 100)
+                #(H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
+                #H = int(H * 360)
+                #S = int(S * 100)
+                #V = int(V * 100)
                 lab = rgb2lab((red, green, blue))
 
-                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d) HSV (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                #fh.write("    <div class='square col%d' title='RGB (%d, %d, %d) HSV (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
                     (col,
                      red, green, blue,
-                     H, S, V,
+                     # H, S, V,
                      lab.L, lab.a, lab.b,
                      red, green, blue,
                      index))
@@ -1224,18 +1221,19 @@ div#anchorsquares {
                     (red, green, blue) = cluster_square.rgb
 
                     # to use python coloursys convertion we have to rescale to range 0-1
-                    (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
+                    #(H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
 
                     # rescale H to 360 degrees and S, V to percent of 100%
-                    H = int(H * 360)
-                    S = int(S * 100)
-                    V = int(V * 100)
+                    #H = int(H * 360)
+                    #S = int(S * 100)
+                    #V = int(V * 100)
                     lab = rgb2lab((red, green, blue))
 
-                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s), Lab (%s, %s, %s) Distance %d'>%d</span>\n" %
+                    #fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s), Lab (%s, %s, %s) Distance %d'>%d</span>\n" %
+                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s) Distance %d'>%d</span>\n" %
                         (red, green, blue,
                          red, green, blue,
-                         H, S, V,
+                         # H, S, V,
                          lab.L, lab.a, lab.b,
                          distance_to_anchor,
                          cluster_square.index))
@@ -1281,7 +1279,7 @@ div#anchorsquares {
         # write the input to the web page so we can reproduce bugs, etc just from the web page
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h1>JSON Input</h1>\n")
-            fh.write("<pre>%s</pre>\n" % json.dumps(scan_data))
+            fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
 
         self.write_cube('Input RGB values', cube)
 

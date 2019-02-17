@@ -2,10 +2,10 @@
 
 from rubikscolorresolver import RubiksColorSolverGeneric
 from math import sqrt
-import argparse
-import json
+from json import dumps as json_dumps
+from json import load as json_load
 import logging
-import sys
+
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
 logging.basicConfig(level=logging.INFO,
@@ -53,7 +53,7 @@ results = []
 for (desc, filename, expected) in test_cases:
     log.warning("Test: %s" % desc)
     with open('test/' + filename, 'r') as fh:
-        scan_data_str_keys = json.load(fh)
+        scan_data_str_keys = json_load(fh)
         scan_data = {}
 
         for (key, value) in scan_data_str_keys.items():
@@ -70,7 +70,7 @@ for (desc, filename, expected) in test_cases:
             output = ''.join(cube.cube_for_kociemba_strict())
         except Exception as e:
             log.exception(e)
-            log.info(json.dumps(scan_data))
+            log.info(json_dumps(scan_data))
             output = 'Exception'
             #break
 
@@ -80,7 +80,7 @@ for (desc, filename, expected) in test_cases:
             results.append("\033[91mFAIL\033[0m: %s" % desc)
             results.append("   expected %s" % expected)
             results.append("   output   %s" % output)
-            log.info(json.dumps(scan_data))
+            log.info(json_dumps(scan_data))
             #break
 
 print('\n'.join(results))
