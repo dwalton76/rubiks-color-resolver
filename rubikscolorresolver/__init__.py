@@ -1105,7 +1105,7 @@ div#colormapping {
                 min_distance_permutation = permutation
 
                 if desc == "centers":
-                    log.warning("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
+                    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
             else:
                 if desc == "centers":
                     log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
@@ -1156,8 +1156,8 @@ div#colormapping {
                 square = side.squares[x]
                 edge_colors.append((square.position, square.rgb))
 
-        #sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
-        sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
+        sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+        #sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
         sorted_edge_colors_cluster_squares = []
         squares_list = []
         squares_per_cluster = int(len(sorted_edge_colors) / 6)
@@ -1215,8 +1215,8 @@ div#colormapping {
 
             #edge_colors.append((0, (0, 0, 0)))
             #edge_colors.append((999, (255, 255, 255)))
-            #sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
-            sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
+            sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+            #sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
             sorted_edge_colors_cluster_squares = []
             squares_list = []
             squares_per_cluster = int(len(sorted_edge_colors) / 6)
@@ -1250,8 +1250,8 @@ div#colormapping {
             for square in side.corner_squares:
                 corner_colors.append((square.position, square.rgb))
 
-        #sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
-        sorted_corner_colors = traveling_salesman(corner_colors, "cie2000")
+        sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
+        #sorted_corner_colors = traveling_salesman(corner_colors, "cie2000")
         sorted_corner_colors_cluster_squares = []
         squares_list = []
         squares_per_cluster = int(len(sorted_corner_colors) / 6)
@@ -1286,8 +1286,8 @@ div#colormapping {
             if len(centers_squares) == 6:
                 sorted_center_colors = center_colors[:]
             else:
-                #sorted_center_colors = traveling_salesman(center_colors, "euclidean")
-                sorted_center_colors = traveling_salesman(center_colors, "cie2000")
+                sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+                #sorted_center_colors = traveling_salesman(center_colors, "cie2000")
 
             #log.info("center_colors: %s" % pformat(center_colors))
             #log.info("sorted_center_colors: %s" % pformat(sorted_center_colors))
@@ -1302,8 +1302,6 @@ div#colormapping {
                     sorted_center_colors_cluster_squares.append(squares_list)
                     squares_list = []
 
-            # dwalton
-            log.warning("%s sorted_center_colors_cluster_squares: %s" % (desc, pformat(sorted_center_colors_cluster_squares)))
             self.assign_color_names(desc, sorted_center_colors_cluster_squares)
             self.write_colors(desc, sorted_center_colors_cluster_squares)
 

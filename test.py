@@ -24,7 +24,7 @@ test_cases = (
     ('2x2x2 solved 02',    'test-data/2x2x2-solved-02.txt',    'DDDDLLLLFFFFUUUURRRRBBBB'),
     ('2x2x2 random 01',    'test-data/2x2x2-random-01.txt',    'LRLURFDFDFBBRRBLUBLUDFDU'),
     ('2x2x2 random 02',    'test-data/2x2x2-random-02.txt',    'FBRUFUBLBLRDDLDUUDFFRRBL'),
-    ('2x2x2 random 03',    'test-data/2x2x2-random-02.txt',    'TBD'),
+    ('2x2x2 random 03',    'test-data/2x2x2-random-03.txt',    'RUDRDFLRLFBULBFDUFUDRBBL'),
     ('3x3x3 solved',       'test-data/3x3x3-solved.txt',       'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'),
     ('3x3x3 checkerboard', 'test-data/3x3x3-checkerboard.txt', 'UDUDUDUDURLRLRLRLRFBFBFBFBFDUDUDUDUDLRLRLRLRLBFBFBFBFB'),
     ('3x3x3 cross',        'test-data/3x3x3-cross.txt',        'DUDUUUDUDFRFRRRFRFRFRFFFRFRUDUDDDUDUBLBLLLBLBLBLBBBLBL'),
