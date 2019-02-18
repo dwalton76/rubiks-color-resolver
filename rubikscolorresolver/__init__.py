@@ -3,6 +3,7 @@ from tsp_solver.greedy import solve_tsp
 from collections import OrderedDict
 from copy import deepcopy, copy
 from itertools import combinations, permutations
+from math import atan2, cos, degrees, exp, radians, sin
 from math import sqrt, ceil
 from pprint import pformat
 from json import dumps as json_dumps
@@ -117,20 +118,20 @@ center_groups = {
     ),
     5: (
         ("x-centers", (
-            7, 9, 17, 19, # Upper
-            32, 34, 42, 44, # Left
-            57, 59, 67, 69, # Front
-            82, 84, 92, 94, # Right
-            107, 109, 117, 119, # Back
-            132, 134, 142, 144, # Down
+            7, 9, 13, 17, 19, # Upper
+            32, 34,38,  42, 44, # Left
+            57, 59, 63, 67, 69, # Front
+            82, 84, 88, 92, 94, # Right
+            107, 109, 113, 117, 119, # Back
+            132, 134, 138, 142, 144, # Down
         )),
         ("t-centers", (
-            8, 12, 14, 18, # Upper
-            33, 37, 39, 43, # Left
-            58, 62, 64, 68, # Front
-            83, 87, 89, 93, # Right
-            108, 112, 114, 118, # Back
-            133, 137, 139, 143, # Down
+            8, 12, 13, 14, 18, # Upper
+            33, 37, 38, 39, 43, # Left
+            58, 62, 63, 64, 68, # Front
+            83, 87, 88, 89, 93, # Right
+            108, 112, 113, 114, 118, # Back
+            133, 137, 138, 139, 143, # Down
         )),
         ("middle-centers", (13, 38, 63, 88, 113, 138)),
     ),
@@ -367,13 +368,11 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
-    '''
 def delta_e_cie2000(lab1, lab2):
     """
     Ported from this php implementation
     https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
     """
-    from math import atan2, cos, degrees, exp, radians, sin
     l1 = lab1.L
     a1 = lab1.a
     b1 = lab1.b
@@ -437,7 +436,6 @@ def delta_e_cie2000(lab1, lab2):
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
 
     return delta_e
-    '''
 
 
 def hex_to_rgb(rgb_string):
