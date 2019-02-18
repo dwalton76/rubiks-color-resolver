@@ -33,6 +33,7 @@ test_cases = (
     ('3x3x3 random 01',    'test-data/3x3x3-random-01.txt',    'DURUULDBRFDFLRRLFBRLUUFFUFFLRUDDDRRDLBBDLLBBBDFFBBRLUU'),
     ('3x3x3 random 02',    'test-data/3x3x3-random-02.txt',    'UUUUUUUUURRRRRLRRLFFFFFFBFFDDDDDDDDDLLLRLLLLRBBBBBBFBB'),
     ('3x3x3 random 03',    'test-data/3x3x3-random-03.txt',    'DFDRULUFDLFLDRBBLRLRFBFLUDURFRRDUUBDFUBBLDLDFBURRBUBLF'),
+    ('3x3x3 random 04',    'test-data/3x3x3-random-04.txt',    'TBD'),
     ('3x3x3 dark 01',      'test-data/3x3x3-dark-01.txt',      'UUBUUBUUBRRRRRRRRRFFUFFUFFUDDFDDFDDFLLLLLLLLLDBBDBBDBB'),
     # I don't yet know what the valid cube string here should be
     # ('3x3x3 dark 02',      'test-data/3x3x3-dark-02.txt',      'UUBUUBUUBRRRRRRRRRFFUFFUFFUDDFDDFDDFLLLLLLLLLDBBDBBDBB'),
