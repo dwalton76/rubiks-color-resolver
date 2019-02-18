@@ -2,10 +2,10 @@
 
 from rubikscolorresolver import RubiksColorSolverGeneric
 from math import sqrt
-import argparse
-import json
+from json import dumps as json_dumps
+from json import load as json_load
 import logging
-import sys
+
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
 logging.basicConfig(level=logging.INFO,
@@ -24,12 +24,16 @@ test_cases = (
     ('2x2x2 solved 02',    'test-data/2x2x2-solved-02.txt',    'DDDDLLLLFFFFUUUURRRRBBBB'),
     ('2x2x2 random 01',    'test-data/2x2x2-random-01.txt',    'LRLURFDFDFBBRRBLUBLUDFDU'),
     ('2x2x2 random 02',    'test-data/2x2x2-random-02.txt',    'FBRUFUBLBLRDDLDUUDFFRRBL'),
+    ('2x2x2 random 03',    'test-data/2x2x2-random-02.txt',    'TBD'),
     ('3x3x3 solved',       'test-data/3x3x3-solved.txt',       'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'),
     ('3x3x3 checkerboard', 'test-data/3x3x3-checkerboard.txt', 'UDUDUDUDURLRLRLRLRFBFBFBFBFDUDUDUDUDLRLRLRLRLBFBFBFBFB'),
     ('3x3x3 cross',        'test-data/3x3x3-cross.txt',        'DUDUUUDUDFRFRRRFRFRFRFFFRFRUDUDDDUDUBLBLLLBLBLBLBBBLBL'),
     ('3x3x3 tetris',       'test-data/3x3x3-tetris.txt',       'FFBFUBFBBUDDURDUUDRLLRFLRRLBBFBDFBFFUDDULDUUDLRRLBRLLR'),
     ('3x3x3 superflip',    'test-data/3x3x3-superflip.txt',    'UBULURUFURURFRBRDRFUFLFRFDFDFDLDRDBDLULBLFLDLBUBRBLBDB'),
     ('3x3x3 random 01',    'test-data/3x3x3-random-01.txt',    'DURUULDBRFDFLRRLFBRLUUFFUFFLRUDDDRRDLBBDLLBBBDFFBBRLUU'),
+    ('3x3x3 random 02',    'test-data/3x3x3-random-02.txt',    'UUUUUUUUURRRRRLRRLFFFFFFBFFDDDDDDDDDLLLRLLLLRBBBBBBFBB'),
+    ('3x3x3 random 03',    'test-data/3x3x3-random-03.txt',    'DFDRULUFDLFLDRBBLRLRFBFLUDURFRRDUUBDFUBBLDLDFBURRBUBLF'),
+    ('3x3x3 random 04',    'test-data/3x3x3-random-04.txt',    'TBD'),
     ('4x4x4 solved 01',    'test-data/4x4x4-solved-01.txt',    'DDDDDDDDDDDDDDDDBBBBBBBBBBBBBBBBLLLLLLLLLLLLLLLLUUUUUUUUUUUUUUUUFFFFFFFFFFFFFFFFRRRRRRRRRRRRRRRR'),
     ('4x4x4 random 01',    'test-data/4x4x4-random-01.txt',    'LUFLUBLBRBLFBFFLBDRFLUURLUUUFDFDRLRURFLBRFLBUDUDRLRRBBBBFFFLLLRBDBUUUDDDUDDBDDDFUULBFRRFLRRBRDDF'),
     ('4x4x4 random 02',    'test-data/4x4x4-random-02.txt',    'RUFFURLLRBBFFFFBDUUDDRFFRLFFLLDRDDDRLDDBBUUDLRRFDBBUDFFUULRLBRDUUFULBBLFBBRULRLBRLBBRUULRDDLFBDU'),
@@ -37,6 +41,7 @@ test_cases = (
     ('4x4x4 random 04',    'test-data/4x4x4-random-04.txt',    'FLLDDLLBUDBDURRLFRUBURFFURBBRLDBBBBDDUULFRBBURUULDFFLFDDLLFFFDRDRFRRUURBUBFRUBBBRFFDUULRDDDLLFLL'),
     ('5x5x5 random 01',    'test-data/5x5x5-random-01.txt',    'RRURRDDUFFDDULLDDLDDDDLDDLLBRBLLBRBRRRUURRDBBUUDBBFFFFFFFFFFRRFBBLLRBBLLRLLDDUFFDDUFFFFDLLLLDURLLDURFRBRRFRBRRUFLDDUURBBUURBBUUFUUUUBUUBUBLLDLFBBDLFBB'),
     ('5x5x5 random 02',    'test-data/5x5x5-random-02.txt',    'RFFFUDUDURBFULULFDBLRLDUFDBLUBBBDDURLRDRFRUDDBFUFLFURRLDFRRRUBFUUDUFLLBLBBULDDRRUFUUUBUDFFDRFLRBBLRFDLLUUBBRFRFRLLBFRLBRRFRBDLLDDFBLRDLFBBBLBLBDUUFDDD'),
+    ('5x5x5 random 03',    'test-data/5x5x5-random-03.txt',    'TBD'),
     ('6x6x6 random 01',    'test-data/6x6x6-random-01.txt',    'RLLDLBDDDUBBFUDDUBLUDDDFDRDDLRLLLUBBLUDDLUUDRRRFBFRRFLRLBFFRDBBBUDFFLBRRBUFLDDRULRFBUFFBRDFFLRLFRLRRRFLUBLDDULRUBRRLDDLRDDUUUDDUUUULURUDDBDFUURUBLUDRUBDFLFBULFLRFUFBLRRFUFLBUFBRRFFRDFBFDLUBBFLFBBFBBBBRLBRFBLLFUFDBRUL'),
 )
 
@@ -48,8 +53,8 @@ results = []
 
 for (desc, filename, expected) in test_cases:
     log.warning("Test: %s" % desc)
-    with open('test/' + filename, 'r') as fh:
-        scan_data_str_keys = json.load(fh)
+    with open(filename, 'r') as fh:
+        scan_data_str_keys = json_load(fh)
         scan_data = {}
 
         for (key, value) in scan_data_str_keys.items():
@@ -66,7 +71,7 @@ for (desc, filename, expected) in test_cases:
             output = ''.join(cube.cube_for_kociemba_strict())
         except Exception as e:
             log.exception(e)
-            log.info(json.dumps(scan_data))
+            log.info(json_dumps(scan_data))
             output = 'Exception'
             #break
 
@@ -76,7 +81,7 @@ for (desc, filename, expected) in test_cases:
             results.append("\033[91mFAIL\033[0m: %s" % desc)
             results.append("   expected %s" % expected)
             results.append("   output   %s" % output)
-            log.info(json.dumps(scan_data))
+            log.info(json_dumps(scan_data))
             #break
 
 print('\n'.join(results))

@@ -2,20 +2,14 @@
 from tsp_solver.greedy import solve_tsp
 from collections import OrderedDict
 from copy import deepcopy, copy
-from itertools import permutations
-from math import atan2, cos, degrees, exp, factorial, radians, sin, sqrt, ceil
+from itertools import combinations, permutations
+from math import sqrt, ceil
 from pprint import pformat
-import itertools
-import json
+from json import dumps as json_dumps
 import logging
 import os
-import sys
-
-if sys.version_info < (3,4):
-    raise SystemError('Must be using Python 3.4 or higher')
 
 log = logging.getLogger(__name__)
-
 
 edge_orbit_id = {
     3: {
@@ -175,6 +169,10 @@ center_groups = {
         )),
     ),
 }
+
+SIDES_COUNT = 6
+HTML_DIRECTORY = '/tmp/rubiks-color-resolver/'
+HTML_FILENAME = os.path.join(HTML_DIRECTORY, 'index.html')
 
 
 def get_euclidean_lab_distance(lab1, lab2):
@@ -369,11 +367,13 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
+    '''
 def delta_e_cie2000(lab1, lab2):
     """
     Ported from this php implementation
     https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
     """
+    from math import atan2, cos, degrees, exp, radians, sin
     l1 = lab1.L
     a1 = lab1.a
     b1 = lab1.b
@@ -437,6 +437,7 @@ def delta_e_cie2000(lab1, lab2):
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
 
     return delta_e
+    '''
 
 
 def hex_to_rgb(rgb_string):
@@ -594,6 +595,14 @@ class RubiksColorSolverGeneric(object):
             self.even = False
             self.odd = True
 
+        if not os.path.exists(HTML_DIRECTORY):
+            os.makedirs(HTML_DIRECTORY)
+            os.chmod(HTML_DIRECTORY, 0o777)
+
+        with open(HTML_FILENAME, 'w') as fh:
+            pass
+        os.chmod(HTML_FILENAME, 0o777)
+
         self.sides = {
             'U': CubeSide(self, self.width, 'U'),
             'L': CubeSide(self, self.width, 'L'),
@@ -644,12 +653,8 @@ class RubiksColorSolverGeneric(object):
         side_margin = 10
         square_size = 40
         size = self.width # 3 for 3x3x3, etc
-        filename = '/tmp/rubiks-color-resolver.html'
 
-        if os.path.exists(filename):
-            os.remove(filename)
-
-        with open(filename, 'w') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("""<!DOCTYPE html>
 <html>
 <head>
@@ -726,8 +731,6 @@ div#colormapping {
 <body>
 """ % (square_size, square_size, square_size, square_size, square_size, square_size))
 
-        os.chmod(filename, 0o777)
-
     def write_cube(self, desc, cube):
         """
         'cube' is a list of (R,G,B) tuples
@@ -741,7 +744,7 @@ div#colormapping {
         side_index = -1
         (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
 
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h1>%s</h1>\n" % desc)
             for index in range(1, max_square + 1):
                 if index in first_squares:
@@ -770,7 +773,7 @@ div#colormapping {
                     col = 1
 
     def write_colors(self, desc, colors):
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             squares_per_side = int(len(colors)/6)
             fh.write("<h2>%s</h2>\n" % desc)
             fh.write("<div class='clear colors'>\n")
@@ -792,7 +795,7 @@ div#colormapping {
             fh.write("</div>\n")
 
     def www_footer(self):
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("""
 </body>
 </html>
@@ -870,9 +873,9 @@ div#colormapping {
             cube.append((red, green, blue))
 
         # write the input to the web page so we can reproduce bugs, etc just from the web page
-        with open('/tmp/rubiks-color-resolver.html', 'a') as fh:
+        with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h1>JSON Input</h1>\n")
-            fh.write("<pre>%s</pre>\n" % json.dumps(scan_data))
+            fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
 
         self.write_cube('Input RGB values', cube)
 

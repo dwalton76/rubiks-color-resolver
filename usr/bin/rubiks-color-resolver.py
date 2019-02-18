@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-from rubikscolorresolver import RubiksColorSolverGeneric
-
+from argparse import ArgumentParser
+from json import dumps as json_dumps
+from json import loads as json_loads
 from math import sqrt
-import argparse
-import json
+from rubikscolorresolver import RubiksColorSolverGeneric
 import logging
-import sys
 
-parser = argparse.ArgumentParser()
+parser = ArgumentParser()
 parser.add_argument('-j', '--json', help='Print json results', action='store_true')
 parser.add_argument('--filename', help='Print json results', type=str, default=None)
 parser.add_argument('--rgb', help='RGB json', type=str, default=None)
@@ -33,9 +32,10 @@ try:
         rgb = args.rgb
     else:
         print("ERROR: Neither --filename or --rgb was specified")
+        import sys
         sys.exit(1)
 
-    scan_data_str_keys = json.loads(rgb)
+    scan_data_str_keys = json_loads(rgb)
     scan_data = {}
 
     for (key, value) in scan_data_str_keys.items():
@@ -50,10 +50,11 @@ try:
     cube.crunch_colors()
 
     if args.json:
-        print(json.dumps(cube.cube_for_json(), indent=4, sort_keys=True))
+        print(json_dumps(cube.cube_for_json(), indent=4, sort_keys=True))
     else:
         print(''.join(cube.cube_for_kociemba_strict()))
 
 except Exception as e:
     log.exception(e)
+    import sys
     sys.exit(1)
