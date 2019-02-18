@@ -184,9 +184,6 @@ def get_euclidean_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    # I experiment with this sometimes
-    # return delta_e_cie2000(lab1, lab2)
-
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
@@ -1108,6 +1105,7 @@ div#colormapping {
                     log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
                 '''
 
+        # dwalton cluster square ref
         for (index, squares_list) in enumerate(squares_lists):
             color_name = min_distance_permutation[index]
 
@@ -1223,7 +1221,11 @@ div#colormapping {
 
         # Nothing to be done for 2x2x2
         if self.width == 2:
-            return
+            return True
+
+        WHITE = (255, 255, 255)
+        BLACK = (0, 0, 0)
+        all_orbits_valid = True
 
         for target_orbit_id in range(self.orbits):
             log.info('Resolve edges for orbit %d' % target_orbit_id)
@@ -1237,10 +1239,7 @@ div#colormapping {
                     if orbit_id == target_orbit_id:
                         edge_colors.append((square.position, square.rgb))
 
-            #edge_colors.append((0, (0, 0, 0)))
-            #edge_colors.append((999, (255, 255, 255)))
             sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
-            #sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
             sorted_edge_colors_cluster_squares = []
             squares_list = []
             squares_per_cluster = int(len(sorted_edge_colors) / 6)
@@ -1253,12 +1252,28 @@ div#colormapping {
                     squares_list = []
 
             self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
-            valid = self.validate_edge_orbit(target_orbit_id)
-
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
                 sorted_edge_colors_cluster_squares)
+
+            # dwalton we need to do something smarter here
+            # 6x6x6 random-01 and 04 have beastly red/orange edges
+            if not self.validate_edge_orbit(target_orbit_id):
+                all_orbits_valid = False
+
+                '''
+                for squares_list in sorted_edge_colors_cluster_squares:
+                    for cluster_square in squares_list:
+                        # Find the Square object for this ClusterSquare
+                        square = self.get_square(cluster_square.index)
+                        log.info("%s -> %s (%s)" % (cluster_square, square, square.color_name))
+                '''
+
+            log.info(f"sorted_edge_colors_cluster_squares:\n{sorted_edge_colors_cluster_squares}")
+
             log.info("\n\n")
+
+        return all_orbits_valid
 
     def resolve_corner_squares(self):
         """
@@ -1272,7 +1287,6 @@ div#colormapping {
                 corner_colors.append((square.position, square.rgb))
 
         sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
-        #sorted_corner_colors = traveling_salesman(corner_colors, "cie2000")
         sorted_corner_colors_cluster_squares = []
         squares_list = []
         squares_per_cluster = int(len(sorted_corner_colors) / 6)
@@ -1308,7 +1322,6 @@ div#colormapping {
                 sorted_center_colors = center_colors[:]
             else:
                 sorted_center_colors = traveling_salesman(center_colors, "euclidean")
-                #sorted_center_colors = traveling_salesman(center_colors, "cie2000")
 
             #log.info("center_colors: %s" % pformat(center_colors))
             #log.info("sorted_center_colors: %s" % pformat(sorted_center_colors))
