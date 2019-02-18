@@ -620,11 +620,11 @@ class CubeSide(object):
                 for x in range(west_edge + 1, east_edge):
                     self.center_pos.append(x)
 
-        log.info("Side %s, min/max %d/%d, edges %s, corners %s, centers %s" %
+        log.info("Side %s\n    min/max %d/%d\n    edges %s\n    corners %s\n    centers %s\n" %
             (self.name, self.min_pos, self.max_pos,
-             pformat(self.edge_pos),
-             pformat(self.corner_pos),
-             pformat(self.center_pos)))
+             " ".join(map(str, self.edge_pos)),
+             " ".join(map(str, self.corner_pos)),
+             " ".join(map(str, self.center_pos))))
 
     def __str__(self):
         return "side-" + self.name
@@ -1200,6 +1200,9 @@ div#colormapping {
 
         # TODO do this for 7x7x7
         if self.width not in edge_orbit_wing_pairs:
+            log.warning("*" * 50)
+            log.warning("%s not in edge_orbit_wing_pairs" % self.width)
+            log.warning("*" * 50)
             return True
 
         for (square1_position, square2_position) in edge_orbit_wing_pairs[self.width][orbit_id]:
