@@ -1,7 +1,6 @@
 
 from tsp_solver.greedy import solve_tsp
 from collections import OrderedDict
-from copy import deepcopy, copy
 from itertools import combinations, permutations
 from math import atan2, cos, degrees, exp, radians, sin
 from math import sqrt, ceil
@@ -200,9 +199,9 @@ def find_index_for_value(list_foo, target, min_index):
     raise Exception("Did not find %s in list %s" % (target, pformat(list_foo)))
 
 
-def traveling_salesman(colors, alg):
+def traveling_salesman(colors, alg, endpoints=None):
 
-    # build a full matrix of cie2000 distances
+    # build a full matrix of color to color distances
     len_colors = len(colors)
     matrix = [[0 for i in range(len_colors)] for j in range(len_colors)]
 
@@ -237,9 +236,8 @@ def traveling_salesman(colors, alg):
             matrix[x][y] = distance
             matrix[y][x] = distance
 
-    path = solve_tsp(matrix)
+    path = solve_tsp(matrix, endpoints=endpoints)
     return [colors[x] for x in path]
-
 
 
 class ClusterSquare(object):
@@ -641,7 +639,6 @@ class RubiksColorSolverGeneric(object):
             #'Bu': hashtag_rgb_to_labcolor('#0000FF'),
             #'Rd': hashtag_rgb_to_labcolor('#FF0000')
         }
-        self.crayon_box = deepcopy(self.crayola_colors)
         self.www_header()
 
     def www_header(self):
@@ -1099,16 +1096,17 @@ div#colormapping {
                 for cluster_square in squares_list:
                     distance += get_euclidean_lab_distance(cluster_square.lab, color_obj)
 
-            # dwalton
             if min_distance is None or distance < min_distance:
                 min_distance = distance
                 min_distance_permutation = permutation
 
+                '''
                 if desc == "centers":
                     log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
             else:
                 if desc == "centers":
                     log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+                '''
 
         for (index, squares_list) in enumerate(squares_lists):
             color_name = min_distance_permutation[index]
@@ -1130,16 +1128,22 @@ div#colormapping {
             square1 = self.get_square(square1_position)
             square2 = self.get_square(square2_position)
             wing_pair_string = ", ".join(sorted([square1.color_name, square2.color_name]))
-            #log.info("({}, {}) is ({})".format(square1_position, square2_position, wing_pair_string))
+            #log.info("orbit {}: ({}, {}) is ({})".format(orbit_id, square1_position, square2_position, wing_pair_string))
 
             if wing_pair_string not in wing_pair_counts:
                 wing_pair_counts[wing_pair_string] = 0
             wing_pair_counts[wing_pair_string] += 1
 
+        # Are all counts the same?
+        target_count = None
         for (wing_pair, count) in wing_pair_counts.items():
-            if count != 2:
-                valid = False
-                break
+
+            if target_count is None:
+                target_count = count
+            else:
+                if count != target_count:
+                    valid = False
+                    break
 
         if not valid:
             log.info("wing_pair_counts:\n{}\n".format(pformat(wing_pair_counts)))
@@ -1147,30 +1151,41 @@ div#colormapping {
 
         return valid
 
-    def resolve_all_squares(self):
+    def resolve_all_squares(self, use_endpoints):
         log.info('Resolve all squares')
-        edge_colors = []
+        WHITE = (255, 255, 255)
+        BLACK = (0, 0, 0)
+        all_colors = []
+
+        if use_endpoints:
+            all_colors.append((0, WHITE))
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
-                edge_colors.append((square.position, square.rgb))
+                all_colors.append((square.position, square.rgb))
 
-        sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
-        #sorted_edge_colors = traveling_salesman(edge_colors, "cie2000")
-        sorted_edge_colors_cluster_squares = []
+        if use_endpoints:
+            all_colors.append((999, BLACK))
+            sorted_all_colors = traveling_salesman(all_colors, "euclidean", (0, len(all_colors) - 1))
+            sorted_all_colors.remove((0, WHITE))
+            sorted_all_colors.remove((999, BLACK))
+        else:
+            sorted_all_colors = traveling_salesman(all_colors, "euclidean")
+
+        sorted_all_colors_cluster_squares = []
         squares_list = []
-        squares_per_cluster = int(len(sorted_edge_colors) / 6)
+        squares_per_cluster = int(len(sorted_all_colors) / 6)
 
-        for (index, (square_index, rgb)) in enumerate(sorted_edge_colors):
+        for (index, (square_index, rgb)) in enumerate(sorted_all_colors):
             index += 1
             squares_list.append(ClusterSquare(square_index, rgb))
             if index % squares_per_cluster == 0:
-                sorted_edge_colors_cluster_squares.append(squares_list)
+                sorted_all_colors_cluster_squares.append(squares_list)
                 squares_list = []
 
-        squares_per_side = int(len(edge_colors)/6)
-        for cluster_square_list in sorted_edge_colors_cluster_squares:
+        squares_per_side = int(len(all_colors)/6)
+        for cluster_square_list in sorted_all_colors_cluster_squares:
             total_red = 0
             total_green = 0
             total_blue = 0
@@ -1186,11 +1201,20 @@ div#colormapping {
 
             log.info("avg RGB ({}, {}, {})".format(avg_red, avg_green, avg_blue))
 
-        #self.assign_color_names('all', sorted_edge_colors_cluster_squares)
+        self.assign_color_names('all', sorted_all_colors_cluster_squares)
+
         self.write_colors(
             'all',
-            sorted_edge_colors_cluster_squares)
+            sorted_all_colors_cluster_squares)
         log.info("\n\n")
+
+        cube_is_valid = True
+        for target_orbit_id in range(self.orbits):
+            if not self.validate_edge_orbit(target_orbit_id):
+                cube_is_valid = False
+                break
+
+        return cube_is_valid
 
     def resolve_edge_squares(self):
         """
@@ -1230,9 +1254,6 @@ div#colormapping {
 
             self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
             valid = self.validate_edge_orbit(target_orbit_id)
-
-            if not valid:
-                pass
 
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
@@ -1317,10 +1338,14 @@ div#colormapping {
         self.write_cube('Final Cube', cube)
 
     def crunch_colors(self):
-        self.resolve_all_squares()
-        self.resolve_edge_squares()
-        self.resolve_corner_squares()
-        self.resolve_center_squares()
+        if self.resolve_all_squares(False):
+            pass
+        elif self.resolve_all_squares(True):
+            pass
+        else:
+            self.resolve_edge_squares()
+            self.resolve_corner_squares()
+            self.resolve_center_squares()
 
         self.print_cube()
         self.write_final_cube()
