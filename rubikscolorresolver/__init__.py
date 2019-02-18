@@ -11,6 +11,38 @@ import os
 
 log = logging.getLogger(__name__)
 
+odd_cube_center_color_permutations = (
+    ('Wh', 'OR', 'Gr', 'Rd', 'Bu', 'Ye'),
+    ('Wh', 'Gr', 'Rd', 'Bu', 'OR', 'Ye'),
+    ('Wh', 'Bu', 'OR', 'Gr', 'Rd', 'Ye'),
+    ('Wh', 'Rd', 'Bu', 'OR', 'Gr', 'Ye'),
+
+    ('Ye', 'Bu', 'Rd', 'Gr', 'OR', 'Wh'),
+    ('Ye', 'Gr', 'OR', 'Bu', 'Rd', 'Wh'),
+    ('Ye', 'Rd', 'Gr', 'OR', 'Bu', 'Wh'),
+    ('Ye', 'OR', 'Bu', 'Rd', 'Gr', 'Wh'),
+
+    ('OR', 'Ye', 'Gr', 'Wh', 'Bu', 'Rd'),
+    ('OR', 'Wh', 'Bu', 'Ye', 'Gr', 'Rd'),
+    ('OR', 'Gr', 'Wh', 'Bu', 'Ye', 'Rd'),
+    ('OR', 'Bu', 'Ye', 'Gr', 'Wh', 'Rd'),
+
+    ('Gr', 'Ye', 'Rd', 'Wh', 'OR', 'Bu'),
+    ('Gr', 'Wh', 'OR', 'Ye', 'Rd', 'Bu'),
+    ('Gr', 'Rd', 'Wh', 'OR', 'Ye', 'Bu'),
+    ('Gr', 'OR', 'Ye', 'Rd', 'Wh', 'Bu'),
+
+    ('Rd', 'Ye', 'Bu', 'Wh', 'Gr', 'OR'),
+    ('Rd', 'Wh', 'Gr', 'Ye', 'Bu', 'OR'),
+    ('Rd', 'Bu', 'Wh', 'Gr', 'Ye', 'OR'),
+    ('Rd', 'Gr', 'Ye', 'Bu', 'Wh', 'OR'),
+
+    ('Bu', 'Wh', 'Rd', 'Ye', 'OR', 'Gr'),
+    ('Bu', 'Ye', 'OR', 'Wh', 'Rd', 'Gr'),
+    ('Bu', 'Rd', 'Ye', 'OR', 'Wh', 'Gr'),
+    ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
+)
+
 edge_orbit_id = {
     3: {
         2: 0, 4: 0, 6: 0, 8: 0, # Upper
@@ -56,7 +88,7 @@ edge_orbit_id = {
     7: {
         # orbit 0
         2: 0, 6: 0, 8: 0, 14: 0, 36: 0, 42: 0, 44: 0, 48: 0, # Upper
-        51: 0, 55: 0, 57: 0, 63: 0, 85: 0, 91: 0, # Left
+        51: 0, 55: 0, 57: 0, 63: 0, 85: 0, 91: 0, 93: 0, 97: 0, # Left
         100: 0, 104: 0, 106: 0, 112: 0, 134: 0, 140: 0, 142: 0, 146: 0, # Front
         149: 0, 153: 0, 155: 0, 161: 0, 183: 0, 189: 0, 191: 0, 195: 0, # Right
         198: 0, 202: 0, 204: 0, 210: 0, 232: 0, 238: 0, 240: 0, 244: 0, # Back
@@ -620,11 +652,11 @@ class CubeSide(object):
                 for x in range(west_edge + 1, east_edge):
                     self.center_pos.append(x)
 
-        log.info("Side %s\n    min/max %d/%d\n    edges %s\n    corners %s\n    centers %s\n" %
-            (self.name, self.min_pos, self.max_pos,
-             " ".join(map(str, self.edge_pos)),
-             " ".join(map(str, self.corner_pos)),
-             " ".join(map(str, self.center_pos))))
+        #log.info("Side %s\n    min/max %d/%d\n    edges %s\n    corners %s\n    centers %s\n" %
+        #    (self.name, self.min_pos, self.max_pos,
+        #     " ".join(map(str, self.edge_pos)),
+        #     " ".join(map(str, self.corner_pos)),
+        #     " ".join(map(str, self.center_pos))))
 
     def __str__(self):
         return "side-" + self.name
@@ -852,11 +884,13 @@ div#colormapping {
                 for cluster_square in cluster_square_list:
                     (red, green, blue) = cluster_square.rgb
                     lab = rgb2lab((red, green, blue))
+                    square = self.get_square(cluster_square.index)
 
-                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s)'>%d</span>\n" %
+                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
                         (red, green, blue,
                          red, green, blue,
                          int(lab.L), int(lab.a), int(lab.b),
+                         square.color_name,
                          cluster_square.index))
 
                 fh.write("<br>")
@@ -997,23 +1031,51 @@ div#colormapping {
         log.info("Cube\n\n%s\n" % '\n'.join(output))
 
     def set_state(self):
-
-        # If we've already set the state the return
-        if self.state:
-            return
+        self.state = []
 
         if self.sideU.mid_pos is not None:
-            self.color_to_side_name = {}
 
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                mid_square = side.squares[side.mid_pos]
+            # Assign a color name to each center square. Compute
+            # which naming scheme results in the least total color distance in
+            # terms of the assigned color name vs. the colors in crayola_colors.
+            min_distance = None
+            min_distance_permutation = None
 
-                if mid_square.color_name in self.color_to_side_name:
-                    log.info("color_to_side_name:\n%s" % pformat(self.color_to_side_name))
-                    raise Exception("side %s with color %s, %s is already in color_to_side_name" %\
-                        (side, mid_square.color_name, mid_square.color_name))
-                self.color_to_side_name[mid_square.color_name] = side.name
+            # Build a list of all center squares
+            center_squares = []
+            for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+                square = side.squares[side.mid_pos]
+                center_squares.append(square)
+            desc = "middle center"
+            #log.info("center_squares: %s" % pformat(center_squares))
+
+            for permutation in odd_cube_center_color_permutations:
+                distance = 0
+
+                for (index, center_square) in enumerate(center_squares):
+                    color_name = permutation[index]
+                    color_obj = self.crayola_colors[color_name]
+                    distance += get_euclidean_lab_distance(center_square.rawcolor, color_obj)
+
+                if min_distance is None or distance < min_distance:
+                    min_distance = distance
+                    min_distance_permutation = permutation
+                    '''
+                    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
+                else:
+                    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+                    '''
+
+            self.color_to_side_name = {
+                min_distance_permutation[0] : 'U',
+                min_distance_permutation[1] : 'L',
+                min_distance_permutation[2] : 'F',
+                min_distance_permutation[3] : 'R',
+                min_distance_permutation[4] : 'B',
+                min_distance_permutation[5] : 'D'
+            }
+
+            #log.info("{} FINAL PERMUTATION {}".format(desc, min_distance_permutation))
 
         else:
             self.color_to_side_name = {
@@ -1026,14 +1088,39 @@ div#colormapping {
             }
 
         self.state = ['placeholder', ]
-        #log.info("color_to_side_name:\n{}".format(self.color_to_side_name))
+        # log.info("color_to_side_name:\n %s\n" % pformat(self.color_to_side_name))
 
         for side_name in self.side_order:
             side = self.sides[side_name]
 
+            # odd cube use the center square for each side
+            if side.mid_pos:
+                side.color_name = side.squares[side.mid_pos].color_name
+
+            # even cube assume:
+            # - white on top
+            # - orange on left
+            # - green on front
+            # - red on right
+            # - blue on back
+            # - yellow on bottom
+            else:
+                if side.name == "U":
+                    side.color_name = "Wh"
+                elif side.name == "L":
+                    side.color_name = "OR"
+                elif side.name == "F":
+                    side.color_name = "Gr"
+                elif side.name == "R":
+                    side.color_name = "Rd"
+                elif side.name == "B":
+                    side.color_name = "Bu"
+                elif side.name == "D":
+                    side.color_name = "Ye"
+
             for x in range(side.min_pos, side.max_pos + 1):
                 color_name = side.squares[x].color_name
-                #log.info("set_state(): side {}, x {}, color_name {}".format(side, x, color_name))
+                # log.info("set_state(): side {}, x {}, color_name {}".format(side, x, color_name))
                 self.state.append(self.color_to_side_name[color_name])
 
     def cube_for_kociemba_strict(self):
@@ -1065,32 +1152,6 @@ div#colormapping {
         }
 
         for side in self.sides.values():
-
-            # odd cube use the center square for each side
-            if side.mid_pos:
-                side.color_name = side.squares[side.mid_pos].color_name
-
-            # even cube assume:
-            # - white on top
-            # - orange on left
-            # - green on front
-            # - red on right
-            # - blue on back
-            # - yellow on bottom
-            else:
-                if side.name == "U":
-                    side.color_name = "Wh"
-                elif side.name == "L":
-                    side.color_name = "OR"
-                elif side.name == "F":
-                    side.color_name = "Gr"
-                elif side.name == "R":
-                    side.color_name = "Rd"
-                elif side.name == "B":
-                    side.color_name = "Bu"
-                elif side.name == "D":
-                    side.color_name = "Ye"
-
             data['sides'][side.name] = {
                 'colorName' : side.color_name,
                 'colorHTML' : html_color[side.color_name]
@@ -1125,37 +1186,7 @@ div#colormapping {
         min_distance_permutation = None
 
         if self.odd and desc == "centers":
-            crayola_color_permutations = (
-                ('Wh', 'OR', 'Gr', 'Rd', 'Bu', 'Ye'),
-                ('Wh', 'Gr', 'Rd', 'Bu', 'OR', 'Ye'),
-                ('Wh', 'Bu', 'OR', 'Gr', 'Rd', 'Ye'),
-                ('Wh', 'Rd', 'Bu', 'OR', 'Gr', 'Ye'),
-
-                ('Ye', 'Bu', 'Rd', 'Gr', 'OR', 'Wh'),
-                ('Ye', 'Gr', 'OR', 'Bu', 'Rd', 'Wh'),
-                ('Ye', 'Rd', 'Gr', 'OR', 'Bu', 'Wh'),
-                ('Ye', 'OR', 'Bu', 'Rd', 'Gr', 'Wh'),
-
-                ('OR', 'Ye', 'Gr', 'Wh', 'Bu', 'Rd'),
-                ('OR', 'Wh', 'Bu', 'Ye', 'Gr', 'Rd'),
-                ('OR', 'Gr', 'Wh', 'Bu', 'Ye', 'Rd'),
-                ('OR', 'Bu', 'Ye', 'Gr', 'Wh', 'Rd'),
-
-                ('Gr', 'Ye', 'Rd', 'Wh', 'OR', 'Bu'),
-                ('Gr', 'Wh', 'OR', 'Ye', 'Rd', 'Bu'),
-                ('Gr', 'Rd', 'Wh', 'OR', 'Ye', 'Bu'),
-                ('Gr', 'OR', 'Ye', 'Rd', 'Wh', 'Bu'),
-
-                ('Rd', 'Ye', 'Bu', 'Wh', 'Gr', 'OR'),
-                ('Rd', 'Wh', 'Gr', 'Ye', 'Bu', 'OR'),
-                ('Rd', 'Bu', 'Wh', 'Gr', 'Ye', 'OR'),
-                ('Rd', 'Gr', 'Ye', 'Bu', 'Wh', 'OR'),
-
-                ('Bu', 'Wh', 'Rd', 'Ye', 'OR', 'Gr'),
-                ('Bu', 'Ye', 'OR', 'Wh', 'Rd', 'Gr'),
-                ('Bu', 'Rd', 'Ye', 'OR', 'Wh', 'Gr'),
-                ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
-            )
+            crayola_color_permutations = odd_cube_center_color_permutations
         else:
             crayola_color_permutations = permutations(self.crayola_colors.keys())
 
@@ -1181,7 +1212,6 @@ div#colormapping {
                     log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
                 '''
 
-        # dwalton cluster square ref
         for (index, squares_list) in enumerate(squares_lists):
             color_name = min_distance_permutation[index]
 
@@ -1191,6 +1221,7 @@ div#colormapping {
                 # Find the Square object for this ClusterSquare
                 square = self.get_square(cluster_square.index)
                 square.color_name = color_name
+                # log.info("SQUARE %s color_name is now %s" % (square, square.color_name))
 
     def validate_edge_orbit(self, orbit_id):
         valid = True
@@ -1339,7 +1370,7 @@ div#colormapping {
                 'edges - orbit %d' % target_orbit_id,
                 sorted_edge_colors_cluster_squares)
 
-            # dwalton we need to do something smarter here
+            # TODO we need to do something smarter here
             # 6x6x6 random-01 and 04 have beastly red/orange edges
             if not self.validate_edge_orbit(target_orbit_id):
                 all_orbits_valid = False
@@ -1352,8 +1383,7 @@ div#colormapping {
                         log.info("%s -> %s (%s)" % (cluster_square, square, square.color_name))
                 '''
 
-            log.info(f"sorted_edge_colors_cluster_squares:\n{sorted_edge_colors_cluster_squares}")
-
+            #log.info(f"sorted_edge_colors_cluster_squares:\n{sorted_edge_colors_cluster_squares}")
             log.info("\n\n")
 
         return all_orbits_valid
@@ -1434,6 +1464,7 @@ div#colormapping {
         self.write_cube('Final Cube', cube)
 
     def crunch_colors(self):
+        '''
         if self.resolve_all_squares(False):
             pass
         elif self.resolve_all_squares(True):
@@ -1442,6 +1473,10 @@ div#colormapping {
             self.resolve_edge_squares()
             self.resolve_corner_squares()
             self.resolve_center_squares()
+        '''
+        self.resolve_edge_squares()
+        self.resolve_corner_squares()
+        self.resolve_center_squares()
 
         self.print_cube()
         self.write_final_cube()
