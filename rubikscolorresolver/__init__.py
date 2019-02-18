@@ -117,9 +117,10 @@ center_groups = {
         )),
     ),
     5: (
+        ("centers", (13, 38, 63, 88, 113, 138)),
         ("x-centers", (
             7, 9, 13, 17, 19, # Upper
-            32, 34,38,  42, 44, # Left
+            32, 34, 38, 42, 44, # Left
             57, 59, 63, 67, 69, # Front
             82, 84, 88, 92, 94, # Right
             107, 109, 113, 117, 119, # Back
@@ -133,7 +134,6 @@ center_groups = {
             108, 112, 113, 114, 118, # Back
             133, 137, 138, 139, 143, # Down
         )),
-        ("middle-centers", (13, 38, 63, 88, 113, 138)),
     ),
     6: (
         ("inner x-centers", (
@@ -1044,7 +1044,7 @@ div#colormapping {
 
         return data
 
-    def assign_color_names(self, squares_lists):
+    def assign_color_names(self, desc, squares_lists):
         assert len(squares_lists) == 6, "There are %d squares_list, there should be 6" % len(squares_lists)
         #log.info("SQUARES_LIST:\n{}\n".format(pformat(squares_lists)))
 
@@ -1054,7 +1054,42 @@ div#colormapping {
         min_distance = None
         min_distance_permutation = None
 
-        for permutation in permutations(self.crayola_colors.keys()):
+        if self.odd and desc == "centers":
+            crayola_color_permutations = (
+                ('Wh', 'OR', 'Gr', 'Rd', 'Bu', 'Ye'),
+                ('Wh', 'Gr', 'Rd', 'Bu', 'OR', 'Ye'),
+                ('Wh', 'Bu', 'OR', 'Gr', 'Rd', 'Ye'),
+                ('Wh', 'Rd', 'Bu', 'OR', 'Gr', 'Ye'),
+
+                ('Ye', 'Bu', 'Rd', 'Gr', 'OR', 'Wh'),
+                ('Ye', 'Gr', 'OR', 'Bu', 'Rd', 'Wh'),
+                ('Ye', 'Rd', 'Gr', 'OR', 'Bu', 'Wh'),
+                ('Ye', 'OR', 'Bu', 'Rd', 'Gr', 'Wh'),
+
+                ('OR', 'Ye', 'Gr', 'Wh', 'Bu', 'Rd'),
+                ('OR', 'Wh', 'Bu', 'Ye', 'Gr', 'Rd'),
+                ('OR', 'Gr', 'Wh', 'Bu', 'Ye', 'Rd'),
+                ('OR', 'Bu', 'Ye', 'Gr', 'Wh', 'Rd'),
+
+                ('Gr', 'Ye', 'Rd', 'Wh', 'OR', 'Bu'),
+                ('Gr', 'Wh', 'OR', 'Ye', 'Rd', 'Bu'),
+                ('Gr', 'Rd', 'Wh', 'OR', 'Ye', 'Bu'),
+                ('Gr', 'OR', 'Ye', 'Rd', 'Wh', 'Bu'),
+
+                ('Rd', 'Ye', 'Bu', 'Wh', 'Gr', 'OR'),
+                ('Rd', 'Wh', 'Gr', 'Ye', 'Bu', 'OR'),
+                ('Rd', 'Bu', 'Wh', 'Gr', 'Ye', 'OR'),
+                ('Rd', 'Gr', 'Ye', 'Bu', 'Wh', 'OR'),
+
+                ('Bu', 'Wh', 'Rd', 'Ye', 'OR', 'Gr'),
+                ('Bu', 'Ye', 'OR', 'Wh', 'Rd', 'Gr'),
+                ('Bu', 'Rd', 'Ye', 'OR', 'Wh', 'Gr'),
+                ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
+            )
+        else:
+            crayola_color_permutations = permutations(self.crayola_colors.keys())
+
+        for permutation in crayola_color_permutations:
             distance = 0
 
             for (index, squares_list) in enumerate(squares_lists):
@@ -1064,12 +1099,16 @@ div#colormapping {
                 for cluster_square in squares_list:
                     distance += get_euclidean_lab_distance(cluster_square.lab, color_obj)
 
+            # dwalton
             if min_distance is None or distance < min_distance:
                 min_distance = distance
                 min_distance_permutation = permutation
-                #log.info("PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(permutation, int(distance)))
-            #else:
-            #    log.info("PERMUTATION {}, DISTANCE {}".format(permutation, distance))
+
+                if desc == "centers":
+                    log.warning("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
+            else:
+                if desc == "centers":
+                    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
 
         for (index, squares_list) in enumerate(squares_lists):
             color_name = min_distance_permutation[index]
@@ -1147,7 +1186,7 @@ div#colormapping {
 
             log.info("avg RGB ({}, {}, {})".format(avg_red, avg_green, avg_blue))
 
-        #self.assign_color_names(sorted_edge_colors_cluster_squares)
+        #self.assign_color_names('all', sorted_edge_colors_cluster_squares)
         self.write_colors(
             'all',
             sorted_edge_colors_cluster_squares)
@@ -1189,7 +1228,7 @@ div#colormapping {
                     sorted_edge_colors_cluster_squares.append(squares_list)
                     squares_list = []
 
-            self.assign_color_names(sorted_edge_colors_cluster_squares)
+            self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
             valid = self.validate_edge_orbit(target_orbit_id)
 
             if not valid:
@@ -1224,7 +1263,7 @@ div#colormapping {
                 sorted_corner_colors_cluster_squares.append(squares_list)
                 squares_list = []
 
-        self.assign_color_names(sorted_corner_colors_cluster_squares)
+        self.assign_color_names('corners', sorted_corner_colors_cluster_squares)
         self.write_colors('corners', sorted_corner_colors_cluster_squares)
 
     def resolve_center_squares(self):
@@ -1244,8 +1283,14 @@ div#colormapping {
                 square = self.get_square(position)
                 center_colors.append((square.position, square.rgb))
 
-            #sorted_center_colors = traveling_salesman(center_colors, "euclidean")
-            sorted_center_colors = traveling_salesman(center_colors, "cie2000")
+            if len(centers_squares) == 6:
+                sorted_center_colors = center_colors[:]
+            else:
+                #sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+                sorted_center_colors = traveling_salesman(center_colors, "cie2000")
+
+            #log.info("center_colors: %s" % pformat(center_colors))
+            #log.info("sorted_center_colors: %s" % pformat(sorted_center_colors))
             sorted_center_colors_cluster_squares = []
             squares_list = []
             squares_per_cluster = int(len(sorted_center_colors) / 6)
@@ -1257,7 +1302,9 @@ div#colormapping {
                     sorted_center_colors_cluster_squares.append(squares_list)
                     squares_list = []
 
-            self.assign_color_names(sorted_center_colors_cluster_squares)
+            # dwalton
+            log.warning("%s sorted_center_colors_cluster_squares: %s" % (desc, pformat(sorted_center_colors_cluster_squares)))
+            self.assign_color_names(desc, sorted_center_colors_cluster_squares)
             self.write_colors(desc, sorted_center_colors_cluster_squares)
 
     def write_final_cube(self):
