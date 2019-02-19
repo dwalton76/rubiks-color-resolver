@@ -43,6 +43,69 @@ odd_cube_center_color_permutations = (
     ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
 )
 
+corner_tuples = {
+    2 : (
+        (1, 5, 18),
+        (2, 17, 14),
+        (3, 9, 6),
+        (4, 13, 10),
+        (21, 8, 11),
+        (22, 12, 15),
+        (23, 20, 7),
+        (24, 16, 19),
+    ),
+    3 : (
+        (1, 10, 39),
+        (3, 37, 30),
+        (7, 19, 12),
+        (9, 28, 21),
+        (46, 18, 25),
+        (48, 27, 34),
+        (52, 45, 16),
+        (54, 36, 43),
+    ),
+    4 : (
+        (1, 17, 68),
+        (4, 65, 52),
+        (13, 33, 20),
+        (16, 49, 36),
+        (81, 32, 45),
+        (84, 48, 61),
+        (93, 80, 29),
+        (96, 64, 77),
+    ),
+    5 : (
+        (1, 26, 105),
+        (5, 101, 80),
+        (21, 51, 30),
+        (25, 76, 55),
+        (126, 50, 71),
+        (130, 75, 96),
+        (146, 125, 46),
+        (150, 100, 121),
+    ),
+    6 : (
+        (1, 37, 150),
+        (6, 145, 114),
+        (31, 73, 42),
+        (36, 109, 78),
+        (181, 72, 103),
+        (186, 108, 139),
+        (211, 180, 67),
+        (216, 144, 175 ),
+    ),
+    7 : (
+        (1, 50, 203),
+        (7, 197, 154),
+        (43, 99, 56),
+        (49, 148, 105),
+        (246, 98, 141),
+        (252, 147, 190),
+        (288, 245, 92),
+        (294, 196, 239),
+    ),
+}
+
 edge_orbit_id = {
     3: {
         2: 0, 4: 0, 6: 0, 8: 0, # Upper
@@ -688,6 +751,8 @@ class RubiksColorSolverGeneric(object):
         self.scan_data = {}
         self.orbits = int(ceil((self.width - 2) / 2.0))
         self.state = []
+        self.orange_baseline = None
+        self.red_baseline = None
 
         if self.width % 2 == 0:
             self.even = True
@@ -1124,8 +1189,6 @@ div#colormapping {
                 self.state.append(self.color_to_side_name[color_name])
 
     def cube_for_kociemba_strict(self):
-        self.set_state()
-
         data = []
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
@@ -1263,6 +1326,7 @@ div#colormapping {
 
         return valid
 
+        '''
     def resolve_all_squares(self, use_endpoints):
         log.info('Resolve all squares')
         WHITE = (255, 255, 255)
@@ -1327,6 +1391,7 @@ div#colormapping {
                 break
 
         return cube_is_valid
+        '''
 
     def resolve_edge_squares(self):
         """
@@ -1337,8 +1402,6 @@ div#colormapping {
         if self.width == 2:
             return True
 
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
         all_orbits_valid = True
 
         for target_orbit_id in range(self.orbits):
@@ -1388,6 +1451,171 @@ div#colormapping {
 
         return all_orbits_valid
 
+    def assign_green_white_corners(self, green_white_corners):
+        #log.info("Gr/Wh corner tuples %s" % pformat(green_white_corners))
+        valid_green_orange_white = (
+            ['Gr', 'OR', 'Wh'],
+            ['Wh', 'Gr', 'OR'],
+            ['OR', 'Wh', 'Gr'],
+        )
+
+        valid_green_white_red = (
+            ['Gr', 'Wh', 'Rd'],
+            ['Rd', 'Gr', 'Wh'],
+            ['Wh', 'Rd', 'Gr'],
+        )
+
+        for (corner1_index, corner2_index, corner3_index) in green_white_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
+
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_green_orange_white and color_seq not in valid_green_white_red:
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner3)
+
+    def assign_green_yellow_corners(self, green_yellow_corners):
+        valid_green_yellow_orange = (
+            ['Gr', 'Ye', 'OR'],
+            ['OR', 'Gr', 'Ye'],
+            ['Ye', 'OR', 'Gr'],
+        )
+
+        valid_green_red_yellow = (
+            ['Gr', 'Rd', 'Ye'],
+            ['Ye', 'Gr', 'Rd'],
+            ['Rd', 'Ye', 'Gr'],
+        )
+
+        for (corner1_index, corner2_index, corner3_index) in green_yellow_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
+
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_green_yellow_orange and color_seq not in valid_green_red_yellow:
+
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner3)
+
+    def assign_blue_white_corners(self, blue_white_corners):
+        #log.info("Bu/Wh corner tuples %s" % pformat(blue_white_corners))
+        valid_blue_white_orange = (
+            ['Bu', 'Wh', 'OR'],
+            ['OR', 'Bu', 'Wh'],
+            ['Wh', 'OR', 'Bu'],
+        )
+
+        valid_blue_red_white = (
+            ['Bu', 'Rd', 'Wh'],
+            ['Wh', 'Bu', 'Rd'],
+            ['Rd', 'Wh', 'Bu'],
+        )
+
+        for (corner1_index, corner2_index, corner3_index) in blue_white_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
+
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_blue_white_orange and color_seq not in valid_blue_red_white:
+
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner3)
+
+    def assign_blue_yellow_corners(self, blue_yellow_corners):
+        valid_blue_yellow_red = (
+            ['Bu', 'Ye', 'Rd'],
+            ['Rd', 'Bu', 'Ye'],
+            ['Ye', 'Rd', 'Bu'],
+        )
+
+        valid_blue_orange_yellow = (
+            ['Bu', 'OR', 'Ye'],
+            ['Ye', 'Bu', 'OR'],
+            ['OR', 'Ye', 'Bu'],
+        )
+
+        for (corner1_index, corner2_index, corner3_index) in blue_yellow_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
+
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_blue_yellow_red and color_seq not in valid_blue_orange_yellow:
+
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change %s from Rd to OR" % corner3)
+
     def resolve_corner_squares(self):
         """
         Use traveling salesman algorithm to sort the colors
@@ -1411,8 +1639,44 @@ div#colormapping {
                 sorted_corner_colors_cluster_squares.append(squares_list)
                 squares_list = []
 
+        #log.info("sorted_corner_colors_cluster_squares:\n%s" % pformat(sorted_corner_colors_cluster_squares))
         self.assign_color_names('corners', sorted_corner_colors_cluster_squares)
         self.write_colors('corners', sorted_corner_colors_cluster_squares)
+
+        green_white_corners = []
+        green_yellow_corners = []
+        blue_white_corners = []
+        blue_yellow_corners = []
+
+        for corner_tuple in corner_tuples[self.width]:
+            corner_colors = []
+
+            for position in corner_tuple:
+                square = self.get_square(position)
+                #log.info("square %s is %s" % (square, square.color_name))
+                corner_colors.append(square.color_name)
+
+            if "Gr" in corner_colors and "Wh" in corner_colors:
+                #log.info("%s is Gr/Wh corner" % " ".join(map(str, corner_tuple)))
+                green_white_corners.append(corner_tuple)
+
+            elif "Gr" in corner_colors and "Ye" in corner_colors:
+                #log.info("%s is Gr/Ye corner" % " ".join(map(str, corner_tuple)))
+                green_yellow_corners.append(corner_tuple)
+
+            elif "Bu" in corner_colors and "Wh" in corner_colors:
+                #log.info("%s is Bu/Wh corner" % " ".join(map(str, corner_tuple)))
+                blue_white_corners.append(corner_tuple)
+
+            elif "Bu" in corner_colors and "Ye" in corner_colors:
+                #log.info("%s is Bu/Ye corner" % " ".join(map(str, corner_tuple)))
+                blue_yellow_corners.append(corner_tuple)
+
+        # dwalton here now
+        self.assign_green_white_corners(green_white_corners)
+        self.assign_green_yellow_corners(green_yellow_corners)
+        self.assign_blue_white_corners(blue_white_corners)
+        self.assign_blue_yellow_corners(blue_yellow_corners)
 
     def resolve_center_squares(self):
         """
@@ -1452,6 +1716,24 @@ div#colormapping {
             self.assign_color_names(desc, sorted_center_colors_cluster_squares)
             self.write_colors(desc, sorted_center_colors_cluster_squares)
 
+            # find avg orange and red
+            '''
+            if self.odd:
+                if desc == "centers":
+                    for cluster_square_list in sorted_center_colors_cluster_squares:
+                        for cluster_square in cluster_square_list:
+                            square = self.get_square(cluster_square.index)
+                            if square.color_name == "OR":
+                                self.orange_baseline = square.rawcolor
+                                log.warning("ORANGE: %s" % self.orange_baseline)
+                            elif square.color_name == "Rd":
+                                self.red_baseline = square.rawcolor
+                                log.warning("RED: %s" % self.red_baseline)
+
+            else:
+                raise Exception("implement this")
+            '''
+
     def write_final_cube(self):
         data = self.cube_for_json()
         cube = ['dummy', ]
@@ -1464,19 +1746,10 @@ div#colormapping {
         self.write_cube('Final Cube', cube)
 
     def crunch_colors(self):
-        '''
-        if self.resolve_all_squares(False):
-            pass
-        elif self.resolve_all_squares(True):
-            pass
-        else:
-            self.resolve_edge_squares()
-            self.resolve_corner_squares()
-            self.resolve_center_squares()
-        '''
-        self.resolve_edge_squares()
-        self.resolve_corner_squares()
         self.resolve_center_squares()
+        self.resolve_corner_squares()
+        self.resolve_edge_squares()
+        self.set_state()
 
         self.print_cube()
         self.write_final_cube()
