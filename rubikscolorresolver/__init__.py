@@ -5,7 +5,7 @@ from itertools import combinations, permutations
 from math import atan2, cos, degrees, exp, radians, sin
 from math import sqrt, ceil
 from pprint import pformat
-from statistics import median
+from statistics import median, mean
 from json import dumps as json_dumps
 import logging
 import os
@@ -181,49 +181,49 @@ edge_orbit_id = {
 }
 
 edge_orbit_wing_pairs = {
-    3 : (
-        ((2, 38), (4, 11), (6, 29), (8, 20),
-         (13, 42), (15, 22),
-         (31, 24), (33, 40),
-         (47, 26), (49, 17), (51, 35), (53, 44)),
-    ),
+    3 : {
+        0: ((2, 38), (4, 11), (6, 29), (8, 20),
+            (13, 42), (15, 22),
+            (31, 24), (33, 40),
+            (47, 26), (49, 17), (51, 35), (53, 44)),
+    },
 
-    4 : (
-        ((2, 67), (3, 66), (5, 18), (9, 19), (8, 51), (12, 50), (14, 34), (15, 35),
-         (21, 72), (25, 76), (24, 37), (28, 41),
-         (53, 40), (57, 44), (56, 69), (60, 73),
-         (82, 46), (83, 47), (85, 31), (89, 30), (88, 62), (92, 63), (94, 79), (95, 78)),
-    ),
+    4 : {
+        0: ((2, 67), (3, 66), (5, 18), (9, 19), (8, 51), (12, 50), (14, 34), (15, 35),
+            (21, 72), (25, 76), (24, 37), (28, 41),
+            (53, 40), (57, 44), (56, 69), (60, 73),
+            (82, 46), (83, 47), (85, 31), (89, 30), (88, 62), (92, 63), (94, 79), (95, 78)),
+    },
 
-    5 : (
+    5 : {
         # orbit 0
-        ((2, 104), (4, 102), (6, 27), (16, 29), (10, 79), (20, 77), (22, 52), (24, 54),
-         (31, 110), (41, 120), (35, 56), (45, 66),
-         (81, 60), (91, 70), (85, 106), (95, 116),
-         (72, 127), (74, 129), (131, 49), (141, 47), (135, 97), (145, 99), (147, 124), (149, 122)),
+        0: ((2, 104), (4, 102), (6, 27), (16, 29), (10, 79), (20, 77), (22, 52), (24, 54),
+            (31, 110), (41, 120), (35, 56), (45, 66),
+            (81, 60), (91, 70), (85, 106), (95, 116),
+            (72, 127), (74, 129), (131, 49), (141, 47), (135, 97), (145, 99), (147, 124), (149, 122)),
 
         # orbit 1
-        ((3, 103), (11, 28), (15, 78), (23, 53),
-         (36, 115), (40, 61),
-         (86, 65), (90, 111),
-         (128, 73), (136, 48), (140, 98), (148, 123)),
-    ),
+        1: ((3, 103), (11, 28), (15, 78), (23, 53),
+            (36, 115), (40, 61),
+            (86, 65), (90, 111),
+            (128, 73), (136, 48), (140, 98), (148, 123)),
+    },
 
-    6 : (
+    6 : {
         # orbit 0
-        ((2, 149), (5, 146), (7, 38), (25, 41), (12, 113), (30, 110), (32, 74), (35, 77),
-         (43, 156), (61, 174), (48, 79), (66, 97),
-         (115, 84), (133, 102), (120, 151), (138, 169),
-         (182, 104), (185, 107), (187, 71), (205, 68), (192, 140), (210, 143), (212, 179), (215, 176),
+        0: ((2, 149), (5, 146), (7, 38), (25, 41), (12, 113), (30, 110), (32, 74), (35, 77),
+            (43, 156), (61, 174), (48, 79), (66, 97),
+            (115, 84), (133, 102), (120, 151), (138, 169),
+            (182, 104), (185, 107), (187, 71), (205, 68), (192, 140), (210, 143), (212, 179), (215, 176),
         ),
 
         # orbit 1
-        ((3, 148), (4, 147), (13, 39), (19, 40), (18, 112), (24, 111), (33, 75), (34, 76),
-         (49, 162), (55, 168), (54, 85), (60, 91),
-         (90, 121), (96, 127), (126, 157), (132, 163),
-         (183, 105), (184, 106), (193, 70), (199, 69), (198, 141), (204, 142), (213, 178), (214, 177),
+        1: ((3, 148), (4, 147), (13, 39), (19, 40), (18, 112), (24, 111), (33, 75), (34, 76),
+            (49, 162), (55, 168), (54, 85), (60, 91),
+            (90, 121), (96, 127), (126, 157), (132, 163),
+            (183, 105), (184, 106), (193, 70), (199, 69), (198, 141), (204, 142), (213, 178), (214, 177),
         ),
-    )
+    }
 }
 
 center_groups = {
@@ -1312,9 +1312,10 @@ div#colormapping {
             log.info("wing_pair_counts:\n{}\n".format(pformat(wing_pair_counts)))
             log.warning("valid: {}".format(valid))
 
+        #assert valid, "Cube is invalid"
         return valid
 
-    def resolve_edge_squares(self, write_to_html):
+    def resolve_edge_squares(self, write_to_html, fix_orange_vs_red):
         """
         Use traveling salesman algorithm to sort the colors
         """
@@ -1366,18 +1367,190 @@ div#colormapping {
                     'edges - orbit %d' % target_orbit_id,
                     sorted_edge_colors_cluster_squares)
 
-            # TODO we need to do something smarter here
-            # 6x6x6 random-01 and 04 have beastly red/orange edges
-            if not self.validate_edge_orbit(target_orbit_id):
-                all_orbits_valid = False
+            if fix_orange_vs_red:
+                green_red_or_orange_edges = []
+                blue_red_or_orange_edges = []
+                white_red_or_orange_edges = []
+                yellow_red_or_orange_edges = []
+                green_red_orange_color_names = ("Gr", "Rd", "OR")
+                blue_red_orange_color_names = ("Bu", "Rd", "OR")
+                white_red_orange_color_names = ("Wh", "Rd", "OR")
+                yellow_red_orange_color_names = ("Ye", "Rd", "OR")
 
-                '''
-                for squares_list in sorted_edge_colors_cluster_squares:
-                    for cluster_square in squares_list:
-                        # Find the Square object for this ClusterSquare
-                        square = self.get_square(cluster_square.index)
-                        log.info("%s -> %s (%s)" % (cluster_square, square, square.color_name))
-                '''
+                for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
+                    square = self.get_square(square_index)
+                    partner = self.get_square(partner_index)
+
+                    if square.color_name in green_red_orange_color_names and partner.color_name in green_red_orange_color_names:
+                        if square.color_name == "Gr":
+                            green_red_or_orange_edges.append((square, partner))
+                        else:
+                            green_red_or_orange_edges.append((partner, square))
+
+                    elif square.color_name in blue_red_orange_color_names and partner.color_name in blue_red_orange_color_names:
+                        if square.color_name == "Bu":
+                            blue_red_or_orange_edges.append((square, partner))
+                        else:
+                            blue_red_or_orange_edges.append((partner, square))
+
+                    elif square.color_name in white_red_orange_color_names and partner.color_name in white_red_orange_color_names:
+                        if square.color_name == "Wh":
+                            white_red_or_orange_edges.append((square, partner))
+                        else:
+                            white_red_or_orange_edges.append((partner, square))
+
+                    elif square.color_name in yellow_red_orange_color_names and partner.color_name in yellow_red_orange_color_names:
+                        if square.color_name == "Ye":
+                            yellow_red_or_orange_edges.append((square, partner))
+                        else:
+                            yellow_red_or_orange_edges.append((partner, square))
+
+                log.info(f"green_red_or_orange_edges {green_red_or_orange_edges}")
+                log.info(f"blue_red_or_orange_edges {blue_red_or_orange_edges}")
+                log.info(f"white_red_or_orange_edges {white_red_or_orange_edges}")
+                log.info(f"yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
+
+                # There must be one Gr/OR edge and one Gr/Rd. Assign based on which combo
+                # has the least color distance vs our OR/Rd baselines.
+                distance_OR_Rd = 0
+                distance_OR_Rd += get_euclidean_lab_distance(green_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
+                distance_OR_Rd += get_euclidean_lab_distance(green_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
+
+                distance_Rd_OR = 0
+                distance_Rd_OR += get_euclidean_lab_distance(green_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
+                distance_Rd_OR += get_euclidean_lab_distance(green_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
+
+                log.info(f"distance_OR_Rd {distance_OR_Rd}")
+                log.info(f"distance_Rd_OR {distance_Rd_OR}")
+
+                if distance_OR_Rd <= distance_Rd_OR:
+                    if green_red_or_orange_edges[0][1].color_name != "OR":
+                        log.warning("change green edge partner %s from %s to OR" %
+                            (green_red_or_orange_edges[0][1], green_red_or_orange_edges[0][1].color_name))
+                        green_red_or_orange_edges[0][1].color_name = "OR"
+
+                    if green_red_or_orange_edges[1][1].color_name != "Rd":
+                        log.warning("change green edge partner %s from %s to Rd" %
+                            (green_red_or_orange_edges[1][1], green_red_or_orange_edges[1][1].color_name))
+                        green_red_or_orange_edges[1][1].color_name = "Rd"
+                else:
+                    if green_red_or_orange_edges[0][1].color_name != "Rd":
+                        log.warning("change green edge partner %s from %s to Rd" %
+                            (green_red_or_orange_edges[0][1], green_red_or_orange_edges[0][1].color_name))
+                        green_red_or_orange_edges[0][1].color_name = "Rd"
+
+                    if green_red_or_orange_edges[1][1].color_name != "OR":
+                        log.warning("change green edge partner %s from %s to OR" %
+                            (green_red_or_orange_edges[1][1], green_red_or_orange_edges[1][1].color_name))
+                        green_red_or_orange_edges[1][1].color_name = "OR"
+
+                # There must be one Bu/OR edge and one Bu/Rd. Assign based on which combo
+                # has the least color distance vs our OR/Rd baselines.
+                distance_OR_Rd = 0
+                distance_OR_Rd += get_euclidean_lab_distance(blue_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
+                distance_OR_Rd += get_euclidean_lab_distance(blue_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
+
+                distance_Rd_OR = 0
+                distance_Rd_OR += get_euclidean_lab_distance(blue_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
+                distance_Rd_OR += get_euclidean_lab_distance(blue_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
+
+                log.info(f"distance_OR_Rd {distance_OR_Rd}")
+                log.info(f"distance_Rd_OR {distance_Rd_OR}")
+
+                if distance_OR_Rd <= distance_Rd_OR:
+                    if blue_red_or_orange_edges[0][1].color_name != "OR":
+                        log.warning("change blue edge partner %s from %s to OR" %
+                            (blue_red_or_orange_edges[0][1], blue_red_or_orange_edges[0][1].color_name))
+                        blue_red_or_orange_edges[0][1].color_name = "OR"
+
+                    if blue_red_or_orange_edges[1][1].color_name != "Rd":
+                        log.warning("change blue edge partner %s from %s to Rd" %
+                            (blue_red_or_orange_edges[1][1], blue_red_or_orange_edges[1][1].color_name))
+                        blue_red_or_orange_edges[1][1].color_name = "Rd"
+                else:
+                    if blue_red_or_orange_edges[0][1].color_name != "Rd":
+                        log.warning("change blue edge partner %s from %s to Rd" %
+                            (blue_red_or_orange_edges[0][1], blue_red_or_orange_edges[0][1].color_name))
+                        blue_red_or_orange_edges[0][1].color_name = "Rd"
+
+                    if blue_red_or_orange_edges[1][1].color_name != "OR":
+                        log.warning("change blue edge partner %s from %s to OR" %
+                            (blue_red_or_orange_edges[1][1], blue_red_or_orange_edges[1][1].color_name))
+                        blue_red_or_orange_edges[1][1].color_name = "OR"
+
+                # There must be one Wh/OR edge and one Wh/Rd. Assign based on which combo
+                # has the least color distance vs our OR/Rd baselines.
+                distance_OR_Rd = 0
+                distance_OR_Rd += get_euclidean_lab_distance(white_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
+                distance_OR_Rd += get_euclidean_lab_distance(white_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
+
+                distance_Rd_OR = 0
+                distance_Rd_OR += get_euclidean_lab_distance(white_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
+                distance_Rd_OR += get_euclidean_lab_distance(white_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
+
+                log.info(f"distance_OR_Rd {distance_OR_Rd}")
+                log.info(f"distance_Rd_OR {distance_Rd_OR}")
+
+                if distance_OR_Rd <= distance_Rd_OR:
+                    if white_red_or_orange_edges[0][1].color_name != "OR":
+                        log.warning("change white edge partner %s from %s to OR" %
+                            (white_red_or_orange_edges[0][1], white_red_or_orange_edges[0][1].color_name))
+                        white_red_or_orange_edges[0][1].color_name = "OR"
+
+                    if white_red_or_orange_edges[1][1].color_name != "Rd":
+                        log.warning("change white edge partner %s from %s to Rd" %
+                            (white_red_or_orange_edges[1][1], white_red_or_orange_edges[1][1].color_name))
+                        white_red_or_orange_edges[1][1].color_name = "Rd"
+                else:
+                    if white_red_or_orange_edges[0][1].color_name != "Rd":
+                        log.warning("change white edge partner %s from %s to Rd" %
+                            (white_red_or_orange_edges[0][1], white_red_or_orange_edges[0][1].color_name))
+                        white_red_or_orange_edges[0][1].color_name = "Rd"
+
+                    if white_red_or_orange_edges[1][1].color_name != "OR":
+                        log.warning("change white edge partner %s from %s to OR" %
+                            (white_red_or_orange_edges[1][1], white_red_or_orange_edges[1][1].color_name))
+                        white_red_or_orange_edges[1][1].color_name = "OR"
+
+                # There must be one Wh/OR edge and one Wh/Rd. Assign based on which combo
+                # has the least color distance vs our OR/Rd baselines.
+                distance_OR_Rd = 0
+                distance_OR_Rd += get_euclidean_lab_distance(yellow_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
+                distance_OR_Rd += get_euclidean_lab_distance(yellow_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
+
+                distance_Rd_OR = 0
+                distance_Rd_OR += get_euclidean_lab_distance(yellow_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
+                distance_Rd_OR += get_euclidean_lab_distance(yellow_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
+
+                log.info(f"distance_OR_Rd {distance_OR_Rd}")
+                log.info(f"distance_Rd_OR {distance_Rd_OR}")
+
+                if distance_OR_Rd <= distance_Rd_OR:
+                    if yellow_red_or_orange_edges[0][1].color_name != "OR":
+                        log.warning("change yellow edge partner %s from %s to OR" %
+                            (yellow_red_or_orange_edges[0][1], yellow_red_or_orange_edges[0][1].color_name))
+                        yellow_red_or_orange_edges[0][1].color_name = "OR"
+
+                    if yellow_red_or_orange_edges[1][1].color_name != "Rd":
+                        log.warning("change yellow edge partner %s from %s to Rd" %
+                            (yellow_red_or_orange_edges[1][1], yellow_red_or_orange_edges[1][1].color_name))
+                        yellow_red_or_orange_edges[1][1].color_name = "Rd"
+                else:
+                    if yellow_red_or_orange_edges[0][1].color_name != "Rd":
+                        log.warning("change yellow edge partner %s from %s to Rd" %
+                            (yellow_red_or_orange_edges[0][1], yellow_red_or_orange_edges[0][1].color_name))
+                        yellow_red_or_orange_edges[0][1].color_name = "Rd"
+
+                    if yellow_red_or_orange_edges[1][1].color_name != "OR":
+                        log.warning("change yellow edge partner %s from %s to OR" %
+                            (yellow_red_or_orange_edges[1][1], yellow_red_or_orange_edges[1][1].color_name))
+                        yellow_red_or_orange_edges[1][1].color_name = "OR"
+
+                # TODO we need to validate parity if this is a 3x3x3, if parity is off figure out which Or/Rd edge
+                # squares to swap to create valid parity
+
+                # dwalton
+                self.validate_edge_orbit(target_orbit_id)
 
             #log.info(f"sorted_edge_colors_cluster_squares:\n{sorted_edge_colors_cluster_squares}")
             log.info("\n\n")
@@ -1408,22 +1581,22 @@ div#colormapping {
             if color_seq not in valid_green_orange_white and color_seq not in valid_green_white_red:
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner1)
+                    log.warning("change Gr/Wh corner partner %s from OR to Rd" % corner1)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner1)
+                    log.warning("change Gr/Wh corner partner %s from Rd to OR" % corner1)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner2)
+                    log.warning("change Gr/Wh corner partner %s from OR to Rd" % corner2)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner2)
+                    log.warning("change Gr/Wh corner partner %s from Rd to OR" % corner2)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner3)
+                    log.warning("change Gr/Wh corner partner %s from OR to Rd" % corner3)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner3)
+                    log.warning("change Gr/Wh corner partner %s from Rd to OR" % corner3)
 
     def assign_green_yellow_corners(self, green_yellow_corners):
         valid_green_yellow_orange = (
@@ -1449,22 +1622,22 @@ div#colormapping {
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner1)
+                    log.warning("change Gr/Ye corner partner %s from OR to Rd" % corner1)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner1)
+                    log.warning("change Gr/Ye corner partner %s from Rd to OR" % corner1)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner2)
+                    log.warning("change Gr/Ye corner partner %s from OR to Rd" % corner2)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner2)
+                    log.warning("change Gr/Ye corner partner %s from Rd to OR" % corner2)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner3)
+                    log.warning("change Gr/Ye corner partner %s from OR to Rd" % corner3)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner3)
+                    log.warning("change Gr/Ye corner partner %s from Rd to OR" % corner3)
 
     def assign_blue_white_corners(self, blue_white_corners):
         #log.info("Bu/Wh corner tuples %s" % pformat(blue_white_corners))
@@ -1491,22 +1664,22 @@ div#colormapping {
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner1)
+                    log.warning("change Bu/Wh corner partner %s from OR to Rd" % corner1)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner1)
+                    log.warning("change Bu/Wh corner partner %s from Rd to OR" % corner1)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner2)
+                    log.warning("change Bu/Wh corner partner %s from OR to Rd" % corner2)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner2)
+                    log.warning("change Bu/Wh corner partner %s from Rd to OR" % corner2)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner3)
+                    log.warning("change Bu/Wh corner partner %s from OR to Rd" % corner3)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner3)
+                    log.warning("change Bu/Wh corner partner %s from Rd to OR" % corner3)
 
     def assign_blue_yellow_corners(self, blue_yellow_corners):
         valid_blue_yellow_red = (
@@ -1532,22 +1705,22 @@ div#colormapping {
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner1)
+                    log.warning("change Bu/Ye corner partner %s from OR to Rd" % corner1)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner1)
+                    log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner1)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner2)
+                    log.warning("change Bu/Ye corner partner %s from OR to Rd" % corner2)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner2)
+                    log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner2)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning("change %s from OR to Rd" % corner3)
+                    log.warning("change Bu/Ye corner partner %s from OR to Rd" % corner3)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning("change %s from Rd to OR" % corner3)
+                    log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner3)
 
     def resolve_corner_squares(self, write_to_html):
         """
@@ -1622,6 +1795,91 @@ div#colormapping {
         self.assign_blue_white_corners(blue_white_corners)
         self.assign_blue_yellow_corners(blue_yellow_corners)
 
+    def find_orange_and_red_baselines(self):
+
+        if self.width in (3, 4, 5, 7):
+            centers_for_orange_red_baseline = "centers"
+        elif self.width == 6:
+            centers_for_orange_red_baseline = "x-centers"
+        else:
+            raise Exception("What centers to use for orange/red baseline?")
+
+        for (desc, centers_squares) in center_groups[self.width]:
+            if desc != centers_for_orange_red_baseline:
+                continue
+
+            orange_reds = []
+            orange_greens = []
+            orange_blues = []
+            red_reds = []
+            red_greens = []
+            red_blues = []
+
+            for index in centers_squares:
+                square = self.get_square(index)
+
+                if square.color_name == "OR":
+                    orange_reds.append(square.red)
+                    orange_greens.append(square.green)
+                    orange_blues.append(square.blue)
+
+                elif square.color_name == "Rd":
+                    red_reds.append(square.red)
+                    red_greens.append(square.green)
+                    red_blues.append(square.blue)
+
+            '''
+            for cluster_square_list in sorted_center_colors_cluster_squares:
+                for cluster_square in cluster_square_list:
+                    square = self.get_square(cluster_square.index)
+
+                    if square.color_name == "OR":
+                        orange_reds.append(square.red)
+                        orange_greens.append(square.green)
+                        orange_blues.append(square.blue)
+
+                    elif square.color_name == "Rd":
+                        red_reds.append(square.red)
+                        red_greens.append(square.green)
+                        red_blues.append(square.blue)
+            '''
+
+            new_orange_red = mean(orange_reds)
+            new_orange_green = mean(orange_greens)
+            new_orange_blue = mean(orange_blues)
+            self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
+
+            new_red_red = mean(red_reds)
+            new_red_green = mean(red_greens)
+            new_red_blue = mean(red_blues)
+            self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
+
+            log.warning("ORANGE: %s" % self.orange_baseline)
+            log.warning("RED: %s" % self.red_baseline)
+
+            with open(HTML_FILENAME, 'a') as fh:
+                fh.write("<h2>ORANGE baseline</h2>\n")
+                fh.write("<div class='clear colors'>\n")
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (new_orange_red, new_orange_green, new_orange_blue,
+                     new_orange_red, new_orange_green, new_orange_blue,
+                     int(self.orange_baseline.L), int(self.orange_baseline.a), int(self.orange_baseline.b),
+                     'OR',
+                     0))
+                fh.write("<br>")
+                fh.write("</div>\n")
+
+                fh.write("<h2>RED baseline</h2>\n")
+                fh.write("<div class='clear colors'>\n")
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (new_red_red, new_red_green, new_red_blue,
+                     new_red_red, new_red_green, new_red_blue,
+                     int(self.red_baseline.L), int(self.red_baseline.a), int(self.red_baseline.b),
+                     'Rd',
+                     0))
+                fh.write("<br>")
+                fh.write("</div>\n")
+
     def resolve_center_squares(self, write_to_html):
         """
         Use traveling salesman algorithm to sort the colors
@@ -1668,22 +1926,6 @@ div#colormapping {
 
             if write_to_html:
                 self.write_colors(desc, sorted_center_colors_cluster_squares)
-
-            # find avg orange and red
-            if self.odd:
-                if desc == "centers":
-                    for cluster_square_list in sorted_center_colors_cluster_squares:
-                        for cluster_square in cluster_square_list:
-                            square = self.get_square(cluster_square.index)
-                            if square.color_name == "OR":
-                                self.orange_baseline = square.rawcolor
-                                log.warning("ORANGE: %s" % self.orange_baseline)
-                            elif square.color_name == "Rd":
-                                self.red_baseline = square.rawcolor
-                                log.warning("RED: %s" % self.red_baseline)
-
-            else:
-                raise Exception("implement this")
 
     def contrast_stretch(self):
         log.info("WHITE squares %s" % pformat(self.white_squares))
@@ -1850,18 +2092,19 @@ div#colormapping {
         self.write_cube2("Initial RGB values")
         self.resolve_center_squares(False)
         self.resolve_corner_squares(False)
-        self.resolve_edge_squares(False)
+        self.resolve_edge_squares(False, False)
 
         # Write the white squares to our html file
         self.write_white_squares()
 
         self.contrast_stretch()
         self.white_squares = []
-
         self.write_cube2("Contrast Stretched RBG values")
+
+        self.find_orange_and_red_baselines()
         self.resolve_center_squares(True)
         self.resolve_corner_squares(True)
-        self.resolve_edge_squares(True)
+        self.resolve_edge_squares(True, True)
         self.set_state()
 
         self.print_cube()
