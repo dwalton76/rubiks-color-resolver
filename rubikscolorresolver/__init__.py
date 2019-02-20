@@ -1670,7 +1670,6 @@ div#colormapping {
                 self.write_colors(desc, sorted_center_colors_cluster_squares)
 
             # find avg orange and red
-            '''
             if self.odd:
                 if desc == "centers":
                     for cluster_square_list in sorted_center_colors_cluster_squares:
@@ -1685,7 +1684,6 @@ div#colormapping {
 
             else:
                 raise Exception("implement this")
-            '''
 
     def contrast_stretch(self):
         log.info("WHITE squares %s" % pformat(self.white_squares))
@@ -1705,6 +1703,9 @@ div#colormapping {
         max_input_red = 0
         max_input_green = 0
         max_input_blue = 0
+        darkest_white_red = 255
+        darkest_white_green = 255
+        darkest_white_blue = 255
 
         for square in all_squares:
             (red, green, blue) = square.rgb
@@ -1732,12 +1733,21 @@ div#colormapping {
                 white_greens.append(green)
                 white_blues.append(blue)
 
+                if red < darkest_white_red:
+                    darkest_white_red = red
+
+                if green < darkest_white_green:
+                    darkest_white_green = green
+
+                if blue < darkest_white_blue:
+                    darkest_white_blue = blue
+
         log.info(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
         log.info(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
         log.info(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
-        min_output_red = 0
-        min_output_green = 0
-        min_output_blue = 0
+        min_output_red = 30
+        min_output_green = 30
+        min_output_blue = 30
         max_output_red = 255
         max_output_green = 255
         max_output_blue = 255
@@ -1775,16 +1785,46 @@ div#colormapping {
         #max_input_red = median_white_red
         #max_input_green = median_white_green
         #max_input_blue = median_white_blue
+        #max_input_red = darkest_white_red
+        #max_input_green = darkest_white_green
+        #max_input_blue = darkest_white_blue
 
-        # dwalton 
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             side_squares = side.corner_squares + side.center_squares + side.edge_squares
             for square in side_squares:
                 # https://pythontic.com/image-processing/pillow/contrast%20stretching
                 # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
-                new_red = min(max_output_red, int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red)))
-                new_green = min(max_output_green, int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green)))
-                new_blue = min(max_output_blue, int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue)))
+                new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
+                new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
+                new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
+
+                #new_red = int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red))
+                #new_green = int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green))
+                #new_blue = int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue))
+
+                new_red = min(max_output_red, new_red)
+                new_green = min(max_output_green, new_green)
+                new_blue = min(max_output_blue, new_blue)
+                delta_to_add = 0
+
+                if new_red < min_output_red:
+                    delta_to_add = max(delta_to_add, min_output_red - new_red)
+
+                if new_green < min_output_green:
+                    delta_to_add = max(delta_to_add, min_output_green - new_green)
+
+                if new_blue < min_output_blue:
+                    delta_to_add = max(delta_to_add, min_output_blue - new_blue)
+
+                # Add enough so that red, green, and blue are all >= min_output_red, etc
+                if delta_to_add:
+                    new_red += delta_to_add
+                    new_green += delta_to_add
+                    new_blue += delta_to_add
+
+                new_red = min(max_output_red, new_red)
+                new_green = min(max_output_green, new_green)
+                new_blue = min(max_output_blue, new_blue)
 
                 square.rgb = (new_red, new_green, new_blue)
                 square.red = new_red
