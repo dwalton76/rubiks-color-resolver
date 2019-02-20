@@ -1797,7 +1797,11 @@ div#colormapping {
 
     def find_orange_and_red_baselines(self):
 
-        if self.width in (3, 4, 5, 7):
+        # The ORANGE/RED baselines are only used for sanity checking edges
+        # so we can return here for 2x2x2
+        if self.width == 2:
+            return
+        elif self.width in (3, 4, 5, 7):
             centers_for_orange_red_baseline = "centers"
         elif self.width == 6:
             centers_for_orange_red_baseline = "x-centers"
@@ -1828,30 +1832,14 @@ div#colormapping {
                     red_greens.append(square.green)
                     red_blues.append(square.blue)
 
-            '''
-            for cluster_square_list in sorted_center_colors_cluster_squares:
-                for cluster_square in cluster_square_list:
-                    square = self.get_square(cluster_square.index)
-
-                    if square.color_name == "OR":
-                        orange_reds.append(square.red)
-                        orange_greens.append(square.green)
-                        orange_blues.append(square.blue)
-
-                    elif square.color_name == "Rd":
-                        red_reds.append(square.red)
-                        red_greens.append(square.green)
-                        red_blues.append(square.blue)
-            '''
-
-            new_orange_red = mean(orange_reds)
-            new_orange_green = mean(orange_greens)
-            new_orange_blue = mean(orange_blues)
+            new_orange_red = int(mean(orange_reds))
+            new_orange_green = int(mean(orange_greens))
+            new_orange_blue = int(mean(orange_blues))
             self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
 
-            new_red_red = mean(red_reds)
-            new_red_green = mean(red_greens)
-            new_red_blue = mean(red_blues)
+            new_red_red = int(mean(red_reds))
+            new_red_green = int(mean(red_greens))
+            new_red_blue = int(mean(red_blues))
             self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
 
             log.warning("ORANGE: %s" % self.orange_baseline)
