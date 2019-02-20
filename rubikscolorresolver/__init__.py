@@ -5,11 +5,16 @@ from itertools import combinations, permutations
 from math import atan2, cos, degrees, exp, radians, sin
 from math import sqrt, ceil
 from pprint import pformat
+from statistics import median
 from json import dumps as json_dumps
 import logging
 import os
 
 log = logging.getLogger(__name__)
+
+use_endpoints = False
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
 odd_cube_center_color_permutations = (
     ('Wh', 'OR', 'Gr', 'Rd', 'Bu', 'Ye'),
@@ -753,6 +758,7 @@ class RubiksColorSolverGeneric(object):
         self.state = []
         self.orange_baseline = None
         self.red_baseline = None
+        self.white_squares = []
 
         if self.width % 2 == 0:
             self.even = True
@@ -937,6 +943,27 @@ div#colormapping {
                 if col == self.width + 1:
                     col = 1
 
+    def write_white_squares(self):
+        self.white_squares.sort()
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h2>white squares</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+
+            for white_square in self.white_squares:
+                (red, green, blue) = white_square.rgb
+                lab = rgb2lab((red, green, blue))
+
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (red, green, blue,
+                     red, green, blue,
+                     int(lab.L), int(lab.a), int(lab.b),
+                     white_square.color_name,
+                     white_square.position))
+
+            fh.write("<br>")
+            fh.write("</div>\n")
+
     def write_colors(self, desc, colors):
         with open(HTML_FILENAME, 'a') as fh:
             squares_per_side = int(len(colors)/6)
@@ -984,67 +1011,25 @@ div#colormapping {
 
     def enter_scan_data(self, scan_data):
         self.scan_data = scan_data
-        cube = ['dummy',]
-
-        max_avg = {
-            'U': 0,
-            'L': 0,
-            'F': 0,
-            'R': 0,
-            'B': 0,
-            'D': 0,
-        }
-        max_avg_rgb = {
-            'U': None,
-            'L': None,
-            'F': None,
-            'R': None,
-            'B': None,
-            'D': None,
-        }
 
         for (position, (red, green, blue)) in sorted(self.scan_data.items()):
             position = int(position)
             side = self.get_side(position)
-            avg = float((red + green + blue) / 3)
-
-            if avg > max_avg[side.name]:
-                max_avg[side.name] = avg
-                max_avg_rgb[side.name] = (red, green, blue)
-
-        for (position, (red, green, blue)) in sorted(self.scan_data.items()):
-            position = int(position)
-            side = self.get_side(position)
-
-            # white balance
-            '''
-            red_offset = 255 - max_avg_rgb[side.name][0]
-            green_offset = 255 - max_avg_rgb[side.name][1]
-            blue_offset = 255 - max_avg_rgb[side.name][2]
-
-            red += red_offset
-            green += green_offset
-            blue += blue_offset
-
-            if red > 255:
-                red = 255
-
-            if green > 255:
-                green = 255
-
-            if blue > 255:
-                blue = 255
-            '''
-
             side.set_square(position, red, green, blue)
-            cube.append((red, green, blue))
 
-        # write the input to the web page so we can reproduce bugs, etc just from the web page
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h1>JSON Input</h1>\n")
-            fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
+            fh.write("<pre>%s</pre>\n" % json_dumps(self.scan_data))
 
-        self.write_cube('Input RGB values', cube)
+    def write_cube2(self, desc):
+        cube = ['dummy',]
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for position in range(side.min_pos, side.max_pos+1):
+                square = side.squares[position]
+                cube.append((square.red, square.green, square.blue))
+
+        self.write_cube(desc, cube)
 
     def print_cube(self):
         data = []
@@ -1286,6 +1271,9 @@ div#colormapping {
                 square.color_name = color_name
                 # log.info("SQUARE %s color_name is now %s" % (square, square.color_name))
 
+                if color_name == "Wh":
+                    self.white_squares.append(square)
+
     def validate_edge_orbit(self, orbit_id):
         valid = True
 
@@ -1326,74 +1314,7 @@ div#colormapping {
 
         return valid
 
-        '''
-    def resolve_all_squares(self, use_endpoints):
-        log.info('Resolve all squares')
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
-        all_colors = []
-
-        if use_endpoints:
-            all_colors.append((0, WHITE))
-
-        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
-            for x in range(side.min_pos, side.max_pos + 1):
-                square = side.squares[x]
-                all_colors.append((square.position, square.rgb))
-
-        if use_endpoints:
-            all_colors.append((999, BLACK))
-            sorted_all_colors = traveling_salesman(all_colors, "euclidean", (0, len(all_colors) - 1))
-            sorted_all_colors.remove((0, WHITE))
-            sorted_all_colors.remove((999, BLACK))
-        else:
-            sorted_all_colors = traveling_salesman(all_colors, "euclidean")
-
-        sorted_all_colors_cluster_squares = []
-        squares_list = []
-        squares_per_cluster = int(len(sorted_all_colors) / 6)
-
-        for (index, (square_index, rgb)) in enumerate(sorted_all_colors):
-            index += 1
-            squares_list.append(ClusterSquare(square_index, rgb))
-            if index % squares_per_cluster == 0:
-                sorted_all_colors_cluster_squares.append(squares_list)
-                squares_list = []
-
-        squares_per_side = int(len(all_colors)/6)
-        for cluster_square_list in sorted_all_colors_cluster_squares:
-            total_red = 0
-            total_green = 0
-            total_blue = 0
-            for cluster_square in cluster_square_list:
-                (red, green, blue) = cluster_square.rgb
-                total_red += red
-                total_green += green
-                total_blue += blue
-
-            avg_red = int(total_red / squares_per_side)
-            avg_green = int(total_green / squares_per_side)
-            avg_blue = int(total_blue / squares_per_side)
-
-            log.info("avg RGB ({}, {}, {})".format(avg_red, avg_green, avg_blue))
-
-        self.assign_color_names('all', sorted_all_colors_cluster_squares)
-
-        self.write_colors(
-            'all',
-            sorted_all_colors_cluster_squares)
-        log.info("\n\n")
-
-        cube_is_valid = True
-        for target_orbit_id in range(self.orbits):
-            if not self.validate_edge_orbit(target_orbit_id):
-                cube_is_valid = False
-                break
-
-        return cube_is_valid
-        '''
-
-    def resolve_edge_squares(self):
+    def resolve_edge_squares(self, write_to_html):
         """
         Use traveling salesman algorithm to sort the colors
         """
@@ -1408,6 +1329,10 @@ div#colormapping {
             log.info('Resolve edges for orbit %d' % target_orbit_id)
             edge_colors = []
 
+            if use_endpoints:
+                edge_colors.append((0, WHITE))
+                edge_colors.append((999, BLACK))
+
             for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
                 for square in side.edge_squares:
                     orbit_id = edge_orbit_id[self.width][square.position]
@@ -1416,7 +1341,13 @@ div#colormapping {
                     if orbit_id == target_orbit_id:
                         edge_colors.append((square.position, square.rgb))
 
-            sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+            if use_endpoints:
+                sorted_edge_colors = traveling_salesman(edge_colors, "euclidean", (0, 1))
+                sorted_edge_colors.remove((0, WHITE))
+                sorted_edge_colors.remove((999, BLACK))
+            else:
+                sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+
             sorted_edge_colors_cluster_squares = []
             squares_list = []
             squares_per_cluster = int(len(sorted_edge_colors) / 6)
@@ -1429,9 +1360,11 @@ div#colormapping {
                     squares_list = []
 
             self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
-            self.write_colors(
-                'edges - orbit %d' % target_orbit_id,
-                sorted_edge_colors_cluster_squares)
+
+            if write_to_html:
+                self.write_colors(
+                    'edges - orbit %d' % target_orbit_id,
+                    sorted_edge_colors_cluster_squares)
 
             # TODO we need to do something smarter here
             # 6x6x6 random-01 and 04 have beastly red/orange edges
@@ -1616,18 +1549,28 @@ div#colormapping {
                     corner3.color_name = "OR"
                     log.warning("change %s from Rd to OR" % corner3)
 
-    def resolve_corner_squares(self):
+    def resolve_corner_squares(self, write_to_html):
         """
         Use traveling salesman algorithm to sort the colors
         """
         log.info('Resolve corners')
         corner_colors = []
 
+        if use_endpoints:
+            corner_colors.append((0, WHITE))
+            corner_colors.append((999, BLACK))
+
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.corner_squares:
                 corner_colors.append((square.position, square.rgb))
 
-        sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
+        if use_endpoints:
+            sorted_corner_colors = traveling_salesman(corner_colors, "euclidean", (0, 1))
+            sorted_corner_colors.remove((0, WHITE))
+            sorted_corner_colors.remove((999, BLACK))
+        else:
+            sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
+
         sorted_corner_colors_cluster_squares = []
         squares_list = []
         squares_per_cluster = int(len(sorted_corner_colors) / 6)
@@ -1641,7 +1584,9 @@ div#colormapping {
 
         #log.info("sorted_corner_colors_cluster_squares:\n%s" % pformat(sorted_corner_colors_cluster_squares))
         self.assign_color_names('corners', sorted_corner_colors_cluster_squares)
-        self.write_colors('corners', sorted_corner_colors_cluster_squares)
+
+        if write_to_html:
+            self.write_colors('corners', sorted_corner_colors_cluster_squares)
 
         green_white_corners = []
         green_yellow_corners = []
@@ -1672,13 +1617,12 @@ div#colormapping {
                 #log.info("%s is Bu/Ye corner" % " ".join(map(str, corner_tuple)))
                 blue_yellow_corners.append(corner_tuple)
 
-        # dwalton here now
         self.assign_green_white_corners(green_white_corners)
         self.assign_green_yellow_corners(green_yellow_corners)
         self.assign_blue_white_corners(blue_white_corners)
         self.assign_blue_yellow_corners(blue_yellow_corners)
 
-    def resolve_center_squares(self):
+    def resolve_center_squares(self, write_to_html):
         """
         Use traveling salesman algorithm to sort the colors
         """
@@ -1698,7 +1642,14 @@ div#colormapping {
             if len(centers_squares) == 6:
                 sorted_center_colors = center_colors[:]
             else:
-                sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+                if use_endpoints:
+                    center_colors.append((998, WHITE))
+                    center_colors.append((999, BLACK))
+                    sorted_center_colors = traveling_salesman(center_colors, "euclidean", (-2, -1))
+                    sorted_center_colors.remove((998, WHITE))
+                    sorted_center_colors.remove((999, BLACK))
+                else:
+                    sorted_center_colors = traveling_salesman(center_colors, "euclidean")
 
             #log.info("center_colors: %s" % pformat(center_colors))
             #log.info("sorted_center_colors: %s" % pformat(sorted_center_colors))
@@ -1714,7 +1665,9 @@ div#colormapping {
                     squares_list = []
 
             self.assign_color_names(desc, sorted_center_colors_cluster_squares)
-            self.write_colors(desc, sorted_center_colors_cluster_squares)
+
+            if write_to_html:
+                self.write_colors(desc, sorted_center_colors_cluster_squares)
 
             # find avg orange and red
             '''
@@ -1734,6 +1687,111 @@ div#colormapping {
                 raise Exception("implement this")
             '''
 
+    def contrast_stretch(self):
+        log.info("WHITE squares %s" % pformat(self.white_squares))
+        white_reds = []
+        white_greens = []
+        white_blues = []
+        all_squares = []
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            side_squares = side.corner_squares + side.center_squares + side.edge_squares
+            for square in side_squares:
+                all_squares.append(square)
+
+        min_input_red = 255
+        min_input_green = 255
+        min_input_blue = 255
+        max_input_red = 0
+        max_input_green = 0
+        max_input_blue = 0
+
+        for square in all_squares:
+            (red, green, blue) = square.rgb
+
+            if red < min_input_red:
+                min_input_red = red
+
+            if red > max_input_red:
+                max_input_red = red
+
+            if green < min_input_green:
+                min_input_green = green
+
+            if green > max_input_green:
+                max_input_green = green
+
+            if blue < min_input_blue:
+                min_input_blue = blue
+
+            if blue > max_input_blue:
+                max_input_blue = blue
+
+            if square.color_name == "Wh":
+                white_reds.append(red)
+                white_greens.append(green)
+                white_blues.append(blue)
+
+        log.info(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
+        log.info(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
+        log.info(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
+        min_output_red = 0
+        min_output_green = 0
+        min_output_blue = 0
+        max_output_red = 255
+        max_output_green = 255
+        max_output_blue = 255
+
+        white_reds.sort()
+        white_greens.sort()
+        white_blues.sort()
+        avg_white_red = int(sum(white_reds) / len(white_reds))
+        avg_white_green = int(sum(white_greens) / len(white_greens))
+        avg_white_blue = int(sum(white_blues) / len(white_blues))
+        median_white_red = median(white_reds)
+        median_white_green = median(white_greens)
+        median_white_blue = median(white_blues)
+        log.info(f"WHITE reds {white_reds},  avg {avg_white_red}, median {median_white_red}")
+        log.info(f"WHITE greens {white_greens},  avg {avg_white_green}, median {median_white_green}")
+        log.info(f"WHITE blues {white_blues},  avg {avg_white_blue}, median {median_white_blue}")
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h2>Mean white square</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+            lab = rgb2lab((avg_white_red, avg_white_green, avg_white_blue))
+
+            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                (avg_white_red, avg_white_green, avg_white_blue,
+                 avg_white_red, avg_white_green, avg_white_blue,
+                 int(lab.L), int(lab.a), int(lab.b),
+                 'Wh',
+                 0))
+            fh.write("<br>")
+            fh.write("</div>\n")
+
+        max_input_red = avg_white_red
+        max_input_green = avg_white_green
+        max_input_blue = avg_white_blue
+        #max_input_red = median_white_red
+        #max_input_green = median_white_green
+        #max_input_blue = median_white_blue
+
+        # dwalton 
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            side_squares = side.corner_squares + side.center_squares + side.edge_squares
+            for square in side_squares:
+                # https://pythontic.com/image-processing/pillow/contrast%20stretching
+                # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
+                new_red = min(max_output_red, int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red)))
+                new_green = min(max_output_green, int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green)))
+                new_blue = min(max_output_blue, int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue)))
+
+                square.rgb = (new_red, new_green, new_blue)
+                square.red = new_red
+                square.green = new_green
+                square.blue = new_blue
+                square.rawcolor = rgb2lab((new_red, new_green, new_blue))
+
     def write_final_cube(self):
         data = self.cube_for_json()
         cube = ['dummy', ]
@@ -1746,9 +1804,24 @@ div#colormapping {
         self.write_cube('Final Cube', cube)
 
     def crunch_colors(self):
-        self.resolve_center_squares()
-        self.resolve_corner_squares()
-        self.resolve_edge_squares()
+
+        # The first step is to find all of the white squares so we can call contrast_stretch()
+        # to create as much color separation as possible.
+        self.write_cube2("Initial RGB values")
+        self.resolve_center_squares(False)
+        self.resolve_corner_squares(False)
+        self.resolve_edge_squares(False)
+
+        # Write the white squares to our html file
+        self.write_white_squares()
+
+        self.contrast_stretch()
+        self.white_squares = []
+
+        self.write_cube2("Contrast Stretched RBG values")
+        self.resolve_center_squares(True)
+        self.resolve_corner_squares(True)
+        self.resolve_edge_squares(True)
         self.set_state()
 
         self.print_cube()
