@@ -1315,6 +1315,94 @@ div#colormapping {
         #assert valid, "Cube is invalid"
         return valid
 
+    def fix_orange_vs_red(self, target_orbit_id):
+
+        def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
+            # Example:
+            # There must be one Gr/OR edge and one Gr/Rd. Assign based on which combo
+            # has the least color distance vs our OR/Rd baselines.
+            distance_OR_Rd = 0
+            distance_OR_Rd += get_euclidean_lab_distance(target_color_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
+            distance_OR_Rd += get_euclidean_lab_distance(target_color_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
+            log.info(f"target edge {target_color} distance_OR_Rd {distance_OR_Rd}")
+
+            distance_Rd_OR = 0
+            distance_Rd_OR += get_euclidean_lab_distance(target_color_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
+            distance_Rd_OR += get_euclidean_lab_distance(target_color_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
+            log.info(f"target edge {target_color} distance_Rd_OR {distance_Rd_OR}")
+
+            if distance_OR_Rd <= distance_Rd_OR:
+                if target_color_red_or_orange_edges[0][1].color_name != "OR":
+                    log.warning("change %s edge partner %s from %s to OR" %
+                        (target_color, target_color_red_or_orange_edges[0][1], target_color_red_or_orange_edges[0][1].color_name))
+                    target_color_red_or_orange_edges[0][1].color_name = "OR"
+
+                if target_color_red_or_orange_edges[1][1].color_name != "Rd":
+                    log.warning("change %s edge partner %s from %s to Rd" %
+                        (target_color, target_color_red_or_orange_edges[1][1], target_color_red_or_orange_edges[1][1].color_name))
+                    target_color_red_or_orange_edges[1][1].color_name = "Rd"
+            else:
+                if target_color_red_or_orange_edges[0][1].color_name != "Rd":
+                    log.warning("change %s edge partner %s from %s to Rd" %
+                        (target_color, target_color_red_or_orange_edges[0][1], target_color_red_or_orange_edges[0][1].color_name))
+                    target_color_red_or_orange_edges[0][1].color_name = "Rd"
+
+                if target_color_red_or_orange_edges[1][1].color_name != "OR":
+                    log.warning("change %s edge partner %s from %s to OR" %
+                        (target_color, target_color_red_or_orange_edges[1][1], target_color_red_or_orange_edges[1][1].color_name))
+                    target_color_red_or_orange_edges[1][1].color_name = "OR"
+
+        green_red_orange_color_names = ("Gr", "Rd", "OR")
+        blue_red_orange_color_names = ("Bu", "Rd", "OR")
+        white_red_orange_color_names = ("Wh", "Rd", "OR")
+        yellow_red_orange_color_names = ("Ye", "Rd", "OR")
+        green_red_or_orange_edges = []
+        blue_red_or_orange_edges = []
+        white_red_or_orange_edges = []
+        yellow_red_or_orange_edges = []
+
+        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
+            square = self.get_square(square_index)
+            partner = self.get_square(partner_index)
+
+            if square.color_name in green_red_orange_color_names and partner.color_name in green_red_orange_color_names:
+                if square.color_name == "Gr":
+                    green_red_or_orange_edges.append((square, partner))
+                else:
+                    green_red_or_orange_edges.append((partner, square))
+
+            elif square.color_name in blue_red_orange_color_names and partner.color_name in blue_red_orange_color_names:
+                if square.color_name == "Bu":
+                    blue_red_or_orange_edges.append((square, partner))
+                else:
+                    blue_red_or_orange_edges.append((partner, square))
+
+            elif square.color_name in white_red_orange_color_names and partner.color_name in white_red_orange_color_names:
+                if square.color_name == "Wh":
+                    white_red_or_orange_edges.append((square, partner))
+                else:
+                    white_red_or_orange_edges.append((partner, square))
+
+            elif square.color_name in yellow_red_orange_color_names and partner.color_name in yellow_red_orange_color_names:
+                if square.color_name == "Ye":
+                    yellow_red_or_orange_edges.append((square, partner))
+                else:
+                    yellow_red_or_orange_edges.append((partner, square))
+
+        log.info(f"green_red_or_orange_edges {green_red_or_orange_edges}")
+        log.info(f"blue_red_or_orange_edges {blue_red_or_orange_edges}")
+        log.info(f"white_red_or_orange_edges {white_red_or_orange_edges}")
+        log.info(f"yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
+
+        fix_orange_vs_red_for_color('green', green_red_or_orange_edges)
+        fix_orange_vs_red_for_color('blue', blue_red_or_orange_edges)
+        fix_orange_vs_red_for_color('white', white_red_or_orange_edges)
+        fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
+
+        # TODO we need to validate parity if this is a 3x3x3, if parity is off figure out which OR/Rd edge
+        # squares to swap to create valid parity
+        self.validate_edge_orbit(target_orbit_id)
+
     def resolve_edge_squares(self, write_to_html, fix_orange_vs_red):
         """
         Use traveling salesman algorithm to sort the colors
@@ -1368,189 +1456,7 @@ div#colormapping {
                     sorted_edge_colors_cluster_squares)
 
             if fix_orange_vs_red:
-                green_red_or_orange_edges = []
-                blue_red_or_orange_edges = []
-                white_red_or_orange_edges = []
-                yellow_red_or_orange_edges = []
-                green_red_orange_color_names = ("Gr", "Rd", "OR")
-                blue_red_orange_color_names = ("Bu", "Rd", "OR")
-                white_red_orange_color_names = ("Wh", "Rd", "OR")
-                yellow_red_orange_color_names = ("Ye", "Rd", "OR")
-
-                for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
-                    square = self.get_square(square_index)
-                    partner = self.get_square(partner_index)
-
-                    if square.color_name in green_red_orange_color_names and partner.color_name in green_red_orange_color_names:
-                        if square.color_name == "Gr":
-                            green_red_or_orange_edges.append((square, partner))
-                        else:
-                            green_red_or_orange_edges.append((partner, square))
-
-                    elif square.color_name in blue_red_orange_color_names and partner.color_name in blue_red_orange_color_names:
-                        if square.color_name == "Bu":
-                            blue_red_or_orange_edges.append((square, partner))
-                        else:
-                            blue_red_or_orange_edges.append((partner, square))
-
-                    elif square.color_name in white_red_orange_color_names and partner.color_name in white_red_orange_color_names:
-                        if square.color_name == "Wh":
-                            white_red_or_orange_edges.append((square, partner))
-                        else:
-                            white_red_or_orange_edges.append((partner, square))
-
-                    elif square.color_name in yellow_red_orange_color_names and partner.color_name in yellow_red_orange_color_names:
-                        if square.color_name == "Ye":
-                            yellow_red_or_orange_edges.append((square, partner))
-                        else:
-                            yellow_red_or_orange_edges.append((partner, square))
-
-                log.info(f"green_red_or_orange_edges {green_red_or_orange_edges}")
-                log.info(f"blue_red_or_orange_edges {blue_red_or_orange_edges}")
-                log.info(f"white_red_or_orange_edges {white_red_or_orange_edges}")
-                log.info(f"yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
-
-                # There must be one Gr/OR edge and one Gr/Rd. Assign based on which combo
-                # has the least color distance vs our OR/Rd baselines.
-                distance_OR_Rd = 0
-                distance_OR_Rd += get_euclidean_lab_distance(green_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
-                distance_OR_Rd += get_euclidean_lab_distance(green_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
-
-                distance_Rd_OR = 0
-                distance_Rd_OR += get_euclidean_lab_distance(green_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
-                distance_Rd_OR += get_euclidean_lab_distance(green_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
-
-                log.info(f"distance_OR_Rd {distance_OR_Rd}")
-                log.info(f"distance_Rd_OR {distance_Rd_OR}")
-
-                if distance_OR_Rd <= distance_Rd_OR:
-                    if green_red_or_orange_edges[0][1].color_name != "OR":
-                        log.warning("change green edge partner %s from %s to OR" %
-                            (green_red_or_orange_edges[0][1], green_red_or_orange_edges[0][1].color_name))
-                        green_red_or_orange_edges[0][1].color_name = "OR"
-
-                    if green_red_or_orange_edges[1][1].color_name != "Rd":
-                        log.warning("change green edge partner %s from %s to Rd" %
-                            (green_red_or_orange_edges[1][1], green_red_or_orange_edges[1][1].color_name))
-                        green_red_or_orange_edges[1][1].color_name = "Rd"
-                else:
-                    if green_red_or_orange_edges[0][1].color_name != "Rd":
-                        log.warning("change green edge partner %s from %s to Rd" %
-                            (green_red_or_orange_edges[0][1], green_red_or_orange_edges[0][1].color_name))
-                        green_red_or_orange_edges[0][1].color_name = "Rd"
-
-                    if green_red_or_orange_edges[1][1].color_name != "OR":
-                        log.warning("change green edge partner %s from %s to OR" %
-                            (green_red_or_orange_edges[1][1], green_red_or_orange_edges[1][1].color_name))
-                        green_red_or_orange_edges[1][1].color_name = "OR"
-
-                # There must be one Bu/OR edge and one Bu/Rd. Assign based on which combo
-                # has the least color distance vs our OR/Rd baselines.
-                distance_OR_Rd = 0
-                distance_OR_Rd += get_euclidean_lab_distance(blue_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
-                distance_OR_Rd += get_euclidean_lab_distance(blue_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
-
-                distance_Rd_OR = 0
-                distance_Rd_OR += get_euclidean_lab_distance(blue_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
-                distance_Rd_OR += get_euclidean_lab_distance(blue_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
-
-                log.info(f"distance_OR_Rd {distance_OR_Rd}")
-                log.info(f"distance_Rd_OR {distance_Rd_OR}")
-
-                if distance_OR_Rd <= distance_Rd_OR:
-                    if blue_red_or_orange_edges[0][1].color_name != "OR":
-                        log.warning("change blue edge partner %s from %s to OR" %
-                            (blue_red_or_orange_edges[0][1], blue_red_or_orange_edges[0][1].color_name))
-                        blue_red_or_orange_edges[0][1].color_name = "OR"
-
-                    if blue_red_or_orange_edges[1][1].color_name != "Rd":
-                        log.warning("change blue edge partner %s from %s to Rd" %
-                            (blue_red_or_orange_edges[1][1], blue_red_or_orange_edges[1][1].color_name))
-                        blue_red_or_orange_edges[1][1].color_name = "Rd"
-                else:
-                    if blue_red_or_orange_edges[0][1].color_name != "Rd":
-                        log.warning("change blue edge partner %s from %s to Rd" %
-                            (blue_red_or_orange_edges[0][1], blue_red_or_orange_edges[0][1].color_name))
-                        blue_red_or_orange_edges[0][1].color_name = "Rd"
-
-                    if blue_red_or_orange_edges[1][1].color_name != "OR":
-                        log.warning("change blue edge partner %s from %s to OR" %
-                            (blue_red_or_orange_edges[1][1], blue_red_or_orange_edges[1][1].color_name))
-                        blue_red_or_orange_edges[1][1].color_name = "OR"
-
-                # There must be one Wh/OR edge and one Wh/Rd. Assign based on which combo
-                # has the least color distance vs our OR/Rd baselines.
-                distance_OR_Rd = 0
-                distance_OR_Rd += get_euclidean_lab_distance(white_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
-                distance_OR_Rd += get_euclidean_lab_distance(white_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
-
-                distance_Rd_OR = 0
-                distance_Rd_OR += get_euclidean_lab_distance(white_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
-                distance_Rd_OR += get_euclidean_lab_distance(white_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
-
-                log.info(f"distance_OR_Rd {distance_OR_Rd}")
-                log.info(f"distance_Rd_OR {distance_Rd_OR}")
-
-                if distance_OR_Rd <= distance_Rd_OR:
-                    if white_red_or_orange_edges[0][1].color_name != "OR":
-                        log.warning("change white edge partner %s from %s to OR" %
-                            (white_red_or_orange_edges[0][1], white_red_or_orange_edges[0][1].color_name))
-                        white_red_or_orange_edges[0][1].color_name = "OR"
-
-                    if white_red_or_orange_edges[1][1].color_name != "Rd":
-                        log.warning("change white edge partner %s from %s to Rd" %
-                            (white_red_or_orange_edges[1][1], white_red_or_orange_edges[1][1].color_name))
-                        white_red_or_orange_edges[1][1].color_name = "Rd"
-                else:
-                    if white_red_or_orange_edges[0][1].color_name != "Rd":
-                        log.warning("change white edge partner %s from %s to Rd" %
-                            (white_red_or_orange_edges[0][1], white_red_or_orange_edges[0][1].color_name))
-                        white_red_or_orange_edges[0][1].color_name = "Rd"
-
-                    if white_red_or_orange_edges[1][1].color_name != "OR":
-                        log.warning("change white edge partner %s from %s to OR" %
-                            (white_red_or_orange_edges[1][1], white_red_or_orange_edges[1][1].color_name))
-                        white_red_or_orange_edges[1][1].color_name = "OR"
-
-                # There must be one Wh/OR edge and one Wh/Rd. Assign based on which combo
-                # has the least color distance vs our OR/Rd baselines.
-                distance_OR_Rd = 0
-                distance_OR_Rd += get_euclidean_lab_distance(yellow_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
-                distance_OR_Rd += get_euclidean_lab_distance(yellow_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
-
-                distance_Rd_OR = 0
-                distance_Rd_OR += get_euclidean_lab_distance(yellow_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
-                distance_Rd_OR += get_euclidean_lab_distance(yellow_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
-
-                log.info(f"distance_OR_Rd {distance_OR_Rd}")
-                log.info(f"distance_Rd_OR {distance_Rd_OR}")
-
-                if distance_OR_Rd <= distance_Rd_OR:
-                    if yellow_red_or_orange_edges[0][1].color_name != "OR":
-                        log.warning("change yellow edge partner %s from %s to OR" %
-                            (yellow_red_or_orange_edges[0][1], yellow_red_or_orange_edges[0][1].color_name))
-                        yellow_red_or_orange_edges[0][1].color_name = "OR"
-
-                    if yellow_red_or_orange_edges[1][1].color_name != "Rd":
-                        log.warning("change yellow edge partner %s from %s to Rd" %
-                            (yellow_red_or_orange_edges[1][1], yellow_red_or_orange_edges[1][1].color_name))
-                        yellow_red_or_orange_edges[1][1].color_name = "Rd"
-                else:
-                    if yellow_red_or_orange_edges[0][1].color_name != "Rd":
-                        log.warning("change yellow edge partner %s from %s to Rd" %
-                            (yellow_red_or_orange_edges[0][1], yellow_red_or_orange_edges[0][1].color_name))
-                        yellow_red_or_orange_edges[0][1].color_name = "Rd"
-
-                    if yellow_red_or_orange_edges[1][1].color_name != "OR":
-                        log.warning("change yellow edge partner %s from %s to OR" %
-                            (yellow_red_or_orange_edges[1][1], yellow_red_or_orange_edges[1][1].color_name))
-                        yellow_red_or_orange_edges[1][1].color_name = "OR"
-
-                # TODO we need to validate parity if this is a 3x3x3, if parity is off figure out which Or/Rd edge
-                # squares to swap to create valid parity
-
-                # dwalton
-                self.validate_edge_orbit(target_orbit_id)
+                self.fix_orange_vs_red(target_orbit_id)
 
             #log.info(f"sorted_edge_colors_cluster_squares:\n{sorted_edge_colors_cluster_squares}")
             log.info("\n\n")
