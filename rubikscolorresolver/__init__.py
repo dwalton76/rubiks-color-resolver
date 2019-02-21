@@ -1189,44 +1189,6 @@ div#colormapping {
                 'Ye' : 'D'
             }
 
-        '''
-        self.state = ['placeholder', ]
-        # log.info("color_to_side_name:\n %s\n" % pformat(self.color_to_side_name))
-
-        for side_name in self.side_order:
-            side = self.sides[side_name]
-
-            # odd cube use the center square for each side
-            if side.mid_pos:
-                side.color_name = side.squares[side.mid_pos].color_name
-
-            # even cube assume:
-            # - white on top
-            # - orange on left
-            # - green on front
-            # - red on right
-            # - blue on back
-            # - yellow on bottom
-            else:
-                if side.name == "U":
-                    side.color_name = "Wh"
-                elif side.name == "L":
-                    side.color_name = "OR"
-                elif side.name == "F":
-                    side.color_name = "Gr"
-                elif side.name == "R":
-                    side.color_name = "Rd"
-                elif side.name == "B":
-                    side.color_name = "Bu"
-                elif side.name == "D":
-                    side.color_name = "Ye"
-
-            for x in range(side.min_pos, side.max_pos + 1):
-                color_name = side.squares[x].color_name
-                # log.info("set_state(): side {}, x {}, color_name {}".format(side, x, color_name))
-                self.state.append(self.color_to_side_name[color_name])
-        '''
-
     def cube_for_kociemba_strict(self):
         log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
         data = []
@@ -1253,7 +1215,7 @@ div#colormapping {
                 'colorHTML' : html_color[side.color_name]
             }
 
-        log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
+        #log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
@@ -1263,7 +1225,6 @@ div#colormapping {
                     'finalSide' : self.color_to_side_name[color]
                 }
 
-        #log.info("cube_for_json:\n %s\n" % pformat(data))
         return data
 
     def assign_color_names(self, desc, squares_lists_all):
