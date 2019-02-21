@@ -1322,8 +1322,10 @@ div#colormapping {
                 #log.info("%s SQUARE %s color_name is now %s" % (desc, square, square.color_name))
 
                 # dwalton what about for even cubes?
+                # Odd cubes are awesome because we can easily find one square of each color by
+                # looking at the square in the exact center.
                 if self.odd and desc == "centers":
-                    log.warning(f"update crayola_colors[{color_name}] from {self.crayola_colors[color_name]} to {square.lab}")
+                    #log.warning(f"update crayola_colors[{color_name}] from {self.crayola_colors[color_name]} to {square.lab}")
                     self.crayola_colors[color_name] = square.lab
 
     def validate_edge_orbit(self, orbit_id):
@@ -1367,7 +1369,7 @@ div#colormapping {
         #assert valid, "Cube is invalid"
         return valid
 
-    def fix_orange_vs_red(self, target_orbit_id):
+    def sanity_check_edge_corner_for_orbit(self, target_orbit_id):
 
         def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
 
@@ -1412,16 +1414,17 @@ div#colormapping {
                 else:
                     log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance}")
 
+            # TODO this needs to consider the number of high/low edges in the orbit also so that
+            # we do not create an invalid cube
             log.info(f"min_distance_permutation {min_distance_permutation}")
             for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
-                #red_orange = min_distance_permutation[index]
                 if partner_square.color_name != min_distance_permutation[index]:
                     log.warning("change %s edge partner %s from %s to %s" %
                         (target_color, partner_square, partner_square.color_name, min_distance_permutation[index]))
                     partner_square.color_name = min_distance_permutation[index]
                 else:
-                    log.warning("%s edge partner %s is %s, should be %s" %
-                        (target_color, partner_square, partner_square.color_name, min_distance_permutation[index]))
+                    log.info("%s edge partner %s is %s" %
+                        (target_color, partner_square, partner_square.color_name))
 
             log.info("\n\n")
 
@@ -1475,7 +1478,7 @@ div#colormapping {
         fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
 
         # TODO we need to validate parity if this is a 3x3x3, if parity is off figure out which OR/Rd edge
-        # squares to swap to create valid parity
+        # squares to swap to create valid parity. I think the same would apply for 5x5x5 and 7x7x7.
         self.validate_edge_orbit(target_orbit_id)
 
     def resolve_edge_squares(self):
@@ -1506,6 +1509,15 @@ div#colormapping {
                 sorted_edge_squares)
 
             log.info("\n\n")
+
+    def sanity_check_edge_squares(self):
+
+        # Nothing to be done for 2x2x2
+        if self.width == 2:
+            return True
+
+        for orbit_id in range(self.orbits):
+            self.sanity_check_edge_corner_for_orbit(orbit_id)
 
     def assign_green_white_corners(self, green_white_corners):
         #log.info("Gr/Wh corner tuples %s" % pformat(green_white_corners))
@@ -1731,7 +1743,7 @@ div#colormapping {
         elif self.width in (3, 4, 5, 7):
             centers_for_red_orange_baseline = "centers"
         elif self.width == 6:
-            centers_for_red_orange_baseline = "x-centers"
+            centers_for_red_orange_baseline = "inner x-centers"
         else:
             raise Exception("What centers to use for orange/red baseline?")
 
@@ -1984,6 +1996,8 @@ div#colormapping {
         self.sanity_check_corner_squares()
 
         self.resolve_edge_squares()
+        self.find_orange_and_red_baselines()
+        self.sanity_check_edge_squares()
 
         self.set_state()
         self.write_cube("Final Cube", True)
