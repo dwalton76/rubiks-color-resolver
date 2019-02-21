@@ -16,6 +16,15 @@ use_endpoints = False
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
+html_color = {
+    'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
+    'Bu' : {'red' :   0, 'green' :   0, 'blue' : 153},
+    'OR' : {'red' : 255, 'green' : 102, 'blue' : 0},
+    'Rd' : {'red' : 204, 'green' :   0, 'blue' : 0},
+    'Wh' : {'red' : 255, 'green' : 255, 'blue' : 255},
+    'Ye' : {'red' : 255, 'green' : 204, 'blue' : 0},
+}
+
 odd_cube_center_color_permutations = (
     ('Wh', 'OR', 'Gr', 'Rd', 'Bu', 'Ye'),
     ('Wh', 'Gr', 'Rd', 'Bu', 'OR', 'Ye'),
@@ -922,13 +931,15 @@ div#colormapping {
                     side_index += 1
                     fh.write("<div class='side' id='%s'>\n" % sides[side_index])
 
-                (red, green, blue) = cube[index]
+                # dwalton
+                (red, green, blue, color_name) = cube[index]
                 lab = rgb2lab((red, green, blue))
 
-                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
                     (col,
                      red, green, blue,
                      int(lab.L), int(lab.a), int(lab.b),
+                     color_name,
                      red, green, blue,
                      index))
 
@@ -1027,7 +1038,7 @@ div#colormapping {
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for position in range(side.min_pos, side.max_pos+1):
                 square = side.squares[position]
-                cube.append((square.red, square.green, square.blue))
+                cube.append((square.red, square.green, square.blue, square.color_name))
 
         self.write_cube(desc, cube)
 
@@ -1190,37 +1201,23 @@ div#colormapping {
         data['sides'] = {}
         data['squares'] = {}
 
-        html_color = {
-            'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
-            'Bu' : {'red' :   0, 'green' :   0, 'blue' : 153},
-            'OR' : {'red' : 255, 'green' : 102, 'blue' : 0},
-            'Rd' : {'red' : 204, 'green' :   0, 'blue' : 0},
-            'Wh' : {'red' : 255, 'green' : 255, 'blue' : 255},
-            'Ye' : {'red' : 255, 'green' : 204, 'blue' : 0},
-        }
-
         for side in self.sides.values():
             data['sides'][side.name] = {
                 'colorName' : side.color_name,
                 'colorHTML' : html_color[side.color_name]
             }
 
-        #log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
+        log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
                 color = square.color_name
-                final_side = self.color_to_side_name[color]
                 data['squares'][square.position] = {
-                    #'colorScan' : {
-                    #    'red'   : square.red,
-                    #    'green' : square.green,
-                    #    'blue'  : square.blue,
-                    #},
                     'finalSide' : self.color_to_side_name[color]
                 }
 
+        #log.info("cube_for_json:\n %s\n" % pformat(data))
         return data
 
     def assign_color_names(self, desc, squares_lists):
@@ -1269,7 +1266,7 @@ div#colormapping {
                 # Find the Square object for this ClusterSquare
                 square = self.get_square(cluster_square.index)
                 square.color_name = color_name
-                # log.info("SQUARE %s color_name is now %s" % (square, square.color_name))
+                #log.info("SQUARE %s color_name is now %s" % (square, square.color_name))
 
                 if color_name == "Wh":
                     self.white_squares.append(square)
@@ -1318,6 +1315,61 @@ div#colormapping {
     def fix_orange_vs_red(self, target_orbit_id):
 
         def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
+
+            if len(target_color_red_or_orange_edges) == 2:
+                red_orange_permutations = (
+                    ("OR", "Rd"),
+                    ("Rd", "OR"),
+                )
+            elif len(target_color_red_or_orange_edges) == 4:
+                # 4!/(2!*2!) = 6
+                red_orange_permutations = (
+                    ("OR", "OR", "Rd", "Rd"),
+                    ("OR", "Rd", "OR", "Rd"),
+                    ("OR", "Rd", "Rd", "OR"),
+                    ("Rd", "Rd", "OR", "OR"),
+                    ("Rd", "OR", "Rd", "OR"),
+                    ("Rd", "OR", "OR", "Rd"),
+                )
+            else:
+                raise Exception(f"There should be either 2 or 4 but we have {target_color_red_or_orange_edges}")
+
+            min_distance = None
+            min_distance_permutation = None
+
+            for red_orange_permutation in red_orange_permutations:
+                distance = 0
+
+                for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
+                    red_orange = red_orange_permutation[index]
+
+                    if red_orange == "OR":
+                        distance += get_euclidean_lab_distance(partner_square.rawcolor, self.orange_baseline)
+                    elif red_orange == "Rd":
+                        distance += get_euclidean_lab_distance(partner_square.rawcolor, self.red_baseline)
+                    else:
+                        raise Exception(red_orange)
+    
+                if min_distance is None or distance < min_distance:
+                    min_distance = distance
+                    min_distance_permutation = red_orange_permutation 
+                    log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance} (NEW MIN)")
+                else:
+                    log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance}")
+
+            # dwalton
+            log.info(f"min_distance_permutation {min_distance_permutation}")
+            for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
+                #red_orange = min_distance_permutation[index]
+                if partner_square.color_name != min_distance_permutation[index]:
+                    log.warning("change %s edge partner %s from %s to %s" %
+                        (target_color, partner_square, partner_square.color_name, min_distance_permutation[index]))
+                    partner_square.color_name = min_distance_permutation[index]
+                else:
+                    log.warning("%s edge partner %s is %s, should be %s" %
+                        (target_color, partner_square, partner_square.color_name, min_distance_permutation[index]))
+
+            '''
             # Example:
             # There must be one Gr/OR edge and one Gr/Rd. Assign based on which combo
             # has the least color distance vs our OR/Rd baselines.
@@ -1351,6 +1403,8 @@ div#colormapping {
                     log.warning("change %s edge partner %s from %s to OR" %
                         (target_color, target_color_red_or_orange_edges[1][1], target_color_red_or_orange_edges[1][1].color_name))
                     target_color_red_or_orange_edges[1][1].color_name = "OR"
+            '''
+            log.info("\n\n")
 
         green_red_orange_color_names = ("Gr", "Rd", "OR")
         blue_red_orange_color_names = ("Bu", "Rd", "OR")
@@ -1390,13 +1444,15 @@ div#colormapping {
                     yellow_red_or_orange_edges.append((partner, square))
 
         log.info(f"green_red_or_orange_edges {green_red_or_orange_edges}")
-        log.info(f"blue_red_or_orange_edges {blue_red_or_orange_edges}")
-        log.info(f"white_red_or_orange_edges {white_red_or_orange_edges}")
-        log.info(f"yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
-
         fix_orange_vs_red_for_color('green', green_red_or_orange_edges)
+
+        log.info(f"blue_red_or_orange_edges {blue_red_or_orange_edges}")
         fix_orange_vs_red_for_color('blue', blue_red_or_orange_edges)
+
+        log.info(f"white_red_or_orange_edges {white_red_or_orange_edges}")
         fix_orange_vs_red_for_color('white', white_red_or_orange_edges)
+
+        log.info(f"yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
         fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
 
         # TODO we need to validate parity if this is a 3x3x3, if parity is off figure out which OR/Rd edge
@@ -1708,14 +1764,14 @@ div#colormapping {
         if self.width == 2:
             return
         elif self.width in (3, 4, 5, 7):
-            centers_for_orange_red_baseline = "centers"
+            centers_for_red_orange_baseline = "centers"
         elif self.width == 6:
-            centers_for_orange_red_baseline = "x-centers"
+            centers_for_red_orange_baseline = "x-centers"
         else:
             raise Exception("What centers to use for orange/red baseline?")
 
         for (desc, centers_squares) in center_groups[self.width]:
-            if desc != centers_for_orange_red_baseline:
+            if desc != centers_for_red_orange_baseline:
                 continue
 
             orange_reds = []
@@ -1973,9 +2029,10 @@ div#colormapping {
         cube = ['dummy', ]
 
         for square_index in sorted(data['squares'].keys()):
+            square = self.get_square(square_index)
             value = data['squares'][square_index]
             html_colors = data['sides'][value['finalSide']]['colorHTML']
-            cube.append((html_colors['red'], html_colors['green'], html_colors['blue']))
+            cube.append((html_colors['red'], html_colors['green'], html_colors['blue'], square.color_name))
 
         self.write_cube('Final Cube', cube)
 
@@ -2000,6 +2057,7 @@ div#colormapping {
         self.resolve_corner_squares(True)
         self.resolve_edge_squares(True, True)
         self.set_state()
+        #self.write_cube2("Final Cube")
 
         self.print_cube()
         self.write_final_cube()
