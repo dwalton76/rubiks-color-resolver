@@ -13,7 +13,6 @@ import sys
 
 log = logging.getLogger(__name__)
 
-use_endpoints = False
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
@@ -382,17 +381,19 @@ def find_index_for_value(list_foo, target, min_index):
     raise Exception("Did not find %s in list %s" % (target, pformat(list_foo)))
 
 
-def traveling_salesman(colors, alg, endpoints=None):
+def traveling_salesman(squares, alg, endpoints=None):
 
     # build a full matrix of color to color distances
-    len_colors = len(colors)
-    matrix = [[0 for i in range(len_colors)] for j in range(len_colors)]
+    len_squares = len(squares)
+    matrix = [[0 for i in range(len_squares)] for j in range(len_squares)]
 
-    for x in range(len_colors):
-        (_x_square_index, (x_red, x_green, x_blue)) = colors[x]
-        x_lab = rgb2lab((x_red, x_green, x_blue))
+    for x in range(len_squares):
+        x_square = squares[x]
+        (x_red, x_green, x_blue) = x_square.rgb
+        #x_lab = rgb2lab((x_red, x_green, x_blue))
+        x_lab = x_square.lab
 
-        for y in range(len_colors):
+        for y in range(len_squares):
 
             if x == y:
                 matrix[x][y] = 0
@@ -402,8 +403,10 @@ def traveling_salesman(colors, alg, endpoints=None):
             if matrix[x][y] or matrix[y][x]:
                 continue
 
-            (_y_square_index, (y_red, y_green, y_blue)) = colors[y]
-            y_lab = rgb2lab((y_red, y_green, y_blue))
+            y_square = squares[y]
+            (y_red, y_green, y_blue) = y_square.rgb
+            #y_lab = rgb2lab((y_red, y_green, y_blue))
+            y_lab = y_square.lab
 
             if alg == "cie2000":
                 distance_xy = delta_e_cie2000(x_lab, y_lab)
@@ -420,7 +423,7 @@ def traveling_salesman(colors, alg, endpoints=None):
             matrix[y][x] = distance
 
     path = solve_tsp(matrix, endpoints=endpoints)
-    return [colors[x] for x in path]
+    return [squares[x] for x in path]
 
 
 def get_important_square_indexes(size):
@@ -617,6 +620,49 @@ def hashtag_rgb_to_labcolor(rgb_string):
     return rgb2lab((red, green, blue))
 
 
+def get_row_color_distances(squares, row_baseline_lab):
+    """
+    'colors' is list if (index, (red, green, blue)) tuples
+    'row_baseline_lab' is a list of Lab colors, one for each row of colors
+
+    Return the total distance of the colors in a row vs their baseline
+    """
+    results = []
+    squares_per_row = int(len(squares)/6)
+    count = 0
+    row_index = 0
+    distance = 0
+    baseline_lab = row_baseline_lab[row_index]
+
+    for square in squares:
+        baseline_lab = row_baseline_lab[row_index]
+        distance += get_euclidean_lab_distance(baseline_lab, square.lab)
+        count += 1
+
+        if count % squares_per_row == 0:
+            results.append(int(distance))
+            row_index += 1
+            distance = 0
+
+    return results
+
+
+def get_squares_for_row(squares, target_row_index):
+    results = []
+    squares_per_row = int(len(squares)/6)
+    count = 0
+    row_index = 0
+
+    for square in squares:
+        if row_index == target_row_index:
+            results.append(square)
+        count += 1
+
+        if count % squares_per_row == 0:
+            row_index += 1
+
+    return results
+
 class Square(object):
 
     def __init__(self, side, cube, position, red, green, blue):
@@ -627,7 +673,7 @@ class Square(object):
         self.red = red
         self.green = green
         self.blue = blue
-        self.rawcolor = rgb2lab((red, green, blue))
+        self.lab = rgb2lab((red, green, blue))
         self.color = None
         self.color_name = None
 
@@ -795,10 +841,6 @@ class RubiksColorSolverGeneric(object):
             'OR': hashtag_rgb_to_labcolor('#943509'),
             'Bu': hashtag_rgb_to_labcolor('#163967'),
             'Rd': hashtag_rgb_to_labcolor('#680402')
-            #'Gr': hashtag_rgb_to_labcolor('#00FF00'),
-            #'OR': hashtag_rgb_to_labcolor('#ff8c00'),
-            #'Bu': hashtag_rgb_to_labcolor('#0000FF'),
-            #'Rd': hashtag_rgb_to_labcolor('#FF0000')
         }
         self.www_header()
 
@@ -887,65 +929,66 @@ div#colormapping {
 <body>
 """ % (square_size, square_size, square_size, square_size, square_size, square_size))
 
-    def write_colors(self, desc, colors):
+    def write_colors(self, desc, squares):
         with open(HTML_FILENAME, 'a') as fh:
-            squares_per_side = int(len(colors)/6)
+            squares_per_row = int(len(squares)/6)
             fh.write("<h2>%s</h2>\n" % desc)
             fh.write("<div class='clear colors'>\n")
 
-            log.info(f"COLORS:\n{colors}\n")
             count = 0
-            for (index, (red, green, blue)) in colors:
-                lab = rgb2lab((red, green, blue))
-                square = self.get_square(index)
-
+            for square in squares:
+                (red, green, blue) = square.rgb
                 fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
                     (red, green, blue,
                      red, green, blue,
-                     int(lab.L), int(lab.a), int(lab.b),
+                     int(square.lab.L), int(square.lab.a), int(square.lab.b),
                      square.color_name,
-                     index))
+                     square.position))
 
                 count += 1
 
-                if count % squares_per_side == 0:
+                if count % squares_per_row == 0:
                     fh.write("<br>")
             fh.write("</div>\n")
 
-
     def find_white_squares(self):
-        all_colors = []
-
+        all_squares = []
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for square in side.squares.values():
-                all_colors.append((square.position, square.rgb))
+                all_squares.append(square)
 
-        # dwalton
-        sorted_all_colors = traveling_salesman(all_colors, "euclidean")
+        sorted_all_squares = traveling_salesman(all_squares, "euclidean")
         self.write_colors(
             'finding white colors',
-            sorted_all_colors)
+            sorted_all_squares)
 
-        # dwalton here now
-        self.white_squares = []
-        for x in range(self.squares_per_side):
-            log.info(f"sorted_all_colors[{x}] {sorted_all_colors[x]}")
+        # There are six "rows" of colors, which row is the closest to pure white?
+        white_lab = rgb2lab(WHITE)
+        row_distances = get_row_color_distances(sorted_all_squares, [white_lab] * 6)
+        log.debug(f"row_distances {row_distances}")
+        min_distance = 99999
+        min_distance_row_index = None
+
+        for (row_index, distance) in enumerate(row_distances):
+            if distance < min_distance:
+                min_distance = distance
+                min_distance_row_index = row_index
+
+        self.white_squares = get_squares_for_row(sorted_all_squares, min_distance_row_index)
         self.white_squares.sort()
 
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h2>white squares</h2>\n")
             fh.write("<div class='clear colors'>\n")
 
-            for white_square in self.white_squares:
-                (red, green, blue) = white_square.rgb
-                lab = rgb2lab((red, green, blue))
-
+            for square in self.white_squares:
+                (red, green, blue) = square.rgb
                 fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
                     (red, green, blue,
                      red, green, blue,
-                     int(lab.L), int(lab.a), int(lab.b),
-                     white_square.color_name,
-                     white_square.position))
+                     int(square.lab.L), int(square.lab.a), int(square.lab.b),
+                     square.color_name,
+                     square.position))
 
             fh.write("<br>")
             fh.write("</div>\n")
@@ -1114,7 +1157,7 @@ div#colormapping {
                 for (index, center_square) in enumerate(center_squares):
                     color_name = permutation[index]
                     color_obj = self.crayola_colors[color_name]
-                    distance += get_euclidean_lab_distance(center_square.rawcolor, color_obj)
+                    distance += get_euclidean_lab_distance(center_square.lab, color_obj)
 
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
@@ -1223,9 +1266,19 @@ div#colormapping {
         #log.info("cube_for_json:\n %s\n" % pformat(data))
         return data
 
-    def assign_color_names(self, desc, squares_lists):
-        assert len(squares_lists) == 6, "There are %d squares_list, there should be 6" % len(squares_lists)
-        #log.info("SQUARES_LIST:\n{}\n".format(pformat(squares_lists)))
+    def assign_color_names(self, desc, squares_lists_all):
+
+        # split squares_lists_all up into 6 evenly sized lists
+        squares_per_row = int(len(squares_lists_all)/6)
+        squares_lists = []
+        square_list = []
+
+        for square in squares_lists_all:
+            square_list.append(square)
+
+            if len(square_list) == squares_per_row:
+                squares_lists.append(square_list)
+                square_list = []
 
         # Assign a color name to each squares in each square_list. Compute
         # which naming scheme results in the least total color distance in
@@ -1243,19 +1296,10 @@ div#colormapping {
 
             for (index, squares_list) in enumerate(squares_lists):
                 color_name = permutation[index]
+                crayola_color_lab = self.crayola_colors[color_name]
 
-                '''
-                if color_name == "OR":
-                    color_obj = self.orange_baseline
-                elif color_name == "Rd":
-                    color_obj = self.red_baseline
-                else:
-                    color_obj = self.crayola_colors[color_name]
-                '''
-                color_obj = self.crayola_colors[color_name]
-
-                for cluster_square in squares_list:
-                    distance += get_euclidean_lab_distance(cluster_square.lab, color_obj)
+                for square in squares_list:
+                    distance += get_euclidean_lab_distance(square.lab, crayola_color_lab)
 
             if min_distance is None or distance < min_distance:
                 min_distance = distance
@@ -1269,12 +1313,18 @@ div#colormapping {
                     log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
                 '''
 
+        # Assign the color name to the Square object
         for (index, squares_list) in enumerate(squares_lists):
             color_name = min_distance_permutation[index]
 
             for square in squares_list:
                 square.color_name = color_name
-                log.info("%s SQUARE %s color_name is now %s" % (desc, square, square.color_name))
+                #log.info("%s SQUARE %s color_name is now %s" % (desc, square, square.color_name))
+
+                # dwalton what about for even cubes?
+                if self.odd and desc == "centers":
+                    log.warning(f"update crayola_colors[{color_name}] from {self.crayola_colors[color_name]} to {square.lab}")
+                    self.crayola_colors[color_name] = square.lab
 
     def validate_edge_orbit(self, orbit_id):
         valid = True
@@ -1349,15 +1399,15 @@ div#colormapping {
                     red_orange = red_orange_permutation[index]
 
                     if red_orange == "OR":
-                        distance += get_euclidean_lab_distance(partner_square.rawcolor, self.orange_baseline)
+                        distance += get_euclidean_lab_distance(partner_square.lab, self.orange_baseline)
                     elif red_orange == "Rd":
-                        distance += get_euclidean_lab_distance(partner_square.rawcolor, self.red_baseline)
+                        distance += get_euclidean_lab_distance(partner_square.lab, self.red_baseline)
                     else:
                         raise Exception(red_orange)
-    
+
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
-                    min_distance_permutation = red_orange_permutation 
+                    min_distance_permutation = red_orange_permutation
                     log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance} (NEW MIN)")
                 else:
                     log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance}")
@@ -1428,7 +1478,7 @@ div#colormapping {
         # squares to swap to create valid parity
         self.validate_edge_orbit(target_orbit_id)
 
-    def resolve_edge_squares(self, write_to_html, fix_orange_vs_red):
+    def resolve_edge_squares(self):
         """
         Use traveling salesman algorithm to sort the colors
         """
@@ -1437,15 +1487,9 @@ div#colormapping {
         if self.width == 2:
             return True
 
-        all_orbits_valid = True
-
         for target_orbit_id in range(self.orbits):
             log.info('Resolve edges for orbit %d' % target_orbit_id)
-            edge_colors = []
-
-            if use_endpoints:
-                edge_colors.append((0, WHITE))
-                edge_colors.append((999, BLACK))
+            edge_squares = []
 
             for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
                 for square in side.edge_squares:
@@ -1453,29 +1497,15 @@ div#colormapping {
                     #log.info("{}: {}, position {}, orbit_id {}".format(self.width, square, square.position, orbit_id))
 
                     if orbit_id == target_orbit_id:
-                        edge_colors.append((square.position, square.rgb))
+                        edge_squares.append(square)
 
-            if use_endpoints:
-                sorted_edge_colors = traveling_salesman(edge_colors, "euclidean", (0, 1))
-                sorted_edge_colors.remove((0, WHITE))
-                sorted_edge_colors.remove((999, BLACK))
-            else:
-                sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
+            sorted_edge_squares = traveling_salesman(edge_squares, "euclidean")
+            self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_squares)
+            self.write_colors(
+                'edges - orbit %d' % target_orbit_id,
+                sorted_edge_squares)
 
-            # dwalton tsp reference
-            if write_to_html:
-                self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
-                self.write_colors(
-                    'edges - orbit %d' % target_orbit_id,
-                    sorted_edge_colors)
-
-            if fix_orange_vs_red:
-                self.fix_orange_vs_red(target_orbit_id)
-
-            #log.info(f"sorted_edge_colors_cluster_squares:\n{sorted_edge_colors_cluster_squares}")
             log.info("\n\n")
-
-        return all_orbits_valid
 
     def assign_green_white_corners(self, green_white_corners):
         #log.info("Gr/Wh corner tuples %s" % pformat(green_white_corners))
@@ -1642,32 +1672,22 @@ div#colormapping {
                     corner3.color_name = "OR"
                     log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner3)
 
-    def resolve_corner_squares(self, write_to_html):
+    def resolve_corner_squares(self):
         """
         Use traveling salesman algorithm to sort the colors
         """
         log.info('Resolve corners')
-        corner_colors = []
-
-        if use_endpoints:
-            corner_colors.append((0, WHITE))
-            corner_colors.append((999, BLACK))
+        corner_squares = []
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.corner_squares:
-                corner_colors.append((square.position, square.rgb))
+                corner_squares.append(square)
 
-        if use_endpoints:
-            sorted_corner_colors = traveling_salesman(corner_colors, "euclidean", (0, 1))
-            sorted_corner_colors.remove((0, WHITE))
-            sorted_corner_colors.remove((999, BLACK))
-        else:
-            sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
+        sorted_corner_squares = traveling_salesman(corner_squares, "euclidean")
+        self.assign_color_names('corners', sorted_corner_squares)
+        self.write_colors('corners', sorted_corner_squares)
 
-        if write_to_html:
-            self.assign_color_names('corners', sorted_corner_colors)
-            self.write_colors('corners', sorted_corner_colors)
-
+    def sanity_check_corner_squares(self):
         green_white_corners = []
         green_yellow_corners = []
         blue_white_corners = []
@@ -1775,9 +1795,9 @@ div#colormapping {
                 fh.write("<br>")
                 fh.write("</div>\n")
 
-    def resolve_center_squares(self, write_to_html):
+    def resolve_center_squares(self):
         """
-        Use traveling salesman algorithm to sort the colors
+        Use traveling salesman algorithm to sort the squares by color
         """
 
         # Nothing to be done for 2x2x2
@@ -1786,33 +1806,21 @@ div#colormapping {
 
         for (desc, centers_squares) in center_groups[self.width]:
             log.info('Resolve {}'.format(desc))
-            center_colors = []
+            center_squares = []
 
             for position in centers_squares:
                 square = self.get_square(position)
-                center_colors.append((square.position, square.rgb))
+                center_squares.append(square)
 
             if len(centers_squares) == 6:
-                sorted_center_colors = center_colors[:]
+                sorted_center_squares = center_squares[:]
             else:
-                if use_endpoints:
-                    center_colors.append((998, WHITE))
-                    center_colors.append((999, BLACK))
-                    sorted_center_colors = traveling_salesman(center_colors, "euclidean", (-2, -1))
-                    sorted_center_colors.remove((998, WHITE))
-                    sorted_center_colors.remove((999, BLACK))
-                else:
-                    sorted_center_colors = traveling_salesman(center_colors, "euclidean")
+                sorted_center_squares = traveling_salesman(center_squares, "euclidean")
 
-            #log.info("center_colors: %s" % pformat(center_colors))
-            #log.info("sorted_center_colors: %s" % pformat(sorted_center_colors))
-
-            if write_to_html:
-                self.assign_color_names(desc, sorted_center_colors)
-                self.write_colors(desc, sorted_center_colors)
+            self.assign_color_names(desc, sorted_center_squares)
+            self.write_colors(desc, sorted_center_squares)
 
     def contrast_stretch(self):
-        log.info("WHITE squares %s" % pformat(self.white_squares))
         white_reds = []
         white_greens = []
         white_blues = []
@@ -1854,23 +1862,24 @@ div#colormapping {
             if blue > max_input_blue:
                 max_input_blue = blue
 
-            if square.color_name == "Wh":
-                white_reds.append(red)
-                white_greens.append(green)
-                white_blues.append(blue)
+        for square in self.white_squares:
+            (red, green, blue) = square.rgb
+            white_reds.append(red)
+            white_greens.append(green)
+            white_blues.append(blue)
 
-                if red < darkest_white_red:
-                    darkest_white_red = red
+            if red < darkest_white_red:
+                darkest_white_red = red
 
-                if green < darkest_white_green:
-                    darkest_white_green = green
+            if green < darkest_white_green:
+                darkest_white_green = green
 
-                if blue < darkest_white_blue:
-                    darkest_white_blue = blue
+            if blue < darkest_white_blue:
+                darkest_white_blue = blue
 
-        log.info(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
-        log.info(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
-        log.info(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
+        log.debug(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
+        log.debug(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
+        log.debug(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
         min_output_red = 30
         min_output_green = 30
         min_output_blue = 30
@@ -1887,9 +1896,9 @@ div#colormapping {
         median_white_red = median(white_reds)
         median_white_green = median(white_greens)
         median_white_blue = median(white_blues)
-        log.info(f"WHITE reds {white_reds},  avg {avg_white_red}, median {median_white_red}")
-        log.info(f"WHITE greens {white_greens},  avg {avg_white_green}, median {median_white_green}")
-        log.info(f"WHITE blues {white_blues},  avg {avg_white_blue}, median {median_white_blue}")
+        log.debug(f"WHITE reds {white_reds},  avg {avg_white_red}, median {median_white_red}")
+        log.debug(f"WHITE greens {white_greens},  avg {avg_white_green}, median {median_white_green}")
+        log.debug(f"WHITE blues {white_blues},  avg {avg_white_blue}, median {median_white_blue}")
 
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h2>Mean white square</h2>\n")
@@ -1915,74 +1924,67 @@ div#colormapping {
         #max_input_green = darkest_white_green
         #max_input_blue = darkest_white_blue
 
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            side_squares = side.corner_squares + side.center_squares + side.edge_squares
-            for square in side_squares:
-                # https://pythontic.com/image-processing/pillow/contrast%20stretching
-                # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
-                new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
-                new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
-                new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
+        for square in all_squares:
+            # https://pythontic.com/image-processing/pillow/contrast%20stretching
+            # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
+            new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
+            new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
+            new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
 
-                #new_red = int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red))
-                #new_green = int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green))
-                #new_blue = int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue))
+            #new_red = int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red))
+            #new_green = int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green))
+            #new_blue = int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue))
 
-                new_red = min(max_output_red, new_red)
-                new_green = min(max_output_green, new_green)
-                new_blue = min(max_output_blue, new_blue)
-                delta_to_add = 0
+            new_red = min(max_output_red, new_red)
+            new_green = min(max_output_green, new_green)
+            new_blue = min(max_output_blue, new_blue)
+            delta_to_add = 0
 
-                if new_red < min_output_red:
-                    delta_to_add = max(delta_to_add, min_output_red - new_red)
+            if new_red < min_output_red:
+                delta_to_add = max(delta_to_add, min_output_red - new_red)
 
-                if new_green < min_output_green:
-                    delta_to_add = max(delta_to_add, min_output_green - new_green)
+            if new_green < min_output_green:
+                delta_to_add = max(delta_to_add, min_output_green - new_green)
 
-                if new_blue < min_output_blue:
-                    delta_to_add = max(delta_to_add, min_output_blue - new_blue)
+            if new_blue < min_output_blue:
+                delta_to_add = max(delta_to_add, min_output_blue - new_blue)
 
-                # Add enough so that red, green, and blue are all >= min_output_red, etc
-                if delta_to_add:
-                    new_red += delta_to_add
-                    new_green += delta_to_add
-                    new_blue += delta_to_add
+            # Add enough so that red, green, and blue are all >= min_output_red, etc
+            if delta_to_add:
+                new_red += delta_to_add
+                new_green += delta_to_add
+                new_blue += delta_to_add
 
-                new_red = min(max_output_red, new_red)
-                new_green = min(max_output_green, new_green)
-                new_blue = min(max_output_blue, new_blue)
+            new_red = min(max_output_red, new_red)
+            new_green = min(max_output_green, new_green)
+            new_blue = min(max_output_blue, new_blue)
 
-                square.rgb = (new_red, new_green, new_blue)
-                square.red = new_red
-                square.green = new_green
-                square.blue = new_blue
-                square.rawcolor = rgb2lab((new_red, new_green, new_blue))
+            square.rgb = (new_red, new_green, new_blue)
+            square.red = new_red
+            square.green = new_green
+            square.blue = new_blue
+            square.lab = rgb2lab((new_red, new_green, new_blue))
 
     def crunch_colors(self):
 
         # Find all of the white squares
         self.write_cube("Initial RGB values", False)
         self.find_white_squares()
-        sys.exit(0)
 
         # Now that we know what white looks like, contrast stretch the colors
         self.contrast_stretch()
-        self.write_cube("Contrast Stretched RBG values", False)
+        self.write_cube("Contrast Stretched RGB values", False)
 
         # Find baselines/anchor for each color
-        self.find_orange_and_red_baselines()
+        #self.find_orange_and_red_baselines()
 
+        self.resolve_center_squares()
 
-        # The first step is to find all of the white squares so we can call contrast_stretch()
-        # to create as much color separation as possible.
-        self.resolve_center_squares(False)
-        self.resolve_corner_squares(False)
-        self.resolve_edge_squares(False, False)
+        self.resolve_corner_squares()
+        self.sanity_check_corner_squares()
 
+        self.resolve_edge_squares()
 
-        self.resolve_center_squares(True)
-        self.resolve_corner_squares(True)
-        self.resolve_edge_squares(True, True)
         self.set_state()
         self.write_cube("Final Cube", True)
         self.print_cube()
