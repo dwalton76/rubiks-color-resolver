@@ -423,26 +423,6 @@ def traveling_salesman(colors, alg, endpoints=None):
     return [colors[x] for x in path]
 
 
-class ClusterSquare(object):
-
-    def __init__(self, index, rgb):
-        self.index = index
-        self.rgb = rgb
-        self.lab = rgb2lab(rgb)
-
-    def __str__(self):
-        if self.index:
-            return "CS" + str(self.index)
-        else:
-            return "CS" + str(self.rgb)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __lt__(self, other):
-        return self.index < other.index
-
-
 def get_important_square_indexes(size):
     squares_per_side = size * size
     min_square = 1
@@ -913,22 +893,23 @@ div#colormapping {
             fh.write("<h2>%s</h2>\n" % desc)
             fh.write("<div class='clear colors'>\n")
 
-            for cluster_square_list in colors:
-                total_distance = 0
+            log.info(f"COLORS:\n{colors}\n")
+            count = 0
+            for (index, (red, green, blue)) in colors:
+                lab = rgb2lab((red, green, blue))
+                square = self.get_square(index)
 
-                for cluster_square in cluster_square_list:
-                    (red, green, blue) = cluster_square.rgb
-                    lab = rgb2lab((red, green, blue))
-                    square = self.get_square(cluster_square.index)
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (red, green, blue,
+                     red, green, blue,
+                     int(lab.L), int(lab.a), int(lab.b),
+                     square.color_name,
+                     index))
 
-                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                        (red, green, blue,
-                         red, green, blue,
-                         int(lab.L), int(lab.a), int(lab.b),
-                         square.color_name,
-                         cluster_square.index))
+                count += 1
 
-                fh.write("<br>")
+                if count % squares_per_side == 0:
+                    fh.write("<br>")
             fh.write("</div>\n")
 
 
@@ -941,20 +922,9 @@ div#colormapping {
 
         # dwalton
         sorted_all_colors = traveling_salesman(all_colors, "euclidean")
-        sorted_all_colors_cluster_squares = []
-        squares_list = []
-        squares_per_cluster = int(len(sorted_all_colors) / 6)
-
-        for (index, (square_index, rgb)) in enumerate(sorted_all_colors):
-            index += 1
-            squares_list.append(ClusterSquare(square_index, rgb))
-            if index % squares_per_cluster == 0:
-                sorted_all_colors_cluster_squares.append(squares_list)
-                squares_list = []
-
         self.write_colors(
             'finding white colors',
-            sorted_all_colors_cluster_squares)
+            sorted_all_colors)
 
         # dwalton here now
         self.white_squares = []
@@ -1302,16 +1272,9 @@ div#colormapping {
         for (index, squares_list) in enumerate(squares_lists):
             color_name = min_distance_permutation[index]
 
-            for cluster_square in squares_list:
-                cluster_square.color_name = color_name
-
-                # Find the Square object for this ClusterSquare
-                square = self.get_square(cluster_square.index)
+            for square in squares_list:
                 square.color_name = color_name
                 log.info("%s SQUARE %s color_name is now %s" % (desc, square, square.color_name))
-
-                #if color_name == "Wh":
-                #    self.white_squares.append(square)
 
     def validate_edge_orbit(self, orbit_id):
         valid = True
@@ -1499,23 +1462,12 @@ div#colormapping {
             else:
                 sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
 
-            # dwalton  tsp reference
-            sorted_edge_colors_cluster_squares = []
-            squares_list = []
-            squares_per_cluster = int(len(sorted_edge_colors) / 6)
-
-            for (index, (square_index, rgb)) in enumerate(sorted_edge_colors):
-                index += 1
-                squares_list.append(ClusterSquare(square_index, rgb))
-                if index % squares_per_cluster == 0:
-                    sorted_edge_colors_cluster_squares.append(squares_list)
-                    squares_list = []
-
+            # dwalton tsp reference
             if write_to_html:
                 self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
                 self.write_colors(
                     'edges - orbit %d' % target_orbit_id,
-                    sorted_edge_colors_cluster_squares)
+                    sorted_edge_colors)
 
             if fix_orange_vs_red:
                 self.fix_orange_vs_red(target_orbit_id)
@@ -1712,20 +1664,9 @@ div#colormapping {
         else:
             sorted_corner_colors = traveling_salesman(corner_colors, "euclidean")
 
-        sorted_corner_colors_cluster_squares = []
-        squares_list = []
-        squares_per_cluster = int(len(sorted_corner_colors) / 6)
-
-        for (index, (square_index, rgb)) in enumerate(sorted_corner_colors):
-            index += 1
-            squares_list.append(ClusterSquare(square_index, rgb))
-            if index % squares_per_cluster == 0:
-                sorted_corner_colors_cluster_squares.append(squares_list)
-                squares_list = []
-
         if write_to_html:
-            self.assign_color_names('corners', sorted_corner_colors_cluster_squares)
-            self.write_colors('corners', sorted_corner_colors_cluster_squares)
+            self.assign_color_names('corners', sorted_corner_colors)
+            self.write_colors('corners', sorted_corner_colors)
 
         green_white_corners = []
         green_yellow_corners = []
@@ -1865,20 +1806,10 @@ div#colormapping {
 
             #log.info("center_colors: %s" % pformat(center_colors))
             #log.info("sorted_center_colors: %s" % pformat(sorted_center_colors))
-            sorted_center_colors_cluster_squares = []
-            squares_list = []
-            squares_per_cluster = int(len(sorted_center_colors) / 6)
-
-            for (index, (square_index, rgb)) in enumerate(sorted_center_colors):
-                index += 1
-                squares_list.append(ClusterSquare(square_index, rgb))
-                if index % squares_per_cluster == 0:
-                    sorted_center_colors_cluster_squares.append(squares_list)
-                    squares_list = []
 
             if write_to_html:
-                self.assign_color_names(desc, sorted_center_colors_cluster_squares)
-                self.write_colors(desc, sorted_center_colors_cluster_squares)
+                self.assign_color_names(desc, sorted_center_colors)
+                self.write_colors(desc, sorted_center_colors)
 
     def contrast_stretch(self):
         log.info("WHITE squares %s" % pformat(self.white_squares))
