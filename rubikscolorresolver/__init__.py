@@ -9,6 +9,7 @@ from statistics import median, mean
 from json import dumps as json_dumps
 import logging
 import os
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -660,13 +661,13 @@ class Square(object):
         return self.position < other.position
 
 
-class CubeSide(object):
+class Side(object):
 
     def __init__(self, cube, width, name):
         self.cube = cube
         self.name = name  # U, L, etc
         self.color = None
-        self.squares = {}
+        self.squares = OrderedDict()
         self.width = width
         self.squares_per_side = width * width
         self.center_squares = []
@@ -729,11 +730,6 @@ class CubeSide(object):
                 for x in range(west_edge + 1, east_edge):
                     self.center_pos.append(x)
 
-        #log.info("Side %s\n    min/max %d/%d\n    edges %s\n    corners %s\n    centers %s\n" %
-        #    (self.name, self.min_pos, self.max_pos,
-        #     " ".join(map(str, self.edge_pos)),
-        #     " ".join(map(str, self.corner_pos)),
-        #     " ".join(map(str, self.center_pos))))
 
     def __str__(self):
         return "side-" + self.name
@@ -785,12 +781,12 @@ class RubiksColorSolverGeneric(object):
         os.chmod(HTML_FILENAME, 0o777)
 
         self.sides = {
-            'U': CubeSide(self, self.width, 'U'),
-            'L': CubeSide(self, self.width, 'L'),
-            'F': CubeSide(self, self.width, 'F'),
-            'R': CubeSide(self, self.width, 'R'),
-            'B': CubeSide(self, self.width, 'B'),
-            'D': CubeSide(self, self.width, 'D')
+            'U': Side(self, self.width, 'U'),
+            'L': Side(self, self.width, 'L'),
+            'F': Side(self, self.width, 'F'),
+            'R': Side(self, self.width, 'R'),
+            'B': Side(self, self.width, 'B'),
+            'D': Side(self, self.width, 'D')
         }
 
         self.sideU = self.sides['U']
@@ -911,70 +907,6 @@ div#colormapping {
 <body>
 """ % (square_size, square_size, square_size, square_size, square_size, square_size))
 
-    def write_cube(self, desc, cube):
-        """
-        'cube' is a list of (R,G,B) tuples
-        """
-        col = 1
-        squares_per_side = self.width * self.width
-        min_square = 1
-        max_square = squares_per_side * 6
-
-        sides = ('upper', 'left', 'front', 'right', 'back', 'down')
-        side_index = -1
-        (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
-
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write("<h1>%s</h1>\n" % desc)
-            for index in range(1, max_square + 1):
-                if index in first_squares:
-                    side_index += 1
-                    fh.write("<div class='side' id='%s'>\n" % sides[side_index])
-
-                # dwalton
-                (red, green, blue, color_name) = cube[index]
-                lab = rgb2lab((red, green, blue))
-
-                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
-                    (col,
-                     red, green, blue,
-                     int(lab.L), int(lab.a), int(lab.b),
-                     color_name,
-                     red, green, blue,
-                     index))
-
-                if index in last_squares:
-                    fh.write("</div>\n")
-
-                    if index in last_UBD_squares:
-                        fh.write("<div class='clear'></div>\n")
-
-                col += 1
-
-                if col == self.width + 1:
-                    col = 1
-
-    def write_white_squares(self):
-        self.white_squares.sort()
-
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write("<h2>white squares</h2>\n")
-            fh.write("<div class='clear colors'>\n")
-
-            for white_square in self.white_squares:
-                (red, green, blue) = white_square.rgb
-                lab = rgb2lab((red, green, blue))
-
-                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                    (red, green, blue,
-                     red, green, blue,
-                     int(lab.L), int(lab.a), int(lab.b),
-                     white_square.color_name,
-                     white_square.position))
-
-            fh.write("<br>")
-            fh.write("</div>\n")
-
     def write_colors(self, desc, colors):
         with open(HTML_FILENAME, 'a') as fh:
             squares_per_side = int(len(colors)/6)
@@ -999,6 +931,55 @@ div#colormapping {
                 fh.write("<br>")
             fh.write("</div>\n")
 
+
+    def find_white_squares(self):
+        all_colors = []
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square in side.squares.values():
+                all_colors.append((square.position, square.rgb))
+
+        # dwalton
+        sorted_all_colors = traveling_salesman(all_colors, "euclidean")
+        sorted_all_colors_cluster_squares = []
+        squares_list = []
+        squares_per_cluster = int(len(sorted_all_colors) / 6)
+
+        for (index, (square_index, rgb)) in enumerate(sorted_all_colors):
+            index += 1
+            squares_list.append(ClusterSquare(square_index, rgb))
+            if index % squares_per_cluster == 0:
+                sorted_all_colors_cluster_squares.append(squares_list)
+                squares_list = []
+
+        self.write_colors(
+            'finding white colors',
+            sorted_all_colors_cluster_squares)
+
+        # dwalton here now
+        self.white_squares = []
+        for x in range(self.squares_per_side):
+            log.info(f"sorted_all_colors[{x}] {sorted_all_colors[x]}")
+        self.white_squares.sort()
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h2>white squares</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+
+            for white_square in self.white_squares:
+                (red, green, blue) = white_square.rgb
+                lab = rgb2lab((red, green, blue))
+
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (red, green, blue,
+                     red, green, blue,
+                     int(lab.L), int(lab.a), int(lab.b),
+                     white_square.color_name,
+                     white_square.position))
+
+            fh.write("<br>")
+            fh.write("</div>\n")
+
     def www_footer(self):
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("""
@@ -1008,7 +989,7 @@ div#colormapping {
 
     def get_side(self, position):
         """
-        Given a position on the cube return the CubeSide object
+        Given a position on the cube return the Side object
         that contians that position
         """
         for side in self.sides.values():
@@ -1032,15 +1013,62 @@ div#colormapping {
             fh.write("<h1>JSON Input</h1>\n")
             fh.write("<pre>%s</pre>\n" % json_dumps(self.scan_data))
 
-    def write_cube2(self, desc):
+    def write_cube(self, desc, use_html_colors):
         cube = ['dummy',]
 
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for position in range(side.min_pos, side.max_pos+1):
                 square = side.squares[position]
-                cube.append((square.red, square.green, square.blue, square.color_name))
 
-        self.write_cube(desc, cube)
+                if use_html_colors:
+                    red = html_color[square.color_name]['red']
+                    green = html_color[square.color_name]['green']
+                    blue = html_color[square.color_name]['blue']
+                else:
+                    red = square.red
+                    green = square.green
+                    blue = square.blue
+
+                cube.append((red, green, blue, square.color_name))
+
+        col = 1
+        squares_per_side = self.width * self.width
+        min_square = 1
+        max_square = squares_per_side * 6
+
+        sides = ('upper', 'left', 'front', 'right', 'back', 'down')
+        side_index = -1
+        (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h1>%s</h1>\n" % desc)
+            for index in range(1, max_square + 1):
+                if index in first_squares:
+                    side_index += 1
+                    fh.write("<div class='side' id='%s'>\n" % sides[side_index])
+
+                (red, green, blue, color_name) = cube[index]
+                lab = rgb2lab((red, green, blue))
+
+                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                    (col,
+                     red, green, blue,
+                     int(lab.L), int(lab.a), int(lab.b),
+                     color_name,
+                     red, green, blue,
+                     index))
+
+                if index in last_squares:
+                    fh.write("</div>\n")
+
+                    if index in last_UBD_squares:
+                        fh.write("<div class='clear'></div>\n")
+
+                col += 1
+
+                if col == self.width + 1:
+                    col = 1
+
 
     def print_cube(self):
         data = []
@@ -1148,6 +1176,7 @@ div#colormapping {
                 'Ye' : 'D'
             }
 
+        '''
         self.state = ['placeholder', ]
         # log.info("color_to_side_name:\n %s\n" % pformat(self.color_to_side_name))
 
@@ -1183,12 +1212,16 @@ div#colormapping {
                 color_name = side.squares[x].color_name
                 # log.info("set_state(): side {}, x {}, color_name {}".format(side, x, color_name))
                 self.state.append(self.color_to_side_name[color_name])
+        '''
 
     def cube_for_kociemba_strict(self):
+        log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
         data = []
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
-                data.append(self.state[x])
+                square = side.squares[x]
+                data.append(self.color_to_side_name[square.color_name])
+                #data.append(self.state[x])
 
         return data
 
@@ -1240,6 +1273,15 @@ div#colormapping {
 
             for (index, squares_list) in enumerate(squares_lists):
                 color_name = permutation[index]
+
+                '''
+                if color_name == "OR":
+                    color_obj = self.orange_baseline
+                elif color_name == "Rd":
+                    color_obj = self.red_baseline
+                else:
+                    color_obj = self.crayola_colors[color_name]
+                '''
                 color_obj = self.crayola_colors[color_name]
 
                 for cluster_square in squares_list:
@@ -1266,10 +1308,10 @@ div#colormapping {
                 # Find the Square object for this ClusterSquare
                 square = self.get_square(cluster_square.index)
                 square.color_name = color_name
-                #log.info("SQUARE %s color_name is now %s" % (square, square.color_name))
+                log.info("%s SQUARE %s color_name is now %s" % (desc, square, square.color_name))
 
-                if color_name == "Wh":
-                    self.white_squares.append(square)
+                #if color_name == "Wh":
+                #    self.white_squares.append(square)
 
     def validate_edge_orbit(self, orbit_id):
         valid = True
@@ -1357,7 +1399,6 @@ div#colormapping {
                 else:
                     log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance}")
 
-            # dwalton
             log.info(f"min_distance_permutation {min_distance_permutation}")
             for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                 #red_orange = min_distance_permutation[index]
@@ -1369,41 +1410,6 @@ div#colormapping {
                     log.warning("%s edge partner %s is %s, should be %s" %
                         (target_color, partner_square, partner_square.color_name, min_distance_permutation[index]))
 
-            '''
-            # Example:
-            # There must be one Gr/OR edge and one Gr/Rd. Assign based on which combo
-            # has the least color distance vs our OR/Rd baselines.
-            distance_OR_Rd = 0
-            distance_OR_Rd += get_euclidean_lab_distance(target_color_red_or_orange_edges[0][1].rawcolor, self.orange_baseline)
-            distance_OR_Rd += get_euclidean_lab_distance(target_color_red_or_orange_edges[1][1].rawcolor, self.red_baseline)
-            log.info(f"target edge {target_color} distance_OR_Rd {distance_OR_Rd}")
-
-            distance_Rd_OR = 0
-            distance_Rd_OR += get_euclidean_lab_distance(target_color_red_or_orange_edges[0][1].rawcolor, self.red_baseline)
-            distance_Rd_OR += get_euclidean_lab_distance(target_color_red_or_orange_edges[1][1].rawcolor, self.orange_baseline)
-            log.info(f"target edge {target_color} distance_Rd_OR {distance_Rd_OR}")
-
-            if distance_OR_Rd <= distance_Rd_OR:
-                if target_color_red_or_orange_edges[0][1].color_name != "OR":
-                    log.warning("change %s edge partner %s from %s to OR" %
-                        (target_color, target_color_red_or_orange_edges[0][1], target_color_red_or_orange_edges[0][1].color_name))
-                    target_color_red_or_orange_edges[0][1].color_name = "OR"
-
-                if target_color_red_or_orange_edges[1][1].color_name != "Rd":
-                    log.warning("change %s edge partner %s from %s to Rd" %
-                        (target_color, target_color_red_or_orange_edges[1][1], target_color_red_or_orange_edges[1][1].color_name))
-                    target_color_red_or_orange_edges[1][1].color_name = "Rd"
-            else:
-                if target_color_red_or_orange_edges[0][1].color_name != "Rd":
-                    log.warning("change %s edge partner %s from %s to Rd" %
-                        (target_color, target_color_red_or_orange_edges[0][1], target_color_red_or_orange_edges[0][1].color_name))
-                    target_color_red_or_orange_edges[0][1].color_name = "Rd"
-
-                if target_color_red_or_orange_edges[1][1].color_name != "OR":
-                    log.warning("change %s edge partner %s from %s to OR" %
-                        (target_color, target_color_red_or_orange_edges[1][1], target_color_red_or_orange_edges[1][1].color_name))
-                    target_color_red_or_orange_edges[1][1].color_name = "OR"
-            '''
             log.info("\n\n")
 
         green_red_orange_color_names = ("Gr", "Rd", "OR")
@@ -1493,6 +1499,7 @@ div#colormapping {
             else:
                 sorted_edge_colors = traveling_salesman(edge_colors, "euclidean")
 
+            # dwalton  tsp reference
             sorted_edge_colors_cluster_squares = []
             squares_list = []
             squares_per_cluster = int(len(sorted_edge_colors) / 6)
@@ -1504,9 +1511,8 @@ div#colormapping {
                     sorted_edge_colors_cluster_squares.append(squares_list)
                     squares_list = []
 
-            self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
-
             if write_to_html:
+                self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_colors_cluster_squares)
                 self.write_colors(
                     'edges - orbit %d' % target_orbit_id,
                     sorted_edge_colors_cluster_squares)
@@ -1717,10 +1723,8 @@ div#colormapping {
                 sorted_corner_colors_cluster_squares.append(squares_list)
                 squares_list = []
 
-        #log.info("sorted_corner_colors_cluster_squares:\n%s" % pformat(sorted_corner_colors_cluster_squares))
-        self.assign_color_names('corners', sorted_corner_colors_cluster_squares)
-
         if write_to_html:
+            self.assign_color_names('corners', sorted_corner_colors_cluster_squares)
             self.write_colors('corners', sorted_corner_colors_cluster_squares)
 
         green_white_corners = []
@@ -1872,9 +1876,8 @@ div#colormapping {
                     sorted_center_colors_cluster_squares.append(squares_list)
                     squares_list = []
 
-            self.assign_color_names(desc, sorted_center_colors_cluster_squares)
-
             if write_to_html:
+                self.assign_color_names(desc, sorted_center_colors_cluster_squares)
                 self.write_colors(desc, sorted_center_colors_cluster_squares)
 
     def contrast_stretch(self):
@@ -2024,41 +2027,32 @@ div#colormapping {
                 square.blue = new_blue
                 square.rawcolor = rgb2lab((new_red, new_green, new_blue))
 
-    def write_final_cube(self):
-        data = self.cube_for_json()
-        cube = ['dummy', ]
-
-        for square_index in sorted(data['squares'].keys()):
-            square = self.get_square(square_index)
-            value = data['squares'][square_index]
-            html_colors = data['sides'][value['finalSide']]['colorHTML']
-            cube.append((html_colors['red'], html_colors['green'], html_colors['blue'], square.color_name))
-
-        self.write_cube('Final Cube', cube)
-
     def crunch_colors(self):
+
+        # Find all of the white squares
+        self.write_cube("Initial RGB values", False)
+        self.find_white_squares()
+        sys.exit(0)
+
+        # Now that we know what white looks like, contrast stretch the colors
+        self.contrast_stretch()
+        self.write_cube("Contrast Stretched RBG values", False)
+
+        # Find baselines/anchor for each color
+        self.find_orange_and_red_baselines()
+
 
         # The first step is to find all of the white squares so we can call contrast_stretch()
         # to create as much color separation as possible.
-        self.write_cube2("Initial RGB values")
         self.resolve_center_squares(False)
         self.resolve_corner_squares(False)
         self.resolve_edge_squares(False, False)
 
-        # Write the white squares to our html file
-        self.write_white_squares()
 
-        self.contrast_stretch()
-        self.white_squares = []
-        self.write_cube2("Contrast Stretched RBG values")
-
-        self.find_orange_and_red_baselines()
         self.resolve_center_squares(True)
         self.resolve_corner_squares(True)
         self.resolve_edge_squares(True, True)
         self.set_state()
-        #self.write_cube2("Final Cube")
-
+        self.write_cube("Final Cube", True)
         self.print_cube()
-        self.write_final_cube()
         self.www_footer()
