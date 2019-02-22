@@ -986,47 +986,6 @@ div#colormapping {
                     fh.write("<br>")
             fh.write("</div>\n")
 
-    def white_balance(self):
-        """
-        https://pippin.gimp.org/image-processing/chapter-automaticadjustments.html
-        """
-        # sum "ab" in "Lab" values
-        sum_a = 0
-        sum_b = 0
-        count = 0
-
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            for square in side.squares.values():
-                sum_a += square.lab.a
-                sum_b += square.lab.b
-                count += 1
-
-        # Now find the average for each
-        avg_a = float(sum_a / count)
-        avg_b = float(sum_b / count)
-
-        a_shift = avg_a * -1
-        b_shift = avg_b * -1
-        log.info(f"a_shift {a_shift}")
-        log.info(f"b_shift {b_shift}")
-
-        # Now "shift" the "ab" by
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            for square in side.squares.values():
-
-                # scale the chroma distance shifted according to amount of
-                # luminance. The 1.1 overshoot is because we cannot be sure
-                # to have gotten the data in the first place.
-                a_delta = a_shift * (square.lab.L/100) * 1.1
-                b_delta = b_shift * (square.lab.L/100) * 1.1
-
-                #log.info(f"{square} a_delta {a_delta}")
-                #log.info(f"{square} b_delta {b_delta}")
-
-                square.lab.a = square.lab.a + a_delta
-                square.lab.b = square.lab.b + b_delta
-                square.lab.update_rgb()
-
     def find_white_squares(self):
         all_squares = []
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
@@ -1207,6 +1166,269 @@ div#colormapping {
             output.append(' '.join(row))
 
         log.info("Cube\n\n%s\n" % '\n'.join(output))
+
+    def white_balance(self):
+        """
+        https://pippin.gimp.org/image-processing/chapter-automaticadjustments.html
+        """
+        # sum "ab" in "Lab" values
+        sum_a = 0
+        sum_b = 0
+        count = 0
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square in side.squares.values():
+                sum_a += square.lab.a
+                sum_b += square.lab.b
+                count += 1
+
+        # Now find the average for each
+        avg_a = float(sum_a / count)
+        avg_b = float(sum_b / count)
+
+        a_shift = avg_a * -1
+        b_shift = avg_b * -1
+        log.info(f"a_shift {a_shift}")
+        log.info(f"b_shift {b_shift}")
+
+        # Now "shift" the "ab" by
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square in side.squares.values():
+
+                # scale the chroma distance shifted according to amount of
+                # luminance. The 1.1 overshoot is because we cannot be sure
+                # to have gotten the data in the first place.
+                a_delta = a_shift * (square.lab.L/100) * 1.1
+                b_delta = b_shift * (square.lab.L/100) * 1.1
+
+                #log.info(f"{square} a_delta {a_delta}")
+                #log.info(f"{square} b_delta {b_delta}")
+
+                square.lab.a = square.lab.a + a_delta
+                square.lab.b = square.lab.b + b_delta
+                square.lab.update_rgb()
+
+    def contrast_stretch(self):
+        white_reds = []
+        white_greens = []
+        white_blues = []
+        all_squares = []
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            side_squares = side.corner_squares + side.center_squares + side.edge_squares
+            for square in side_squares:
+                all_squares.append(square)
+
+        min_input_red = 255
+        min_input_green = 255
+        min_input_blue = 255
+        max_input_red = 0
+        max_input_green = 0
+        max_input_blue = 0
+        darkest_white_red = 255
+        darkest_white_green = 255
+        darkest_white_blue = 255
+
+        for square in all_squares:
+            (red, green, blue) = square.rgb
+
+            if red < min_input_red:
+                min_input_red = red
+
+            if red > max_input_red:
+                max_input_red = red
+
+            if green < min_input_green:
+                min_input_green = green
+
+            if green > max_input_green:
+                max_input_green = green
+
+            if blue < min_input_blue:
+                min_input_blue = blue
+
+            if blue > max_input_blue:
+                max_input_blue = blue
+
+        for square in self.white_squares:
+            (red, green, blue) = square.rgb
+            white_reds.append(red)
+            white_greens.append(green)
+            white_blues.append(blue)
+
+            if red < darkest_white_red:
+                darkest_white_red = red
+
+            if green < darkest_white_green:
+                darkest_white_green = green
+
+            if blue < darkest_white_blue:
+                darkest_white_blue = blue
+
+        log.debug(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
+        log.debug(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
+        log.debug(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
+        min_output_red = 30
+        min_output_green = 30
+        min_output_blue = 30
+        max_output_red = 255
+        max_output_green = 255
+        max_output_blue = 255
+
+        white_reds.sort()
+        white_greens.sort()
+        white_blues.sort()
+        avg_white_red = int(sum(white_reds) / len(white_reds))
+        avg_white_green = int(sum(white_greens) / len(white_greens))
+        avg_white_blue = int(sum(white_blues) / len(white_blues))
+        median_white_red = median(white_reds)
+        median_white_green = median(white_greens)
+        median_white_blue = median(white_blues)
+        log.debug(f"WHITE reds {white_reds},  avg {avg_white_red}, median {median_white_red}")
+        log.debug(f"WHITE greens {white_greens},  avg {avg_white_green}, median {median_white_green}")
+        log.debug(f"WHITE blues {white_blues},  avg {avg_white_blue}, median {median_white_blue}")
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h2>Mean white square</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+            lab = rgb2lab((avg_white_red, avg_white_green, avg_white_blue))
+
+            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                (avg_white_red, avg_white_green, avg_white_blue,
+                 avg_white_red, avg_white_green, avg_white_blue,
+                 int(lab.L), int(lab.a), int(lab.b),
+                 'Wh',
+                 0))
+            fh.write("<br>")
+            fh.write("</div>\n")
+
+        max_input_red = avg_white_red
+        max_input_green = avg_white_green
+        max_input_blue = avg_white_blue
+        #max_input_red = median_white_red
+        #max_input_green = median_white_green
+        #max_input_blue = median_white_blue
+        #max_input_red = darkest_white_red
+        #max_input_green = darkest_white_green
+        #max_input_blue = darkest_white_blue
+
+        for square in all_squares:
+            # https://pythontic.com/image-processing/pillow/contrast%20stretching
+            # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
+            new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
+            new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
+            new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
+
+            #new_red = int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red))
+            #new_green = int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green))
+            #new_blue = int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue))
+
+            new_red = min(max_output_red, new_red)
+            new_green = min(max_output_green, new_green)
+            new_blue = min(max_output_blue, new_blue)
+            delta_to_add = 0
+
+            if new_red < min_output_red:
+                delta_to_add = max(delta_to_add, min_output_red - new_red)
+
+            if new_green < min_output_green:
+                delta_to_add = max(delta_to_add, min_output_green - new_green)
+
+            if new_blue < min_output_blue:
+                delta_to_add = max(delta_to_add, min_output_blue - new_blue)
+
+            # Add enough so that red, green, and blue are all >= min_output_red, etc
+            if delta_to_add:
+                new_red += delta_to_add
+                new_green += delta_to_add
+                new_blue += delta_to_add
+
+            new_red = min(max_output_red, new_red)
+            new_green = min(max_output_green, new_green)
+            new_blue = min(max_output_blue, new_blue)
+
+            square.rgb = (new_red, new_green, new_blue)
+            square.red = new_red
+            square.green = new_green
+            square.blue = new_blue
+            square.lab = rgb2lab((new_red, new_green, new_blue))
+            #square.lab.parent = square
+
+    def find_orange_and_red_baselines(self):
+
+        # The ORANGE/RED baselines are only used for sanity checking edges
+        # so we can return here for 2x2x2
+        if self.width == 2:
+            return
+        elif self.width in (3, 4, 5, 7):
+            centers_for_red_orange_baseline = "centers"
+        elif self.width == 6:
+            centers_for_red_orange_baseline = "inner x-centers"
+        else:
+            raise Exception("What centers to use for orange/red baseline?")
+
+        for (desc, centers_squares) in center_groups[self.width]:
+            if desc != centers_for_red_orange_baseline:
+                continue
+
+            orange_reds = []
+            orange_greens = []
+            orange_blues = []
+            red_reds = []
+            red_greens = []
+            red_blues = []
+
+            for index in centers_squares:
+                square = self.get_square(index)
+
+                if square.color_name == "OR":
+                    orange_reds.append(square.red)
+                    orange_greens.append(square.green)
+                    orange_blues.append(square.blue)
+
+                elif square.color_name == "Rd":
+                    red_reds.append(square.red)
+                    red_greens.append(square.green)
+                    red_blues.append(square.blue)
+
+            new_orange_red = int(mean(orange_reds))
+            new_orange_green = int(mean(orange_greens))
+            new_orange_blue = int(mean(orange_blues))
+            self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
+            #self.orange_baseline.parent = self
+
+            new_red_red = int(mean(red_reds))
+            new_red_green = int(mean(red_greens))
+            new_red_blue = int(mean(red_blues))
+            self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
+            #self.red_baseline.parent = self
+
+            log.warning("ORANGE: %s" % self.orange_baseline)
+            log.warning("RED: %s" % self.red_baseline)
+
+            with open(HTML_FILENAME, 'a') as fh:
+                fh.write("<h2>ORANGE baseline</h2>\n")
+                fh.write("<div class='clear colors'>\n")
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (new_orange_red, new_orange_green, new_orange_blue,
+                     new_orange_red, new_orange_green, new_orange_blue,
+                     int(self.orange_baseline.L), int(self.orange_baseline.a), int(self.orange_baseline.b),
+                     'OR',
+                     0))
+                fh.write("<br>")
+                fh.write("</div>\n")
+
+                fh.write("<h2>RED baseline</h2>\n")
+                fh.write("<div class='clear colors'>\n")
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (new_red_red, new_red_green, new_red_blue,
+                     new_red_red, new_red_green, new_red_blue,
+                     int(self.red_baseline.L), int(self.red_baseline.a), int(self.red_baseline.b),
+                     'Rd',
+                     0))
+                fh.write("<br>")
+                fh.write("</div>\n")
+
 
     def set_state(self):
         self.state = []
@@ -1406,7 +1628,7 @@ div#colormapping {
         #assert valid, "Cube is invalid"
         return valid
 
-    def sanity_check_edge_corner_for_orbit(self, target_orbit_id):
+    def sanity_check_edges_for_orbit(self, target_orbit_id):
 
         def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
 
@@ -1518,6 +1740,15 @@ div#colormapping {
         # squares to swap to create valid parity. I think the same would apply for 5x5x5 and 7x7x7.
         self.validate_edge_orbit(target_orbit_id)
 
+    def sanity_check_edge_squares(self):
+
+        # Nothing to be done for 2x2x2
+        if self.width == 2:
+            return True
+
+        for orbit_id in range(self.orbits):
+            self.sanity_check_edges_for_orbit(orbit_id)
+
     def resolve_edge_squares(self):
         """
         Use traveling salesman algorithm to sort the colors
@@ -1546,15 +1777,6 @@ div#colormapping {
                 sorted_edge_squares)
 
             log.info("\n\n")
-
-    def sanity_check_edge_squares(self):
-
-        # Nothing to be done for 2x2x2
-        if self.width == 2:
-            return True
-
-        for orbit_id in range(self.orbits):
-            self.sanity_check_edge_corner_for_orbit(orbit_id)
 
     def assign_green_white_corners(self, green_white_corners):
         #log.info("Gr/Wh corner tuples %s" % pformat(green_white_corners))
@@ -1771,81 +1993,6 @@ div#colormapping {
         self.assign_blue_white_corners(blue_white_corners)
         self.assign_blue_yellow_corners(blue_yellow_corners)
 
-    def find_orange_and_red_baselines(self):
-
-        # The ORANGE/RED baselines are only used for sanity checking edges
-        # so we can return here for 2x2x2
-        if self.width == 2:
-            return
-        elif self.width in (3, 4, 5, 7):
-            centers_for_red_orange_baseline = "centers"
-        elif self.width == 6:
-            centers_for_red_orange_baseline = "inner x-centers"
-        else:
-            raise Exception("What centers to use for orange/red baseline?")
-
-        for (desc, centers_squares) in center_groups[self.width]:
-            if desc != centers_for_red_orange_baseline:
-                continue
-
-            orange_reds = []
-            orange_greens = []
-            orange_blues = []
-            red_reds = []
-            red_greens = []
-            red_blues = []
-
-            for index in centers_squares:
-                square = self.get_square(index)
-
-                if square.color_name == "OR":
-                    orange_reds.append(square.red)
-                    orange_greens.append(square.green)
-                    orange_blues.append(square.blue)
-
-                elif square.color_name == "Rd":
-                    red_reds.append(square.red)
-                    red_greens.append(square.green)
-                    red_blues.append(square.blue)
-
-            new_orange_red = int(mean(orange_reds))
-            new_orange_green = int(mean(orange_greens))
-            new_orange_blue = int(mean(orange_blues))
-            self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
-            #self.orange_baseline.parent = self
-
-            new_red_red = int(mean(red_reds))
-            new_red_green = int(mean(red_greens))
-            new_red_blue = int(mean(red_blues))
-            self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
-            #self.red_baseline.parent = self
-
-            log.warning("ORANGE: %s" % self.orange_baseline)
-            log.warning("RED: %s" % self.red_baseline)
-
-            with open(HTML_FILENAME, 'a') as fh:
-                fh.write("<h2>ORANGE baseline</h2>\n")
-                fh.write("<div class='clear colors'>\n")
-                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                    (new_orange_red, new_orange_green, new_orange_blue,
-                     new_orange_red, new_orange_green, new_orange_blue,
-                     int(self.orange_baseline.L), int(self.orange_baseline.a), int(self.orange_baseline.b),
-                     'OR',
-                     0))
-                fh.write("<br>")
-                fh.write("</div>\n")
-
-                fh.write("<h2>RED baseline</h2>\n")
-                fh.write("<div class='clear colors'>\n")
-                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                    (new_red_red, new_red_green, new_red_blue,
-                     new_red_red, new_red_green, new_red_blue,
-                     int(self.red_baseline.L), int(self.red_baseline.a), int(self.red_baseline.b),
-                     'Rd',
-                     0))
-                fh.write("<br>")
-                fh.write("</div>\n")
-
     def resolve_center_squares(self):
         """
         Use traveling salesman algorithm to sort the squares by color
@@ -1870,152 +2017,6 @@ div#colormapping {
 
             self.assign_color_names(desc, sorted_center_squares)
             self.write_colors(desc, sorted_center_squares)
-
-    def contrast_stretch(self):
-        white_reds = []
-        white_greens = []
-        white_blues = []
-        all_squares = []
-
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            side_squares = side.corner_squares + side.center_squares + side.edge_squares
-            for square in side_squares:
-                all_squares.append(square)
-
-        min_input_red = 255
-        min_input_green = 255
-        min_input_blue = 255
-        max_input_red = 0
-        max_input_green = 0
-        max_input_blue = 0
-        darkest_white_red = 255
-        darkest_white_green = 255
-        darkest_white_blue = 255
-
-        for square in all_squares:
-            (red, green, blue) = square.rgb
-
-            if red < min_input_red:
-                min_input_red = red
-
-            if red > max_input_red:
-                max_input_red = red
-
-            if green < min_input_green:
-                min_input_green = green
-
-            if green > max_input_green:
-                max_input_green = green
-
-            if blue < min_input_blue:
-                min_input_blue = blue
-
-            if blue > max_input_blue:
-                max_input_blue = blue
-
-        for square in self.white_squares:
-            (red, green, blue) = square.rgb
-            white_reds.append(red)
-            white_greens.append(green)
-            white_blues.append(blue)
-
-            if red < darkest_white_red:
-                darkest_white_red = red
-
-            if green < darkest_white_green:
-                darkest_white_green = green
-
-            if blue < darkest_white_blue:
-                darkest_white_blue = blue
-
-        log.debug(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
-        log.debug(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
-        log.debug(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
-        min_output_red = 30
-        min_output_green = 30
-        min_output_blue = 30
-        max_output_red = 255
-        max_output_green = 255
-        max_output_blue = 255
-
-        white_reds.sort()
-        white_greens.sort()
-        white_blues.sort()
-        avg_white_red = int(sum(white_reds) / len(white_reds))
-        avg_white_green = int(sum(white_greens) / len(white_greens))
-        avg_white_blue = int(sum(white_blues) / len(white_blues))
-        median_white_red = median(white_reds)
-        median_white_green = median(white_greens)
-        median_white_blue = median(white_blues)
-        log.debug(f"WHITE reds {white_reds},  avg {avg_white_red}, median {median_white_red}")
-        log.debug(f"WHITE greens {white_greens},  avg {avg_white_green}, median {median_white_green}")
-        log.debug(f"WHITE blues {white_blues},  avg {avg_white_blue}, median {median_white_blue}")
-
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write("<h2>Mean white square</h2>\n")
-            fh.write("<div class='clear colors'>\n")
-            lab = rgb2lab((avg_white_red, avg_white_green, avg_white_blue))
-
-            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                (avg_white_red, avg_white_green, avg_white_blue,
-                 avg_white_red, avg_white_green, avg_white_blue,
-                 int(lab.L), int(lab.a), int(lab.b),
-                 'Wh',
-                 0))
-            fh.write("<br>")
-            fh.write("</div>\n")
-
-        max_input_red = avg_white_red
-        max_input_green = avg_white_green
-        max_input_blue = avg_white_blue
-        #max_input_red = median_white_red
-        #max_input_green = median_white_green
-        #max_input_blue = median_white_blue
-        #max_input_red = darkest_white_red
-        #max_input_green = darkest_white_green
-        #max_input_blue = darkest_white_blue
-
-        for square in all_squares:
-            # https://pythontic.com/image-processing/pillow/contrast%20stretching
-            # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
-            new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
-            new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
-            new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
-
-            #new_red = int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red))
-            #new_green = int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green))
-            #new_blue = int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue))
-
-            new_red = min(max_output_red, new_red)
-            new_green = min(max_output_green, new_green)
-            new_blue = min(max_output_blue, new_blue)
-            delta_to_add = 0
-
-            if new_red < min_output_red:
-                delta_to_add = max(delta_to_add, min_output_red - new_red)
-
-            if new_green < min_output_green:
-                delta_to_add = max(delta_to_add, min_output_green - new_green)
-
-            if new_blue < min_output_blue:
-                delta_to_add = max(delta_to_add, min_output_blue - new_blue)
-
-            # Add enough so that red, green, and blue are all >= min_output_red, etc
-            if delta_to_add:
-                new_red += delta_to_add
-                new_green += delta_to_add
-                new_blue += delta_to_add
-
-            new_red = min(max_output_red, new_red)
-            new_green = min(max_output_green, new_green)
-            new_blue = min(max_output_blue, new_blue)
-
-            square.rgb = (new_red, new_green, new_blue)
-            square.red = new_red
-            square.green = new_green
-            square.blue = new_blue
-            square.lab = rgb2lab((new_red, new_green, new_blue))
-            #square.lab.parent = square
 
     def crunch_colors(self):
         self.write_cube("Initial RGB values", False)
