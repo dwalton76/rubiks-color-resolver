@@ -455,7 +455,6 @@ class LabColor(object):
         self.red = red
         self.green = green
         self.blue = blue
-        self.name = None
 
     def __str__(self):
         return ("Lab (%s, %s, %s)" % (self.L, self.a, self.b))
@@ -464,7 +463,43 @@ class LabColor(object):
         return self.__str__()
 
     def __lt__(self, other):
-        return self.name < other.name
+        if self.L != other.L:
+            return self.L < other.L
+
+        if self.a != other.a:
+            return self.a < other.a
+
+        return self.b < other.b
+
+    def update_rgb(self):
+        """
+        https://github.com/antimatter15/rgb-lab/blob/master/color.js
+        """
+        y = (self.L + 16) / 116
+        x = self.a / 500 + y
+        z = y - self.b / 200
+
+        x = 0.95047 * (x ** 3 if (x**3 > 0.008856) else (x - 16/116) / 7.787)
+        y = 1.00000 * (y ** 3 if (y ** 3 > 0.008856) else (y - 16/116) / 7.787)
+        z = 1.08883 * ( z ** 3 if (z ** 3 > 0.008856) else (z - 16/116) / 7.787)
+
+        r = x *  3.2406 + y * -1.5372 + z * -0.4986
+        g = x * -0.9689 + y *  1.8758 + z *  0.0415
+        b = x *  0.0557 + y * -0.2040 + z *  1.0570
+
+        r = (1.055 * r ** (1/2.4) - 0.055) if (r > 0.0031308) else 12.92 * r
+        g = (1.055 * g ** (1/2.4) - 0.055) if (g > 0.0031308) else 12.92 * g
+        b = (1.055 * b ** (1/2.4) - 0.055) if (b > 0.0031308) else 12.92 * b
+
+        self.red = int(max(0, min(1, r)) * 255)
+        self.green = int(max(0, min(1, g)) * 255)
+        self.blue = int(max(0, min(1, b)) * 255)
+
+        if self.parent:
+            self.parent.red = self.red
+            self.parent.green = self.green
+            self.parent.blue = self.blue
+            self.parent.rgb = (self.red, self.green, self.blue)
 
 
 def rgb2lab(inputColor):
@@ -674,7 +709,7 @@ class Square(object):
         self.green = green
         self.blue = blue
         self.lab = rgb2lab((red, green, blue))
-        self.color = None
+        #self.lab.parent = self
         self.color_name = None
 
     def __str__(self):
@@ -951,6 +986,47 @@ div#colormapping {
                     fh.write("<br>")
             fh.write("</div>\n")
 
+    def white_balance(self):
+        """
+        https://pippin.gimp.org/image-processing/chapter-automaticadjustments.html
+        """
+        # sum "ab" in "Lab" values
+        sum_a = 0
+        sum_b = 0
+        count = 0
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square in side.squares.values():
+                sum_a += square.lab.a
+                sum_b += square.lab.b
+                count += 1
+
+        # Now find the average for each
+        avg_a = float(sum_a / count)
+        avg_b = float(sum_b / count)
+
+        a_shift = avg_a * -1
+        b_shift = avg_b * -1
+        log.info(f"a_shift {a_shift}")
+        log.info(f"b_shift {b_shift}")
+
+        # Now "shift" the "ab" by
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square in side.squares.values():
+
+                # scale the chroma distance shifted according to amount of
+                # luminance. The 1.1 overshoot is because we cannot be sure
+                # to have gotten the data in the first place.
+                a_delta = a_shift * (square.lab.L/100) * 1.1
+                b_delta = b_shift * (square.lab.L/100) * 1.1
+
+                #log.info(f"{square} a_delta {a_delta}")
+                #log.info(f"{square} b_delta {b_delta}")
+
+                square.lab.a = square.lab.a + a_delta
+                square.lab.b = square.lab.b + b_delta
+                square.lab.update_rgb()
+
     def find_white_squares(self):
         all_squares = []
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
@@ -1027,6 +1103,7 @@ div#colormapping {
             fh.write("<pre>%s</pre>\n" % json_dumps(self.scan_data))
 
     def write_cube(self, desc, use_html_colors):
+        # dwalton clean this up...should not need the 'cube' var
         cube = ['dummy',]
 
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
@@ -1081,7 +1158,6 @@ div#colormapping {
 
                 if col == self.width + 1:
                     col = 1
-
 
     def print_cube(self):
         data = []
@@ -1736,11 +1812,13 @@ div#colormapping {
             new_orange_green = int(mean(orange_greens))
             new_orange_blue = int(mean(orange_blues))
             self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
+            #self.orange_baseline.parent = self
 
             new_red_red = int(mean(red_reds))
             new_red_green = int(mean(red_greens))
             new_red_blue = int(mean(red_blues))
             self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
+            #self.red_baseline.parent = self
 
             log.warning("ORANGE: %s" % self.orange_baseline)
             log.warning("RED: %s" % self.red_baseline)
@@ -1937,19 +2015,25 @@ div#colormapping {
             square.green = new_green
             square.blue = new_blue
             square.lab = rgb2lab((new_red, new_green, new_blue))
+            #square.lab.parent = square
 
     def crunch_colors(self):
+        self.write_cube("Initial RGB values", False)
+
+        # I got this working but it seemed to cause more harm than good. I don't think this is
+        # needed anyway since CraneCuber now locks down the white balance after the first pic.
+        # (some of our test cases are before then though). If you ever want to use this uncomment
+        # all of the "parent = " assignments.
+        #
+        # self.white_balance()
+        # self.write_cube("Post white balance", False)
 
         # Find all of the white squares
-        self.write_cube("Initial RGB values", False)
         self.find_white_squares()
 
         # Now that we know what white looks like, contrast stretch the colors
         self.contrast_stretch()
         self.write_cube("Contrast Stretched RGB values", False)
-
-        # Find baselines/anchor for each color
-        #self.find_orange_and_red_baselines()
 
         self.resolve_center_squares()
 
