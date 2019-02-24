@@ -1,4 +1,5 @@
 
+#from rubikscolorresolver.cube_666 import highlow_edge_values_666
 from tsp_solver.greedy import solve_tsp
 from collections import OrderedDict
 from itertools import combinations, permutations
@@ -572,12 +573,6 @@ class LabColor(object):
         self.green = int(max(0, min(1, g)) * 255)
         self.blue = int(max(0, min(1, b)) * 255)
 
-        if self.parent:
-            self.parent.red = self.red
-            self.parent.green = self.green
-            self.parent.blue = self.blue
-            self.parent.rgb = (self.red, self.green, self.blue)
-
 
 def rgb2lab(inputColor):
     (red, green, blue) = inputColor
@@ -787,7 +782,6 @@ class Square(object):
         self.green = green
         self.blue = blue
         self.lab = rgb2lab((red, green, blue))
-        #self.lab.parent = self
         self.color_name = None
         self.side_name = None # ULFRBD
 
@@ -1321,47 +1315,6 @@ div#colormapping {
 
         log.info("Cube\n\n%s\n" % '\n'.join(output))
 
-    def white_balance(self):
-        """
-        https://pippin.gimp.org/image-processing/chapter-automaticadjustments.html
-        """
-        # sum "ab" in "Lab" values
-        sum_a = 0
-        sum_b = 0
-        count = 0
-
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            for square in side.squares.values():
-                sum_a += square.lab.a
-                sum_b += square.lab.b
-                count += 1
-
-        # Now find the average for each
-        avg_a = float(sum_a / count)
-        avg_b = float(sum_b / count)
-
-        a_shift = avg_a * -1
-        b_shift = avg_b * -1
-        log.info(f"a_shift {a_shift}")
-        log.info(f"b_shift {b_shift}")
-
-        # Now "shift" the "ab" by
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            for square in side.squares.values():
-
-                # scale the chroma distance shifted according to amount of
-                # luminance. The 1.1 overshoot is because we cannot be sure
-                # to have gotten the data in the first place.
-                a_delta = a_shift * (square.lab.L/100) * 1.1
-                b_delta = b_shift * (square.lab.L/100) * 1.1
-
-                #log.info(f"{square} a_delta {a_delta}")
-                #log.info(f"{square} b_delta {b_delta}")
-
-                square.lab.a = square.lab.a + a_delta
-                square.lab.b = square.lab.b + b_delta
-                square.lab.update_rgb()
-
     def contrast_stretch(self):
         white_reds = []
         white_greens = []
@@ -1506,7 +1459,6 @@ div#colormapping {
             square.green = new_green
             square.blue = new_blue
             square.lab = rgb2lab((new_red, new_green, new_blue))
-            #square.lab.parent = square
 
     def find_orange_and_red_baselines(self):
 
@@ -1549,13 +1501,11 @@ div#colormapping {
             new_orange_green = int(mean(orange_greens))
             new_orange_blue = int(mean(orange_blues))
             self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
-            #self.orange_baseline.parent = self
 
             new_red_red = int(mean(red_reds))
             new_red_green = int(mean(red_greens))
             new_red_blue = int(mean(red_blues))
             self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
-            #self.red_baseline.parent = self
 
             log.debug("orange baseline: %s" % self.orange_baseline)
             log.debug("red baseline: %s" % self.red_baseline)
@@ -1779,7 +1729,7 @@ div#colormapping {
         #assert valid, "Cube is invalid"
         return valid
 
-    def sanity_check_edges_for_orbit(self, target_orbit_id):
+    def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
 
         def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
 
@@ -1832,6 +1782,7 @@ div#colormapping {
                     log.warning("change %s edge partner %s from %s to %s" %
                         (target_color, partner_square, partner_square.color_name, min_distance_permutation[index]))
                     partner_square.color_name = min_distance_permutation[index]
+                    partner_square.side_name = self.color_to_side_name[partner_square.color_name]
                 else:
                     log.info("%s edge partner %s is %s" %
                         (target_color, partner_square, partner_square.color_name))
@@ -1887,9 +1838,20 @@ div#colormapping {
         log.info(f"yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
         fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
 
-        # TODO we need to validate parity if this is a 3x3x3, if parity is off figure out which OR/Rd edge
-        # squares to swap to create valid parity. I think the same would apply for 5x5x5 and 7x7x7.
         self.validate_edge_orbit(target_orbit_id)
+
+    def sanity_check_edges_high_low_for_orbit(self, target_orbit_id):
+
+        # TODO do this for other sizes
+        if self.width != 6:
+            return
+
+        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
+            square = self.get_square(square_index)
+            partner = self.get_square(partner_index)
+            highlow = highlow_edge_values_666[(square_index, partner_index, square.side_name, partner.side_name)]
+            log.info(f"orbit {target_orbit_id} ({square_index}, {partner_index}) is {square.color_name}/{partner.color_name} {square.side_name}/{partner.side_name} which is {highlow}")
+        log.info("")
 
     def sanity_check_edge_squares(self):
 
@@ -1898,7 +1860,10 @@ div#colormapping {
             return True
 
         for orbit_id in range(self.orbits):
-            self.sanity_check_edges_for_orbit(orbit_id)
+            self.sanity_check_edges_red_orange_count_for_orbit(orbit_id)
+
+        #for orbit_id in range(self.orbits):
+        #    self.sanity_check_edges_high_low_for_orbit(orbit_id)
 
     def resolve_edge_squares(self):
         """
@@ -2441,14 +2406,6 @@ div#colormapping {
     def crunch_colors(self):
         self.write_cube("Initial RGB values", False)
 
-        # I got this working but it seemed to cause more harm than good. I don't think this is
-        # needed anyway since CraneCuber now locks down the white balance after the first pic.
-        # (some of our test cases are before then though). If you ever want to use this uncomment
-        # all of the "parent = " assignments.
-        #
-        # self.white_balance()
-        # self.write_cube("Post white balance", False)
-
         # Find all of the white squares
         self.find_white_squares()
 
@@ -2463,11 +2420,10 @@ div#colormapping {
 
         self.resolve_edge_squares()
         self.find_orange_and_red_baselines()
-        self.sanity_check_edge_squares()
         self.set_state()
+        self.sanity_check_edge_squares()
         self.validate_odd_cube_midge_vs_corner_parity()
 
-        self.set_state()
         self.write_cube("Final Cube", True)
         self.print_cube()
         self.www_footer()
