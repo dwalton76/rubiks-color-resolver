@@ -1,5 +1,7 @@
 
-#from rubikscolorresolver.cube_666 import highlow_edge_values_666
+from rubikscolorresolver.cube_444 import highlow_edge_values_444
+from rubikscolorresolver.cube_555 import highlow_edge_values_555
+from rubikscolorresolver.cube_666 import highlow_edge_values_666
 from tsp_solver.greedy import solve_tsp
 from collections import OrderedDict
 from itertools import combinations, permutations
@@ -57,6 +59,49 @@ odd_cube_center_color_permutations = (
     ('Bu', 'Rd', 'Ye', 'OR', 'Wh', 'Gr'),
     ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
 )
+
+edge_color_pair_map = {
+
+    # Up (white)
+    "Gr/Wh" : "Gr/Wh",
+    "Wh/Gr" : "Gr/Wh",
+
+    "Bu/Wh" : "Bu/Wh",
+    "Wh/Bu" : "Bu/Wh",
+
+    "OR/Wh" : "OR/Wh",
+    "Wh/OR" : "OR/Wh",
+
+    "Rd/Wh" : "Rd/Wh",
+    "Wh/Rd" : "Rd/Wh",
+
+    # Left (orange)
+    "Gr/OR" : "Gr/OR",
+    "OR/Gr" : "Gr/OR",
+
+    "Bu/OR" : "Bu/OR",
+    "OR/Bu" : "Bu/OR",
+
+    # Right (red)
+    "Gr/Rd" : "Gr/Rd",
+    "Rd/Gr" : "Gr/Rd",
+
+    "Bu/Rd" : "Bu/Rd",
+    "Rd/Bu" : "Bu/Rd",
+
+    # Down (yellow)
+    "Gr/Ye" : "Gr/Ye",
+    "Ye/Gr" : "Gr/Ye",
+
+    "Bu/Ye" : "Bu/Ye",
+    "Ye/Bu" : "Bu/Ye",
+
+    "OR/Ye" : "OR/Ye",
+    "Ye/OR" : "OR/Ye",
+
+    "Rd/Ye" : "Rd/Ye",
+    "Ye/Rd" : "Rd/Ye",
+}
 
 corner_tuples = {
     2 : (
@@ -1767,6 +1812,22 @@ div#colormapping {
                     else:
                         raise Exception(red_orange)
 
+                    partner_square.color_name = red_orange
+                    partner_square.side_name = self.color_to_side_name[partner_square.color_name]
+
+                if self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0):
+                    for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
+                        red_orange = red_orange_permutation[index]
+                        high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
+                        edge_color_pair = edge_color_pair_map[f"{target_color_square.color_name}/{partner_square.color_name}"]
+                        #log.info("high_low_edge_per_color\n%s" % pformat(high_low_edge_per_color))
+
+                        if len(high_low_edge_per_color[edge_color_pair]) != 2:
+                            #log.warning("*" * 40)
+                            #log.warning("edge_color_pair %s high_low is %s" % (edge_color_pair, high_low_edge_per_color[edge_color_pair]))
+                            #log.warning("*" * 40)
+                            distance += 999
+
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = red_orange_permutation
@@ -1774,8 +1835,6 @@ div#colormapping {
                 else:
                     log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance}")
 
-            # TODO this needs to consider the number of high/low edges in the orbit also so that
-            # we do not create an invalid cube
             log.info(f"min_distance_permutation {min_distance_permutation}")
             for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                 if partner_square.color_name != min_distance_permutation[index]:
@@ -1826,32 +1885,58 @@ div#colormapping {
                 else:
                     yellow_red_or_orange_edges.append((partner, square))
 
-        log.info(f"green_red_or_orange_edges {green_red_or_orange_edges}")
+        log.info(f"orbit {target_orbit_id} green_red_or_orange_edges {green_red_or_orange_edges}")
         fix_orange_vs_red_for_color('green', green_red_or_orange_edges)
 
-        log.info(f"blue_red_or_orange_edges {blue_red_or_orange_edges}")
+        log.info(f"orbit {target_orbit_id} blue_red_or_orange_edges {blue_red_or_orange_edges}")
         fix_orange_vs_red_for_color('blue', blue_red_or_orange_edges)
 
-        log.info(f"white_red_or_orange_edges {white_red_or_orange_edges}")
+        log.info(f"orbit {target_orbit_id} white_red_or_orange_edges {white_red_or_orange_edges}")
         fix_orange_vs_red_for_color('white', white_red_or_orange_edges)
 
-        log.info(f"yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
+        log.info(f"orbit {target_orbit_id} yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
         fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
 
         self.validate_edge_orbit(target_orbit_id)
 
-    def sanity_check_edges_high_low_for_orbit(self, target_orbit_id):
+    def get_high_low_per_edge_color(self, target_orbit_id):
 
-        # TODO do this for other sizes
-        if self.width != 6:
-            return
+        high_low_per_edge_color = {
+            "Gr/Wh" : set(),
+            "Bu/Wh" : set(),
+            "OR/Wh" : set(),
+            "Rd/Wh" : set(),
+
+            "Gr/OR" : set(),
+            "Bu/OR" : set(),
+            "Gr/Rd" : set(),
+            "Bu/Rd" : set(),
+
+            "Gr/Ye" : set(),
+            "Bu/Ye" : set(),
+            "OR/Ye" : set(),
+            "Rd/Ye" : set(),
+        }
 
         for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
             square = self.get_square(square_index)
             partner = self.get_square(partner_index)
-            highlow = highlow_edge_values_666[(square_index, partner_index, square.side_name, partner.side_name)]
-            log.info(f"orbit {target_orbit_id} ({square_index}, {partner_index}) is {square.color_name}/{partner.color_name} {square.side_name}/{partner.side_name} which is {highlow}")
-        log.info("")
+
+            if self.width == 6:
+                highlow = highlow_edge_values_666[(square_index, partner_index, square.side_name, partner.side_name)]
+            elif self.width == 5:
+                highlow = highlow_edge_values_555[(square_index, partner_index, square.side_name, partner.side_name)]
+            elif self.width == 4:
+                highlow = highlow_edge_values_444[(square_index, partner_index, square.side_name, partner.side_name)]
+
+            # log.info(f"orbit {target_orbit_id} ({square_index}, {partner_index}) is {square.color_name}/{partner.color_name} {square.side_name}/{partner.side_name} which is {highlow}")
+
+            edge_color_pair = edge_color_pair_map[f"{square.color_name}/{partner.color_name}"]
+            high_low_per_edge_color[edge_color_pair].add(highlow)
+
+        # log.info("high_low_per_edge_color for orbit %d\n%s" % (target_orbit_id, pformat(high_low_per_edge_color)))
+        # log.info("")
+        return high_low_per_edge_color
 
     def sanity_check_edge_squares(self):
 
@@ -1861,9 +1946,6 @@ div#colormapping {
 
         for orbit_id in range(self.orbits):
             self.sanity_check_edges_red_orange_count_for_orbit(orbit_id)
-
-        #for orbit_id in range(self.orbits):
-        #    self.sanity_check_edges_high_low_for_orbit(orbit_id)
 
     def resolve_edge_squares(self):
         """
@@ -1891,8 +1973,6 @@ div#colormapping {
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
                 sorted_edge_squares)
-
-            log.info("\n\n")
 
     def assign_green_white_corners(self, green_white_corners):
         #log.info("Gr/Wh corner tuples %s" % pformat(green_white_corners))
@@ -2423,6 +2503,13 @@ div#colormapping {
         self.set_state()
         self.sanity_check_edge_squares()
         self.validate_odd_cube_midge_vs_corner_parity()
+
+        '''
+        for orbit_id in range(self.orbits):
+            if self.width == 4 or self.width == 6 or (self.width == 5 and orbit_id == 0):
+                high_low_edge_per_color = self.get_high_low_per_edge_color(orbit_id)
+                log.info("orbit %d final high_low_edge_per_color\n%s" % (orbit_id, pformat(high_low_edge_per_color)))
+        '''
 
         self.write_cube("Final Cube", True)
         self.print_cube()
