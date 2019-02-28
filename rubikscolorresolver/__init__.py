@@ -17,7 +17,6 @@ import sys
 log = logging.getLogger(__name__)
 
 WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
 
 html_color = {
     'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
@@ -504,7 +503,7 @@ def get_swap_count(listA, listB, debug):
     return swaps
 
 
-def traveling_salesman(squares, alg, endpoints=None):
+def traveling_salesman(squares, alg):
 
     # build a full matrix of color to color distances
     len_squares = len(squares)
@@ -545,7 +544,7 @@ def traveling_salesman(squares, alg, endpoints=None):
             matrix[x][y] = distance
             matrix[y][x] = distance
 
-    path = solve_tsp(matrix, endpoints=endpoints)
+    path = solve_tsp(matrix)
     return [squares[x] for x in path]
 
 
