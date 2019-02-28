@@ -1,13 +1,433 @@
+
+from rubikscolorresolver.cube_444 import highlow_edge_values_444
+from rubikscolorresolver.cube_555 import highlow_edge_values_555
+from rubikscolorresolver.cube_666 import highlow_edge_values_666
+from tsp_solver.greedy import solve_tsp
 from collections import OrderedDict
-from copy import deepcopy, copy
 from itertools import combinations, permutations
+from math import atan2, cos, degrees, exp, radians, sin
 from math import sqrt, ceil
 from pprint import pformat
+from statistics import median, mean
 from json import dumps as json_dumps
 import logging
 import os
+import sys
 
 log = logging.getLogger(__name__)
+
+WHITE = (255, 255, 255)
+
+html_color = {
+    'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
+    'Bu' : {'red' :   0, 'green' :   0, 'blue' : 153},
+    'OR' : {'red' : 255, 'green' : 102, 'blue' : 0},
+    'Rd' : {'red' : 204, 'green' :   0, 'blue' : 0},
+    'Wh' : {'red' : 255, 'green' : 255, 'blue' : 255},
+    'Ye' : {'red' : 255, 'green' : 204, 'blue' : 0},
+}
+
+odd_cube_center_color_permutations = (
+    ('Wh', 'OR', 'Gr', 'Rd', 'Bu', 'Ye'),
+    ('Wh', 'Gr', 'Rd', 'Bu', 'OR', 'Ye'),
+    ('Wh', 'Bu', 'OR', 'Gr', 'Rd', 'Ye'),
+    ('Wh', 'Rd', 'Bu', 'OR', 'Gr', 'Ye'),
+
+    ('Ye', 'Bu', 'Rd', 'Gr', 'OR', 'Wh'),
+    ('Ye', 'Gr', 'OR', 'Bu', 'Rd', 'Wh'),
+    ('Ye', 'Rd', 'Gr', 'OR', 'Bu', 'Wh'),
+    ('Ye', 'OR', 'Bu', 'Rd', 'Gr', 'Wh'),
+
+    ('OR', 'Ye', 'Gr', 'Wh', 'Bu', 'Rd'),
+    ('OR', 'Wh', 'Bu', 'Ye', 'Gr', 'Rd'),
+    ('OR', 'Gr', 'Wh', 'Bu', 'Ye', 'Rd'),
+    ('OR', 'Bu', 'Ye', 'Gr', 'Wh', 'Rd'),
+
+    ('Gr', 'Ye', 'Rd', 'Wh', 'OR', 'Bu'),
+    ('Gr', 'Wh', 'OR', 'Ye', 'Rd', 'Bu'),
+    ('Gr', 'Rd', 'Wh', 'OR', 'Ye', 'Bu'),
+    ('Gr', 'OR', 'Ye', 'Rd', 'Wh', 'Bu'),
+
+    ('Rd', 'Ye', 'Bu', 'Wh', 'Gr', 'OR'),
+    ('Rd', 'Wh', 'Gr', 'Ye', 'Bu', 'OR'),
+    ('Rd', 'Bu', 'Wh', 'Gr', 'Ye', 'OR'),
+    ('Rd', 'Gr', 'Ye', 'Bu', 'Wh', 'OR'),
+
+    ('Bu', 'Wh', 'Rd', 'Ye', 'OR', 'Gr'),
+    ('Bu', 'Ye', 'OR', 'Wh', 'Rd', 'Gr'),
+    ('Bu', 'Rd', 'Ye', 'OR', 'Wh', 'Gr'),
+    ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
+)
+
+edge_color_pair_map = {
+
+    # Up (white)
+    "Gr/Wh" : "Gr/Wh",
+    "Wh/Gr" : "Gr/Wh",
+
+    "Bu/Wh" : "Bu/Wh",
+    "Wh/Bu" : "Bu/Wh",
+
+    "OR/Wh" : "OR/Wh",
+    "Wh/OR" : "OR/Wh",
+
+    "Rd/Wh" : "Rd/Wh",
+    "Wh/Rd" : "Rd/Wh",
+
+    # Left (orange)
+    "Gr/OR" : "Gr/OR",
+    "OR/Gr" : "Gr/OR",
+
+    "Bu/OR" : "Bu/OR",
+    "OR/Bu" : "Bu/OR",
+
+    # Right (red)
+    "Gr/Rd" : "Gr/Rd",
+    "Rd/Gr" : "Gr/Rd",
+
+    "Bu/Rd" : "Bu/Rd",
+    "Rd/Bu" : "Bu/Rd",
+
+    # Down (yellow)
+    "Gr/Ye" : "Gr/Ye",
+    "Ye/Gr" : "Gr/Ye",
+
+    "Bu/Ye" : "Bu/Ye",
+    "Ye/Bu" : "Bu/Ye",
+
+    "OR/Ye" : "OR/Ye",
+    "Ye/OR" : "OR/Ye",
+
+    "Rd/Ye" : "Rd/Ye",
+    "Ye/Rd" : "Rd/Ye",
+}
+
+corner_tuples = {
+    2 : (
+        (1, 5, 18),
+        (2, 17, 14),
+        (3, 9, 6),
+        (4, 13, 10),
+        (21, 8, 11),
+        (22, 12, 15),
+        (23, 20, 7),
+        (24, 16, 19),
+    ),
+    3 : (
+        (1, 10, 39),
+        (3, 37, 30),
+        (7, 19, 12),
+        (9, 28, 21),
+        (46, 18, 25),
+        (48, 27, 34),
+        (52, 45, 16),
+        (54, 36, 43),
+    ),
+    4 : (
+        (1, 17, 68),
+        (4, 65, 52),
+        (13, 33, 20),
+        (16, 49, 36),
+        (81, 32, 45),
+        (84, 48, 61),
+        (93, 80, 29),
+        (96, 64, 77),
+    ),
+    5 : (
+        (1, 26, 105),
+        (5, 101, 80),
+        (21, 51, 30),
+        (25, 76, 55),
+        (126, 50, 71),
+        (130, 75, 96),
+        (146, 125, 46),
+        (150, 100, 121),
+    ),
+    6 : (
+        (1, 37, 150),
+        (6, 145, 114),
+        (31, 73, 42),
+        (36, 109, 78),
+        (181, 72, 103),
+        (186, 108, 139),
+        (211, 180, 67),
+        (216, 144, 175 ),
+    ),
+    7 : (
+        (1, 50, 203),
+        (7, 197, 154),
+        (43, 99, 56),
+        (49, 148, 105),
+        (246, 98, 141),
+        (252, 147, 190),
+        (288, 245, 92),
+        (294, 196, 239),
+    ),
+}
+
+edge_orbit_id = {
+    3: {
+        2: 0, 4: 0, 6: 0, 8: 0, # Upper
+        11: 0, 13: 0, 15: 0, 17: 0, # Left
+        20: 0, 22: 0, 24: 0, 26: 0, # Front
+        29: 0, 31: 0, 33: 0, 35: 0, # Right
+        38: 0, 40: 0, 42: 0, 44: 0, # Back
+        47: 0, 49: 0, 51: 0, 53: 0, # Down
+    },
+    4: {
+        2: 0, 3: 0, 5: 0, 9: 0, 8: 0, 12: 0, 14: 0, 15: 0, # Upper
+        18: 0, 19: 0, 21: 0, 25: 0, 24: 0, 28: 0, 30: 0, 31: 0, # Left
+        34: 0, 35: 0, 37: 0, 41: 0, 40: 0, 44: 0, 46: 0, 47: 0, # Front
+        50: 0, 51: 0, 53: 0, 57: 0, 56: 0, 60: 0, 62: 0, 63: 0, # Right
+        66: 0, 67: 0, 69: 0, 73: 0, 72: 0, 76: 0, 78: 0, 79: 0, # Back
+        82: 0, 83: 0, 85: 0, 89: 0, 88: 0, 92: 0, 94: 0, 95: 0, # Down
+    },
+    5: {
+        2: 0, 3: 1, 4: 0, 6: 0, 11: 1, 16: 0, 10: 0, 15: 1, 20: 0, 22: 0, 23: 1, 24: 0, # Upper
+        27: 0, 28: 1, 29: 0, 31: 0, 36: 1, 41: 0, 35: 0, 40: 1, 45: 0, 47: 0, 48: 1, 49: 0, # Left
+        52: 0, 53: 1, 54: 0, 56: 0, 61: 1, 66: 0, 60: 0, 65: 1, 70: 0, 72: 0, 73: 1, 74: 0, # Front
+        77: 0, 78: 1, 79: 0, 81: 0, 86: 1, 91: 0, 85: 0, 90: 1, 95: 0, 97: 0, 98: 1, 99: 0, # Right
+        102: 0, 103: 1, 104: 0, 106: 0, 111: 1, 116: 0, 110: 0, 115: 1, 120: 0, 122: 0, 123: 1, 124: 0, # Back
+        127: 0, 128: 1, 129: 0, 131: 0, 136: 1, 141: 0, 135: 0, 140: 1, 145: 0, 147: 0, 148: 1, 149: 0, # Down
+    },
+    6: {
+        # orbit 0
+        2: 0, 5: 0, 7: 0, 25: 0, 12: 0, 30: 0, 32: 0, 35: 0, # Upper
+        38: 0, 41: 0, 43: 0, 61: 0, 48: 0, 66: 0, 68: 0, 71: 0, # Left
+        74: 0, 77: 0, 79: 0, 97: 0, 84: 0, 102: 0, 104: 0, 107: 0, # Front
+        110: 0, 113: 0, 115: 0, 133: 0, 120: 0, 138: 0, 140: 0, 143: 0, # Right
+        146: 0, 149: 0, 151: 0, 169: 0, 156: 0, 174: 0, 176: 0, 179: 0, # Back
+        182: 0, 185: 0, 187: 0, 205: 0, 192: 0, 210: 0, 212: 0, 215: 0, # Down
+
+        # orbit 1
+        3: 1, 4: 1, 13: 1, 19: 1, 18: 1, 24: 1, 33: 1, 34: 1, # Upper
+        39: 1, 40: 1, 49: 1, 55: 1, 54: 1, 60: 1, 69: 1, 70: 1, # Left
+        75: 1, 76: 1, 85: 1, 91: 1, 90: 1, 96: 1, 105: 1, 106: 1, # Front
+        111: 1, 112: 1, 121: 1, 127: 1, 126: 1, 132: 1, 141: 1, 142: 1, # Right
+        147: 1, 148: 1, 157: 1, 163: 1, 162: 1, 168: 1, 177: 1, 178: 1, # Back
+        183: 1, 184: 1, 193: 1, 199: 1, 198: 1, 204: 1, 213: 1, 214: 1, # Down
+    },
+    7: {
+        # orbit 0
+        2: 0, 6: 0, 8: 0, 14: 0, 36: 0, 42: 0, 44: 0, 48: 0, # Upper
+        51: 0, 55: 0, 57: 0, 63: 0, 85: 0, 91: 0, 93: 0, 97: 0, # Left
+        100: 0, 104: 0, 106: 0, 112: 0, 134: 0, 140: 0, 142: 0, 146: 0, # Front
+        149: 0, 153: 0, 155: 0, 161: 0, 183: 0, 189: 0, 191: 0, 195: 0, # Right
+        198: 0, 202: 0, 204: 0, 210: 0, 232: 0, 238: 0, 240: 0, 244: 0, # Back
+        247: 0, 251: 0, 253: 0, 259: 0, 281: 0, 287: 0, 289: 0, 293: 0, # Down
+
+        # orbit 1
+        3: 1, 5: 1, 15: 1, 21: 1, 29: 1, 35: 1, 45: 1, 47: 1, # Upper
+        52: 1, 54: 1, 64: 1, 70: 1, 78: 1, 84: 1, 94: 1, 96: 1, # Left
+        101: 1, 103: 1, 113: 1, 119: 1, 127: 1, 133: 1, 143: 1, 145: 1, # Front
+        150: 1, 152: 1, 162: 1, 168: 1, 176: 1, 182: 1, 192: 1, 194: 1, # Right
+        199: 1, 201: 1, 211: 1, 217: 1, 225: 1, 231: 1, 241: 1, 243: 1, # Back
+        248: 1, 250: 1, 260: 1, 266: 1, 274: 1, 280: 1, 290: 1, 292: 1, # Down
+
+        # orbit 2
+        4: 2, 22: 2, 28: 2, 46: 2, # Upper
+        53: 2, 71: 2, 77: 2, 95: 2, # Left
+        102: 2, 120: 2, 126: 2, 144: 2, # Front
+        151: 2, 169: 2, 175: 2, 193: 2, # Right
+        200: 2, 218: 2, 224: 2, 242: 2, # Back
+        249: 2, 267: 2, 273: 2, 291: 2, # Down
+    }
+}
+
+edge_orbit_wing_pairs = {
+    3 : (
+        # orbit 0
+        ((2, 38), (4, 11), (6, 29), (8, 20),
+         (13, 42), (15, 22),
+         (31, 24), (33, 40),
+         (47, 26), (49, 17), (51, 35), (53, 44)
+        ),
+    ),
+
+    4 : (
+        # orbit 0
+        ((2, 67), (3, 66), (5, 18), (9, 19), (8, 51), (12, 50), (14, 34), (15, 35),
+         (21, 72), (25, 76), (24, 37), (28, 41),
+         (53, 40), (57, 44), (56, 69), (60, 73),
+         (82, 46), (83, 47), (85, 31), (89, 30), (88, 62), (92, 63), (94, 79), (95, 78)
+        ),
+    ),
+
+    5 : (
+        # orbit 0
+        ((2, 104), (4, 102), (6, 27), (16, 29), (10, 79), (20, 77), (22, 52), (24, 54),
+         (31, 110), (41, 120), (35, 56), (45, 66),
+         (81, 60), (91, 70), (85, 106), (95, 116),
+         (72, 127), (74, 129), (131, 49), (141, 47), (135, 97), (145, 99), (147, 124), (149, 122)
+        ),
+
+        # orbit 1
+        ((3, 103), (11, 28), (15, 78), (23, 53),
+         (36, 115), (40, 61),
+         (86, 65), (90, 111),
+         (128, 73), (136, 48), (140, 98), (148, 123)
+        ),
+    ),
+
+    6 : (
+        # orbit 0
+        ((2, 149), (5, 146), (7, 38), (25, 41), (12, 113), (30, 110), (32, 74), (35, 77),
+         (43, 156), (61, 174), (48, 79), (66, 97),
+         (115, 84), (133, 102), (120, 151), (138, 169),
+         (182, 104), (185, 107), (187, 71), (205, 68), (192, 140), (210, 143), (212, 179), (215, 176),
+        ),
+
+        # orbit 1
+        ((3, 148), (4, 147), (13, 39), (19, 40), (18, 112), (24, 111), (33, 75), (34, 76),
+         (49, 162), (55, 168), (54, 85), (60, 91),
+         (90, 121), (96, 127), (126, 157), (132, 163),
+         (183, 105), (184, 106), (193, 70), (199, 69), (198, 141), (204, 142), (213, 178), (214, 177),
+        ),
+    ),
+
+    7 : (
+        # orbit 0
+        ((2, 202), (6, 198), (14, 153), (42, 149), (48, 104), (44, 100), (36, 55), (8, 51),  # Upper
+         (63, 106), (91, 134), (85, 238), (57, 210), # Left
+         (161, 204), (189, 232), (183, 140), (155, 112), # Right
+         (247, 142), (251, 146), (259, 191), (287, 195), (293, 240), (289, 244), (281, 93), (253, 97), # Down
+        ),
+
+        # orbit 1
+        ((3, 201), (5, 199), (21, 152), (35, 150), (47, 103), (45, 101), (29, 54), (15, 52), # Upper
+         (70, 113), (84, 127), (78, 231), (64, 217), # Left
+         (168, 211), (182, 225), (176, 133), (162, 119), # Right
+         (248, 143), (250, 145), (266, 192), (280, 194), (292, 241), (290, 243), (274, 94), (260, 96), # Down
+        ),
+
+        # orbit 2
+        ((4, 200), (28, 151), (46, 102), (22, 53), # Upper
+         (77, 120), (71, 224), # Left
+         (175, 218), (169, 126), # Right
+         (249, 144), (273, 193), (291, 242), (267, 95), # Down
+        ),
+    ),
+}
+
+center_groups = {
+    3: (
+        ("centers", (5, 14, 23, 32, 41, 50)),
+    ),
+    4: (
+        ("centers", (
+            6, 7, 10, 11, # Upper
+            22, 23, 26, 27, # Left
+            38, 39, 42, 43, # Front
+            54, 55, 58, 59, # Right
+            70, 71, 74, 75, # Back
+            86, 87, 90, 91, # Down
+        )),
+    ),
+    5: (
+        ("centers", (13, 38, 63, 88, 113, 138)),
+        ("x-centers", (
+            7, 9, 13, 17, 19, # Upper
+            32, 34, 38, 42, 44, # Left
+            57, 59, 63, 67, 69, # Front
+            82, 84, 88, 92, 94, # Right
+            107, 109, 113, 117, 119, # Back
+            132, 134, 138, 142, 144, # Down
+        )),
+        ("t-centers", (
+            8, 12, 13, 14, 18, # Upper
+            33, 37, 38, 39, 43, # Left
+            58, 62, 63, 64, 68, # Front
+            83, 87, 88, 89, 93, # Right
+            108, 112, 113, 114, 118, # Back
+            133, 137, 138, 139, 143, # Down
+        )),
+    ),
+    6: (
+        ("inner x-centers", (
+            15, 16, 21, 22, # Upper
+            51, 52, 57, 58, # Left
+            87, 88, 93, 94, # Front
+            123, 124, 129, 130, # Right
+            159, 160, 165, 166, # Back
+            195, 196, 201, 202, # Down
+        )),
+        ("outer x-centers", (
+            8, 11, 26, 29, # Upper
+            44, 47, 62, 65, # Left
+            80, 83, 98, 101, # Front
+            116, 119, 134, 137, # Right
+            152, 155, 170, 173, # Back
+            188, 191, 206, 209, # Down
+        )),
+        ("left centers (oblique edge)", (
+            9, 17, 28, 20, # Upper
+            45, 53, 64, 56, # Left
+            81, 89, 100, 92, # Front
+            117, 125, 136, 128, # Right
+            153, 161, 172, 164, # Back
+            189, 197, 208, 200, # Down
+        )),
+        ("right centers (oblique edges)", (
+            10, 23, 27, 14, # Upper
+            46, 59, 63, 50, # Left
+            82, 95, 99, 86, # Front
+            118, 131, 135, 122, # Right
+            154, 167, 171, 158, # Back
+            190, 203, 207, 194, # Down
+        )),
+    ),
+    7: (
+        ("centers", (25, 74, 123, 172, 221, 270)),
+        ("inside-x-centers", (
+            17, 19, 31, 33, # Upper
+            66, 68, 80, 82, # Left
+            115, 117, 129, 131, # Front
+            164, 166, 178, 180, # Right
+            213, 215, 227, 229, # Back
+            262, 264, 276, 278, # Down
+        )),
+        ("inside-t-centers", (
+            18, 24, 26, 32, # Upper
+            67, 73, 75, 81, # Left
+            116, 122, 124, 130, # Front
+            165, 171, 173, 179, # Right
+            214, 220, 222, 228, # Back
+            263, 269, 271, 277, # Down
+        )),
+        ("outside-x-centers", (
+            9, 13, 37, 41, # Upper
+            58, 62, 86, 90, # Left
+            107, 111, 135, 139, # Front
+            156, 160, 184, 188, # Right
+            205, 209, 233, 237, # Back
+            254, 258, 282, 286, # Down
+        )),
+        ("outside-t-centers", (
+            11, 23, 27, 39, # Upper
+            60, 72, 76, 88, # Left
+            109, 121, 125, 137, # Front
+            158, 170, 174, 186, # Right
+            207, 219, 223, 235, # Back
+            256, 268, 272, 284, # Down
+        )),
+        ("left-oblique", (
+            10, 20, 40, 30, # Upper
+            59, 69, 89, 79, # Left
+            108, 118, 138, 128, # Front
+            157, 167, 187, 177, # Right
+            206, 216, 236, 226, # Back
+            255, 265, 285, 275, # Down
+        )),
+        ("right-oblique", (
+            12, 34, 38, 16, # Upper
+            61, 83, 87, 65, # Left
+            110, 132, 136, 114, # Front
+            159, 181, 185, 163, # Right
+            208, 230, 234, 212, # Back
+            257, 279, 283, 261, # Down
+        )),
+    )
+}
 
 SIDES_COUNT = 6
 HTML_DIRECTORY = '/tmp/rubiks-color-resolver/'
@@ -23,9 +443,6 @@ def get_euclidean_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    # I experiment with this sometimes
-    # return delta_e_cie2000(lab1, lab2)
-
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
@@ -86,235 +503,49 @@ def get_swap_count(listA, listB, debug):
     return swaps
 
 
-class ClusterSquare(object):
+def traveling_salesman(squares, alg):
 
-    def __init__(self, index, rgb):
-        self.index = index
-        self.rgb = rgb
-        self.lab = rgb2lab(rgb)
-        #self.lab_official = rgb_to_labcolor(rgb[0], rgb[1], rgb[2])
+    # build a full matrix of color to color distances
+    len_squares = len(squares)
+    matrix = [[0 for i in range(len_squares)] for j in range(len_squares)]
 
-    def __str__(self):
-        if self.index:
-            return str(self.index)
-        else:
-            return str(self.rgb)
+    for x in range(len_squares):
+        x_square = squares[x]
+        (x_red, x_green, x_blue) = x_square.rgb
+        #x_lab = rgb2lab((x_red, x_green, x_blue))
+        x_lab = x_square.lab
 
-    def __lt__(self, other):
-        return self.index < other.index
+        for y in range(len_squares):
 
+            if x == y:
+                matrix[x][y] = 0
+                matrix[y][x] = 0
+                continue
 
-class Cluster(object):
+            if matrix[x][y] or matrix[y][x]:
+                continue
 
-    def __init__(self, anchor):
-        self.anchor = anchor
-        self.members = []
-        self.empty_count = 0
+            y_square = squares[y]
+            (y_red, y_green, y_blue) = y_square.rgb
+            #y_lab = rgb2lab((y_red, y_green, y_blue))
+            y_lab = y_square.lab
 
-    def __str__(self):
-        return "cluster %s" % self.anchor
+            if alg == "cie2000":
+                distance_xy = delta_e_cie2000(x_lab, y_lab)
+                distance_yx = delta_e_cie2000(y_lab, x_lab)
+                distance = max(distance_xy, distance_yx)
 
-    def __lt__(self, other):
-        return self.anchor.index < other.anchor.index
+            elif alg == "euclidean":
+                distance = get_euclidean_lab_distance(x_lab, y_lab)
 
-    def calculate_distances(self, data_points, use_sort):
-        self.distances = []
+            else:
+                raise Exception("Implement {}".format(alg))
 
-        for square in data_points:
-            distance_lab_euclidean = get_euclidean_lab_distance(square.lab, self.anchor.lab)
-            self.distances.append((distance_lab_euclidean, square))
+            matrix[x][y] = distance
+            matrix[y][x] = distance
 
-        if use_sort:
-            self.distances = sorted(self.distances)
-
-
-def assign_points(desc, cube, data_points, anchors, squares_per_side):
-    """
-    For each anchor color find the squares_per_side-1 entries in data_points with the lowest distance
-    """
-    clusters = []
-    all_distances = []
-
-    for anchor in anchors:
-        cluster = Cluster(anchor)
-        cluster.calculate_distances(data_points, True)
-        clusters.append(cluster)
-
-        for (distance_2000, square) in cluster.distances:
-            all_distances.append((distance_2000, square, cluster))
-
-    all_distances = sorted(all_distances)
-    used = []
-
-    # Assign the anchor squares as the initial members
-    for cluster in clusters:
-        log.info("%s %s: anchor member %s" % (desc, cluster, cluster.anchor))
-        cluster.members.append(cluster.anchor)
-        used.append(cluster.anchor)
-
-    # First pass, assign squares to clusters, lowest distance first until the cluster has squares_per_side entries
-    for (distance_2000, square, cluster) in all_distances:
-        if len(cluster.members) < squares_per_side and square not in used:
-            log.info("%s %s: next member %s with cie2000 %d" % (desc, cluster, square, distance_2000))
-            cluster.members.append(square)
-            used.append(square)
-
-    # Second pass, see if swapping members between two clusters lowers total
-    # color distance. I originally only did this for orange vs. red but it is
-    # also useful for yellow vs. white and blue vs. green.  Anyway, that is
-    # why all of the variable names below are orange/red.
-    for (orange_color_name, red_color_name) in (('OR', 'Rd'), ('Ye', 'Wh'), ('Bu', 'Gr')):
-        # Find the orange and red clusters
-        orange_cluster = None
-        red_cluster = None
-
-        for cluster in clusters:
-            square = cube.get_square(cluster.anchor.index)
-            #log.info("%s %s anchor %s color %s %s" % (desc, cluster, square, square.color, square.color_name))
-
-            if square.color_name == orange_color_name:
-                orange_cluster = cluster
-            elif square.color_name == red_color_name:
-                red_cluster = cluster
-
-        if orange_cluster and red_cluster:
-            # Build a list of the non-anchor squares in the orange/red clusters
-            non_anchor_orange_red = []
-            for member in orange_cluster.members[1:]:
-                non_anchor_orange_red.append(member)
-
-            for member in red_cluster.members[1:]:
-                non_anchor_orange_red.append(member)
-
-            # Now try all combinations of assigning those squares to the orange/red clusters
-            # Use the combination that results in the lowest color distance
-            min_euclidean_distance = None
-            min_distance_orange_combo = None
-
-            for combo in combinations(non_anchor_orange_red, int(len(non_anchor_orange_red)/2)):
-                total_euclidean_distance = 0
-
-                for member in combo:
-                    total_euclidean_distance += get_euclidean_lab_distance(orange_cluster.anchor.lab, member.lab)
-
-                for member in non_anchor_orange_red:
-                    if member not in combo:
-                        total_euclidean_distance += get_euclidean_lab_distance(red_cluster.anchor.lab, member.lab)
-
-                if min_euclidean_distance is None or total_euclidean_distance < min_euclidean_distance:
-                    min_euclidean_distance = total_euclidean_distance
-                    min_distance_orange_combo = combo
-
-            # Now apply the members to oragne and red to get the minimum color distance
-            for (index, member) in enumerate(min_distance_orange_combo):
-                orange_cluster.members[index+1] = member
-
-            index = 0
-            for member in non_anchor_orange_red:
-                if member not in min_distance_orange_combo:
-                    red_cluster.members[index+1] = member
-                    index += 1
-
-    # Build a 2D list to return
-    assignments = []
-    for cluster in clusters:
-        assigments_for_cluster = []
-        for cluster_square in cluster.members:
-            assigments_for_cluster.append(cluster_square)
-        assignments.append(assigments_for_cluster)
-    return assignments
-
-
-def kmeans_sort_colors_static_anchors(desc, cube, colors, buckets_count=SIDES_COUNT):
-    """
-    colors is an OrderedDict where the key is the square index and the value a RGB tuple
-    Started from https://github.com/stuntgoat/kmeans/blob/master/kmeans.py
-    """
-    dataset = []
-    anchors = []
-    squares_per_side = int(len(colors.keys())/buckets_count)
-
-    for (index, (square_index, rgb)) in enumerate(colors.items()):
-        square = ClusterSquare(square_index, rgb)
-        dataset.append(square)
-
-        if index < buckets_count:
-            anchors.append(square)
-
-    return assign_points(desc, cube, dataset, anchors, squares_per_side)
-
-
-def get_cube_layout(size):
-    """
-    Example: size is 3, return the following string:
-
-              01 02 03
-              04 05 06
-              07 08 09
-
-    10 11 12  19 20 21  28 29 30  37 38 39
-    13 14 15  22 23 24  31 32 33  40 41 42
-    16 17 18  25 26 27  34 35 36  43 44 45
-
-              46 47 48
-              49 50 51
-              52 53 54
-    """
-    result = []
-
-    squares = (size * size) * 6
-    square_index = 1
-
-    if squares >= 1000:
-        digits_size = 4
-        digits_format = "%04d "
-    elif squares >= 100:
-        digits_size = 3
-        digits_format = "%03d "
-    else:
-        digits_size = 2
-        digits_format = "%02d "
-
-    indent = ((digits_size * size) + size + 1) * ' '
-    rows = size * 3
-
-    for row in range(1, rows + 1):
-        line = []
-
-        if row <= size:
-            line.append(indent)
-            for col in range(1, size + 1):
-                line.append(digits_format % square_index)
-                square_index += 1
-
-        elif row > rows - size:
-            line.append(indent)
-            for col in range(1, size + 1):
-                line.append(digits_format % square_index)
-                square_index += 1
-
-        else:
-            init_square_index = square_index
-            last_col = size * 4
-            for col in range(1, last_col + 1):
-                line.append(digits_format % square_index)
-
-                if col == last_col:
-                    square_index += 1
-                elif col % size == 0:
-                    square_index += (size * size) - size + 1
-                    line.append(' ')
-                else:
-                    square_index += 1
-
-            if row % size:
-                square_index = init_square_index + size
-
-        result.append(''.join(line))
-
-        if row == size or row == rows - size:
-            result.append('')
-    return '\n'.join(result)
+    path = solve_tsp(matrix)
+    return [squares[x] for x in path]
 
 
 def get_important_square_indexes(size):
@@ -346,70 +577,117 @@ class LabColor(object):
         self.red = red
         self.green = green
         self.blue = blue
-        self.name = None
 
     def __str__(self):
         return ("Lab (%s, %s, %s)" % (self.L, self.a, self.b))
 
+    def __repr__(self):
+        return self.__str__()
+
     def __lt__(self, other):
-        return self.name < other.name
+        if self.L != other.L:
+            return self.L < other.L
+
+        if self.a != other.a:
+            return self.a < other.a
+
+        return self.b < other.b
+
+    def update_rgb(self):
+        """
+        https://github.com/antimatter15/rgb-lab/blob/master/color.js
+        """
+        y = (self.L + 16) / 116
+        x = self.a / 500 + y
+        z = y - self.b / 200
+
+        x = 0.95047 * (x ** 3 if (x**3 > 0.008856) else (x - 16/116) / 7.787)
+        y = 1.00000 * (y ** 3 if (y ** 3 > 0.008856) else (y - 16/116) / 7.787)
+        z = 1.08883 * ( z ** 3 if (z ** 3 > 0.008856) else (z - 16/116) / 7.787)
+
+        r = x *  3.2406 + y * -1.5372 + z * -0.4986
+        g = x * -0.9689 + y *  1.8758 + z *  0.0415
+        b = x *  0.0557 + y * -0.2040 + z *  1.0570
+
+        r = (1.055 * r ** (1/2.4) - 0.055) if (r > 0.0031308) else 12.92 * r
+        g = (1.055 * g ** (1/2.4) - 0.055) if (g > 0.0031308) else 12.92 * g
+        b = (1.055 * b ** (1/2.4) - 0.055) if (b > 0.0031308) else 12.92 * b
+
+        self.red = int(max(0, min(1, r)) * 255)
+        self.green = int(max(0, min(1, g)) * 255)
+        self.blue = int(max(0, min(1, b)) * 255)
 
 
 def rgb2lab(inputColor):
-    """
-    http://stackoverflow.com/questions/13405956/convert-an-image-rgb-lab-with-python
-    """
-    RGB = [0, 0, 0]
-    XYZ = [0, 0, 0]
-
-    for (num, value) in enumerate(inputColor):
-        if value > 0.04045:
-            value = pow(((value + 0.055) / 1.055), 2.4)
-        else:
-            value = value / 12.92
-
-        RGB[num] = value * 100.0
-
-    # http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-    # sRGB
-    # 0.4124564  0.3575761  0.1804375
-    # 0.2126729  0.7151522  0.0721750
-    # 0.0193339  0.1191920  0.9503041
-    X = (RGB[0] * 0.4124564) + (RGB[1] * 0.3575761) + (RGB[2] * 0.1804375)
-    Y = (RGB[0] * 0.2126729) + (RGB[1] * 0.7151522) + (RGB[2] * 0.0721750)
-    Z = (RGB[0] * 0.0193339) + (RGB[1] * 0.1191920) + (RGB[2] * 0.9503041)
-
-    XYZ[0] = X / 95.047   # ref_X =  95.047
-    XYZ[1] = Y / 100.0    # ref_Y = 100.000
-    XYZ[2] = Z / 108.883  # ref_Z = 108.883
-
-    for (num, value) in enumerate(XYZ):
-        if value > 0.008856:
-            value = pow(value, (1.0 / 3.0))
-        else:
-            value = (7.787 * value) + (16 / 116.0)
-
-        XYZ[num] = value
-
-    L = (116.0 * XYZ[1]) - 16
-    a = 500.0 * (XYZ[0] - XYZ[1])
-    b = 200.0 * (XYZ[1] - XYZ[2])
-
-    L = round(L, 4)
-    a = round(a, 4)
-    b = round(b, 4)
-
     (red, green, blue) = inputColor
+
+    # XYZ -> Standard-RGB
+    # https://www.easyrgb.com/en/math.php
+    var_R = red / 255
+    var_G = green / 255
+    var_B = blue / 255
+
+    if var_R > 0.04045:
+        var_R = pow(((var_R + 0.055) / 1.055), 2.4)
+    else:
+        var_R = var_R / 12.92
+
+    if var_G > 0.04045:
+        var_G = pow(((var_G + 0.055 ) / 1.055), 2.4)
+    else:
+        var_G = var_G / 12.92
+
+    if var_B > 0.04045:
+        var_B = pow(((var_B + 0.055 ) / 1.055), 2.4)
+    else:
+        var_B = var_B / 12.92
+
+    var_R = var_R * 100
+    var_G = var_G * 100
+    var_B = var_B * 100
+
+    X = var_R * 0.4124 + var_G * 0.3576 + var_B * 0.1805
+    Y = var_R * 0.2126 + var_G * 0.7152 + var_B * 0.0722
+    Z = var_R * 0.0193 + var_G * 0.1192 + var_B * 0.9505
+
+    reference_X = 95.047
+    reference_Y = 100.0
+    reference_Z = 108.883
+
+    # XYZ -> CIE-L*ab
+    # //www.easyrgb.com/en/math.php
+    var_X = X / reference_X
+    var_Y = Y / reference_Y
+    var_Z = Z / reference_Z
+
+    if var_X > 0.008856:
+        var_X = pow(var_X, 1/3)
+    else:
+        var_X = (7.787 * var_X) + (16 / 116)
+
+    if var_Y > 0.008856:
+        var_Y = pow(var_Y, 1/3)
+    else:
+        var_Y = (7.787 * var_Y) + (16 / 116)
+
+    if var_Z > 0.008856:
+        var_Z = pow(var_Z, 1/3)
+    else:
+        var_Z = (7.787 * var_Z) + (16 / 116)
+
+    L = (116 * var_Y) - 16
+    a = 500 * (var_X - var_Y)
+    b = 200 * (var_Y - var_Z)
+    #log.info("RGB ({}, {}, {}), L {}, a {}, b {}".format(red, green, blue, L, a, b))
+
     return LabColor(L, a, b, red, green, blue)
 
 
-    '''
 def delta_e_cie2000(lab1, lab2):
     """
     Ported from this php implementation
     https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
     """
-    from math import atan2, cos, degrees, exp, radians, sin
     l1 = lab1.L
     a1 = lab1.a
     b1 = lab1.b
@@ -473,7 +751,6 @@ def delta_e_cie2000(lab1, lab2):
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
 
     return delta_e
-    '''
 
 
 def hex_to_rgb(rgb_string):
@@ -494,6 +771,50 @@ def hashtag_rgb_to_labcolor(rgb_string):
     return rgb2lab((red, green, blue))
 
 
+def get_row_color_distances(squares, row_baseline_lab):
+    """
+    'colors' is list if (index, (red, green, blue)) tuples
+    'row_baseline_lab' is a list of Lab colors, one for each row of colors
+
+    Return the total distance of the colors in a row vs their baseline
+    """
+    results = []
+    squares_per_row = int(len(squares)/6)
+    count = 0
+    row_index = 0
+    distance = 0
+    baseline_lab = row_baseline_lab[row_index]
+
+    for square in squares:
+        baseline_lab = row_baseline_lab[row_index]
+        distance += get_euclidean_lab_distance(baseline_lab, square.lab)
+        count += 1
+
+        if count % squares_per_row == 0:
+            results.append(int(distance))
+            row_index += 1
+            distance = 0
+
+    return results
+
+
+def get_squares_for_row(squares, target_row_index):
+    results = []
+    squares_per_row = int(len(squares)/6)
+    count = 0
+    row_index = 0
+
+    for square in squares:
+        if row_index == target_row_index:
+            results.append(square)
+        count += 1
+
+        if count % squares_per_row == 0:
+            row_index += 1
+
+    return results
+
+
 class Square(object):
 
     def __init__(self, side, cube, position, red, green, blue):
@@ -504,336 +825,27 @@ class Square(object):
         self.red = red
         self.green = green
         self.blue = blue
-        self.rawcolor = rgb2lab((red, green, blue))
-        self.color = None
+        self.lab = rgb2lab((red, green, blue))
         self.color_name = None
-        self.anchor_square = None
+        self.side_name = None # ULFRBD
 
     def __str__(self):
         return "%s%d" % (self.side, self.position)
 
+    def __repr__(self):
+        return self.__str__()
+
     def __lt__(self, other):
         return self.position < other.position
 
-    def find_closest_match(self, crayon_box, debug=False, set_color=True):
-        cie_data = []
 
-        for (color_name, color_obj) in crayon_box.items():
-            distance = get_euclidean_lab_distance(self.rawcolor, color_obj)
-            cie_data.append((distance, color_name, color_obj))
-        cie_data = sorted(cie_data)
-
-        distance = cie_data[0][0]
-        color_name = cie_data[0][1]
-        color_obj = cie_data[0][2]
-
-        if set_color:
-            self.distance = distance
-            self.color_name = color_name
-            self.color = color_obj
-
-        if debug:
-            log.info("%s is %s" % (self, color_obj))
-
-        return (color_obj, distance)
-
-
-def get_orbit_id(cube_size, edge_index):
-    orbit = None
-
-    if cube_size == 3 or cube_size == 4:
-        orbit = 0
-
-    elif cube_size == 5:
-
-        if edge_index == 0 or edge_index == 2:
-            orbit = 0
-        else:
-            orbit = 1
-
-    elif cube_size == 6:
-
-        if edge_index == 0 or edge_index == 3:
-            orbit = 0
-        else:
-            orbit = 1
-
-    elif cube_size == 7:
-
-        if edge_index == 0 or edge_index == 4:
-            orbit = 0
-        elif edge_index == 1 or edge_index == 3:
-            orbit = 1
-        else:
-            orbit = 2
-
-    else:
-        raise Exception("Add orbit ID support for %dx%dx%d cubes" % (cube_size, cube_size, cube_size))
-
-    return orbit
-
-
-class Edge(object):
-
-    def __init__(self, cube, pos1, pos2, edge_index):
-        self.valid = False
-        self.square1 = cube.get_square(pos1)
-        self.square2 = cube.get_square(pos2)
-        self.cube = cube
-        self.color_distance_cache = {}
-        self.orbit_id = get_orbit_id(self.cube.width, edge_index)
-        self.orbit_index = None
-
-        assert self.square1.position < self.square2.position, "square1 pos %d, square2 pos %d" % (self.square1.position, self.square2.position)
-
-    def __str__(self):
-        result = "%s%d/%s%d(%d/%s) " %\
-            (self.square1.side, self.square1.position,
-             self.square2.side, self.square2.position, self.orbit_id, self.orbit_index)
-
-        if self.square1.color and self.square2.color:
-            result += " %s/%s" % (self.square1.color.name, self.square2.color.name)
-        elif self.square1.color and not self.square2.color:
-            result += " %s/None" % self.square1.color.name
-        elif not self.square1.color and self.square2.color:
-            result += " None/%s" % self.square2.color.name
-
-        return result
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __lt__(self, other):
-        return 0
-
-    def colors_match(self, colorA, colorB):
-        if (colorA in (self.square1.color, self.square2.color) and
-            colorB in (self.square1.color, self.square2.color)):
-            return True
-        return False
-
-    def _get_color_distances(self, colorA, colorB):
-        distanceAB = (get_euclidean_lab_distance(self.square1.rawcolor, colorA) +
-                      get_euclidean_lab_distance(self.square2.rawcolor, colorB))
-
-        distanceBA = (get_euclidean_lab_distance(self.square1.rawcolor, colorB) +
-                      get_euclidean_lab_distance(self.square2.rawcolor, colorA))
-
-        return (distanceAB, distanceBA)
-
-    def color_distance(self, colorA, colorB):
-        """
-        Given two colors, return our total color distance
-        """
-        try:
-            return self.color_distance_cache[(colorA, colorB)]
-        except KeyError:
-            value = min(self._get_color_distances(colorA, colorB))
-            self.color_distance_cache[(colorA, colorB)] = value
-            return value
-
-    def reset_colors(self):
-        self.square1.color = None
-        self.square1.color_name = None
-        self.square2.color = None
-        self.square2.color_name = None
-
-    def update_colors(self, colorA, colorB):
-        (distanceAB, distanceBA) = self._get_color_distances(colorA, colorB)
-
-        if distanceAB < distanceBA:
-            self.square1.color = colorA
-            self.square1.color_name = colorA.name
-            self.square2.color = colorB
-            self.square2.color_name = colorB.name
-        else:
-            self.square1.color = colorB
-            self.square1.color_name = colorB.name
-            self.square2.color = colorA
-            self.square2.color_name = colorA.name
-
-    def reset_orbit_index(self):
-        self.orbit_index = None
-
-    def update_orbit_index(self):
-        """
-        Colors have been assigned, we must now determine if this is a UF0 or a UF1 edge
-        """
-        color_to_side_name = {
-            'Wh' : 'U',
-            'OR' : 'L',
-            'Gr' : 'F',
-            'Rd' : 'R',
-            'Bu' : 'B',
-            'Ye' : 'D'
-        }
-
-        square1_side_name = color_to_side_name[self.square1.color.name]
-        square2_side_name = color_to_side_name[self.square2.color.name]
-
-        if self.cube.width == 2 or self.cube.width == 3:
-            pass
-
-        elif self.cube.width == 4:
-            from rubikscolorresolver.cube_444 import orbit_index_444
-            self.orbit_index = orbit_index_444[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
-
-        elif self.cube.width == 5:
-            from rubikscolorresolver.cube_555 import orbit_index_555
-            self.orbit_index = orbit_index_555[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
-
-        elif self.cube.width == 6:
-            from rubikscolorresolver.cube_666 import orbit_index_666
-            self.orbit_index = orbit_index_666[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
-
-        elif self.cube.width == 7:
-            from rubikscolorresolver.cube_777 import orbit_index_777
-            self.orbit_index = orbit_index_777[(self.square1.position, self.square2.position, square1_side_name, square2_side_name)]
-
-        else:
-            # orbit_index_444, etc were generated via https://github.com/dwalton76/rubiks-cube-NxNxN-solver
-            # If you need to build an orbit_index_XYZ for a larger cube search in "orbit_index_444" in rubikscubennnsolver/__init__.py
-            # for instructions on how to do so.
-            raise Exception("Add update_orbit_index support for %dx%dx%d cubes" % (self.cube.width, self.cube.width, self.cube.width))
-
-    def validate(self):
-
-        if self.square1.color == self.square2.color:
-            self.valid = False
-            log.info("%s is an invalid edge (duplicate colors)" % self)
-        elif ((self.square1.color, self.square2.color) in self.cube.valid_edges or
-              (self.square2.color, self.square1.color) in self.cube.valid_edges):
-            self.valid = True
-        else:
-            self.valid = False
-            log.info("%s is an invalid edge" % self)
-
-
-class Corner(object):
-
-    def __init__(self, cube, pos1, pos2, pos3):
-        self.valid = False
-        self.square1 = cube.get_square(pos1)
-        self.square2 = cube.get_square(pos2)
-        self.square3 = cube.get_square(pos3)
-        self.cube = cube
-        self.color_distance_cache = {}
-
-    def __str__(self):
-        if self.square1.color and self.square2.color and self.square3.color:
-            return "%s%d/%s%d/%s%d %s/%s/%s" %\
-                (self.square1.side, self.square1.position,
-                 self.square2.side, self.square2.position,
-                 self.square3.side, self.square3.position,
-                 self.square1.color.name, self.square2.color.name, self.square3.color.name)
-        else:
-            return "%s%d/%s%d/%s%d" %\
-                (self.square1.side, self.square1.position,
-                 self.square2.side, self.square2.position,
-                 self.square3.side, self.square3.position)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __lt__(self, other):
-        return 0
-
-    def colors_match(self, colorA, colorB, colorC):
-        if (colorA in (self.square1.color, self.square2.color, self.square3.color) and
-            colorB in (self.square1.color, self.square2.color, self.square3.color) and
-            colorC in (self.square1.color, self.square2.color, self.square3.color)):
-            return True
-        return False
-
-    def _get_color_distances(self, colorA, colorB, colorC):
-        distanceABC = (get_euclidean_lab_distance(self.square1.rawcolor, colorA) +
-                       get_euclidean_lab_distance(self.square2.rawcolor, colorB) +
-                       get_euclidean_lab_distance(self.square3.rawcolor, colorC))
-
-        distanceCAB = (get_euclidean_lab_distance(self.square1.rawcolor, colorC) +
-                       get_euclidean_lab_distance(self.square2.rawcolor, colorA) +
-                       get_euclidean_lab_distance(self.square3.rawcolor, colorB))
-
-        distanceBCA = (get_euclidean_lab_distance(self.square1.rawcolor, colorB) +
-                       get_euclidean_lab_distance(self.square2.rawcolor, colorC) +
-                       get_euclidean_lab_distance(self.square3.rawcolor, colorA))
-
-        return (distanceABC, distanceCAB, distanceBCA)
-
-    def color_distance(self, colorA, colorB, colorC):
-        """
-        Given three colors, return our total color distance
-        """
-        try:
-            return self.color_distance_cache[(colorA, colorB, colorC)]
-        except KeyError:
-            value = min(self._get_color_distances(colorA, colorB, colorC))
-            self.color_distance_cache[(colorA, colorB, colorC)] = value
-            return value
-
-    def update_colors(self, colorA, colorB, colorC):
-        (distanceABC, distanceCAB, distanceBCA) = self._get_color_distances(colorA, colorB, colorC)
-        min_distance = min(distanceABC, distanceCAB, distanceBCA)
-
-        #log.debug("%s vs %s/%s/%s, distanceABC %s, distanceCAB %s, distanceBCA %s, min %s" %
-        #            (self, colorA.name, colorB.name, colorC.name,
-        #            distanceABC, distanceCAB, distanceBCA, min_distance))
-
-        if min_distance == distanceABC:
-            self.square1.color = colorA
-            self.square1.color_name = colorA.name
-            self.square2.color = colorB
-            self.square2.color_name = colorB.name
-            self.square3.color = colorC
-            self.square3.color_name = colorC.name
-
-        elif min_distance == distanceCAB:
-            self.square1.color = colorC
-            self.square1.color_name = colorC.name
-            self.square2.color = colorA
-            self.square2.color_name = colorA.name
-            self.square3.color = colorB
-            self.square3.color_name = colorB.name
-
-        elif min_distance == distanceBCA:
-            self.square1.color = colorB
-            self.square1.color_name = colorB.name
-            self.square2.color = colorC
-            self.square2.color_name = colorC.name
-            self.square3.color = colorA
-            self.square3.color_name = colorA.name
-
-        else:
-            raise Exception("We should not be here")
-
-    def validate(self):
-
-        if (self.square1.color == self.square2.color or
-            self.square1.color == self.square3.color or
-                self.square2.color == self.square3.color):
-            self.valid = False
-            log.info("%s is an invalid edge (duplicate colors)" % self)
-        elif ((self.square1.color, self.square2.color, self.square3.color) in self.cube.valid_corners or
-              (self.square1.color, self.square3.color, self.square2.color) in self.cube.valid_corners or
-              (self.square2.color, self.square1.color, self.square3.color) in self.cube.valid_corners or
-              (self.square2.color, self.square3.color, self.square1.color) in self.cube.valid_corners or
-              (self.square3.color, self.square1.color, self.square2.color) in self.cube.valid_corners or
-              (self.square3.color, self.square2.color, self.square1.color) in self.cube.valid_corners):
-            self.valid = True
-        else:
-            self.valid = False
-            log.info("%s (%s, %s, %s) is an invalid corner" %
-                     (self, self.square1.color, self.square2.color, self.square3.color))
-
-
-
-class CubeSide(object):
+class Side(object):
 
     def __init__(self, cube, width, name):
         self.cube = cube
         self.name = name  # U, L, etc
-        self.color = None  # Will be the color of the anchor square
-        self.squares = {}
+        self.color = None
+        self.squares = OrderedDict()
         self.width = width
         self.squares_per_side = width * width
         self.center_squares = []
@@ -904,14 +916,12 @@ class CubeSide(object):
                 for x in range(west_edge + 1, east_edge):
                     self.center_pos.append(x)
 
-        log.info("Side %s, min/max %d/%d, edges %s, corners %s, centers %s" %
-            (self.name, self.min_pos, self.max_pos,
-             pformat(self.edge_pos),
-             pformat(self.corner_pos),
-             pformat(self.center_pos)))
 
     def __str__(self):
-        return self.name
+        return "side-" + self.name
+
+    def __repr__(self):
+        return self.__str__()
 
     def set_square(self, position, red, green, blue):
         self.squares[position] = Square(self, self.cube, position, red, green, blue)
@@ -951,8 +961,11 @@ class RubiksColorSolverGeneric(object):
         self.squares_per_side = self.width * self.width
         self.scan_data = {}
         self.orbits = int(ceil((self.width - 2) / 2.0))
-        self.all_edge_positions = []
         self.state = []
+        self.orange_baseline = None
+        self.red_baseline = None
+        self.white_squares = []
+        self.all_edge_positions = []
 
         if self.width % 2 == 0:
             self.even = True
@@ -970,12 +983,12 @@ class RubiksColorSolverGeneric(object):
         os.chmod(HTML_FILENAME, 0o777)
 
         self.sides = {
-            'U': CubeSide(self, self.width, 'U'),
-            'L': CubeSide(self, self.width, 'L'),
-            'F': CubeSide(self, self.width, 'F'),
-            'R': CubeSide(self, self.width, 'R'),
-            'B': CubeSide(self, self.width, 'B'),
-            'D': CubeSide(self, self.width, 'D')
+            'U': Side(self, self.width, 'U'),
+            'L': Side(self, self.width, 'L'),
+            'F': Side(self, self.width, 'F'),
+            'R': Side(self, self.width, 'R'),
+            'B': Side(self, self.width, 'B'),
+            'D': Side(self, self.width, 'D')
         }
 
         self.sideU = self.sides['U']
@@ -1055,12 +1068,7 @@ class RubiksColorSolverGeneric(object):
             'OR': hashtag_rgb_to_labcolor('#943509'),
             'Bu': hashtag_rgb_to_labcolor('#163967'),
             'Rd': hashtag_rgb_to_labcolor('#680402')
-            #'Gr': hashtag_rgb_to_labcolor('#00FF00'),
-            #'OR': hashtag_rgb_to_labcolor('#ff8c00'),
-            #'Bu': hashtag_rgb_to_labcolor('#0000FF'),
-            #'Rd': hashtag_rgb_to_labcolor('#FF0000')
         }
-        self.crayon_box = deepcopy(self.crayola_colors)
         self.www_header()
 
     def www_header(self):
@@ -1142,20 +1150,128 @@ div#colormapping {
     float: left;
 }
 
-div#anchorsquares {
-    margin-left: 350px;
-}
-
 </style>
 <title>CraneCuber</title>
 </head>
 <body>
 """ % (square_size, square_size, square_size, square_size, square_size, square_size))
 
-    def write_cube(self, desc, cube):
+    def write_colors(self, desc, squares):
+        with open(HTML_FILENAME, 'a') as fh:
+            squares_per_row = int(len(squares)/6)
+            fh.write("<h2>%s</h2>\n" % desc)
+            fh.write("<div class='clear colors'>\n")
+
+            count = 0
+            for square in squares:
+                (red, green, blue) = square.rgb
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (red, green, blue,
+                     red, green, blue,
+                     int(square.lab.L), int(square.lab.a), int(square.lab.b),
+                     square.color_name,
+                     square.position))
+
+                count += 1
+
+                if count % squares_per_row == 0:
+                    fh.write("<br>")
+            fh.write("</div>\n")
+
+    def find_white_squares(self):
+        all_squares = []
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square in side.squares.values():
+                all_squares.append(square)
+
+        sorted_all_squares = traveling_salesman(all_squares, "euclidean")
+        self.write_colors(
+            'finding white colors',
+            sorted_all_squares)
+
+        # There are six "rows" of colors, which row is the closest to pure white?
+        white_lab = rgb2lab(WHITE)
+        row_distances = get_row_color_distances(sorted_all_squares, [white_lab] * 6)
+        log.debug(f"row_distances {row_distances}")
+        min_distance = 99999
+        min_distance_row_index = None
+
+        for (row_index, distance) in enumerate(row_distances):
+            if distance < min_distance:
+                min_distance = distance
+                min_distance_row_index = row_index
+
+        self.white_squares = get_squares_for_row(sorted_all_squares, min_distance_row_index)
+        self.white_squares.sort()
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h2>white squares</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+
+            for square in self.white_squares:
+                (red, green, blue) = square.rgb
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (red, green, blue,
+                     red, green, blue,
+                     int(square.lab.L), int(square.lab.a), int(square.lab.b),
+                     square.color_name,
+                     square.position))
+
+            fh.write("<br>")
+            fh.write("</div>\n")
+
+    def www_footer(self):
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("""
+</body>
+</html>
+""")
+
+    def get_side(self, position):
         """
-        'cube' is a list of (R,G,B) tuples
+        Given a position on the cube return the Side object
+        that contians that position
         """
+        for side in self.sides.values():
+            if position >= side.min_pos and position <= side.max_pos:
+                return side
+        raise Exception("Could not find side for %d" % position)
+
+    def get_square(self, position):
+        side = self.get_side(position)
+        return side.squares[position]
+
+    def enter_scan_data(self, scan_data):
+        self.scan_data = scan_data
+
+        for (position, (red, green, blue)) in sorted(self.scan_data.items()):
+            position = int(position)
+            side = self.get_side(position)
+            side.set_square(position, red, green, blue)
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h1>JSON Input</h1>\n")
+            fh.write("<pre>%s</pre>\n" % json_dumps(self.scan_data))
+
+    def write_cube(self, desc, use_html_colors):
+        # TODO clean this up...should not need the 'cube' var
+        cube = ['dummy',]
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for position in range(side.min_pos, side.max_pos+1):
+                square = side.squares[position]
+
+                if use_html_colors:
+                    red = html_color[square.color_name]['red']
+                    green = html_color[square.color_name]['green']
+                    blue = html_color[square.color_name]['blue']
+                else:
+                    red = square.red
+                    green = square.green
+                    blue = square.blue
+
+                cube.append((red, green, blue, square.color_name))
+
         col = 1
         squares_per_side = self.width * self.width
         min_square = 1
@@ -1172,19 +1288,14 @@ div#anchorsquares {
                     side_index += 1
                     fh.write("<div class='side' id='%s'>\n" % sides[side_index])
 
-                (red, green, blue) = cube[index]
-                #(H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
-                #H = int(H * 360)
-                #S = int(S * 100)
-                #V = int(V * 100)
+                (red, green, blue, color_name) = cube[index]
                 lab = rgb2lab((red, green, blue))
 
-                #fh.write("    <div class='square col%d' title='RGB (%d, %d, %d) HSV (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
-                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s)' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
+                fh.write("    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n" %
                     (col,
                      red, green, blue,
-                     # H, S, V,
-                     lab.L, lab.a, lab.b,
+                     int(lab.L), int(lab.a), int(lab.b),
+                     color_name,
                      red, green, blue,
                      index))
 
@@ -1198,93 +1309,6 @@ div#anchorsquares {
 
                 if col == self.width + 1:
                     col = 1
-
-    def write_colors(self, desc, colors):
-        with open(HTML_FILENAME, 'a') as fh:
-            squares_per_side = int(len(colors)/6)
-            fh.write("<h2>%s</h2>\n" % desc)
-            fh.write("<div class='clear colors'>\n")
-
-            for cluster_square_list in colors:
-                anchor = None
-                total_distance = 0
-
-                for cluster_square in cluster_square_list:
-
-                    # The anchor is always the first one on the list
-                    if anchor is None:
-                        anchor = cluster_square
-                        distance_to_anchor = 0
-                    else:
-                        distance_to_anchor = get_euclidean_lab_distance(cluster_square.lab, anchor.lab)
-
-                    (red, green, blue) = cluster_square.rgb
-
-                    # to use python coloursys convertion we have to rescale to range 0-1
-                    #(H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
-
-                    # rescale H to 360 degrees and S, V to percent of 100%
-                    #H = int(H * 360)
-                    #S = int(S * 100)
-                    #V = int(V * 100)
-                    lab = rgb2lab((red, green, blue))
-
-                    #fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s), Lab (%s, %s, %s) Distance %d'>%d</span>\n" %
-                    fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s) Distance %d'>%d</span>\n" %
-                        (red, green, blue,
-                         red, green, blue,
-                         # H, S, V,
-                         lab.L, lab.a, lab.b,
-                         distance_to_anchor,
-                         cluster_square.index))
-                    total_distance += distance_to_anchor
-
-                fh.write("<span class='square'>%d</span>\n" % total_distance)
-                fh.write("<br>")
-
-            fh.write("</div>\n")
-            log.info('\n\n')
-
-    def www_footer(self):
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write("""
-</body>
-</html>
-""")
-
-    def get_side(self, position):
-        """
-        Given a position on the cube return the CubeSide object
-        that contians that position
-        """
-        for side in self.sides.values():
-            if position >= side.min_pos and position <= side.max_pos:
-                return side
-        raise Exception("Could not find side for %d" % position)
-
-    def get_square(self, position):
-        side = self.get_side(position)
-        return side.squares[position]
-
-    def enter_scan_data(self, scan_data):
-        self.scan_data = scan_data
-        cube = ['dummy',]
-
-        for (position, (red, green, blue)) in sorted(self.scan_data.items()):
-            position = int(position)
-            side = self.get_side(position)
-            side.set_square(position, red, green, blue)
-            cube.append((red, green, blue))
-
-        # write the input to the web page so we can reproduce bugs, etc just from the web page
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write("<h1>JSON Input</h1>\n")
-            fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
-
-        self.write_cube('Input RGB values', cube)
-
-    def print_layout(self):
-        log.info('\n' + get_cube_layout(self.width) + '\n')
 
     def print_cube(self):
         data = []
@@ -1335,27 +1359,273 @@ div#anchorsquares {
 
         log.info("Cube\n\n%s\n" % '\n'.join(output))
 
-    def set_state(self):
+    def contrast_stretch(self):
+        white_reds = []
+        white_greens = []
+        white_blues = []
+        all_squares = []
 
-        # If we've already set the state the return
-        if self.state:
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            side_squares = side.corner_squares + side.center_squares + side.edge_squares
+            for square in side_squares:
+                all_squares.append(square)
+
+        min_input_red = 255
+        min_input_green = 255
+        min_input_blue = 255
+        max_input_red = 0
+        max_input_green = 0
+        max_input_blue = 0
+        darkest_white_red = 255
+        darkest_white_green = 255
+        darkest_white_blue = 255
+
+        for square in all_squares:
+            (red, green, blue) = square.rgb
+
+            if red < min_input_red:
+                min_input_red = red
+
+            if red > max_input_red:
+                max_input_red = red
+
+            if green < min_input_green:
+                min_input_green = green
+
+            if green > max_input_green:
+                max_input_green = green
+
+            if blue < min_input_blue:
+                min_input_blue = blue
+
+            if blue > max_input_blue:
+                max_input_blue = blue
+
+        for square in self.white_squares:
+            (red, green, blue) = square.rgb
+            white_reds.append(red)
+            white_greens.append(green)
+            white_blues.append(blue)
+
+            if red < darkest_white_red:
+                darkest_white_red = red
+
+            if green < darkest_white_green:
+                darkest_white_green = green
+
+            if blue < darkest_white_blue:
+                darkest_white_blue = blue
+
+        log.debug(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
+        log.debug(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
+        log.debug(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
+        min_output_red = 30
+        min_output_green = 30
+        min_output_blue = 30
+        max_output_red = 255
+        max_output_green = 255
+        max_output_blue = 255
+
+        white_reds.sort()
+        white_greens.sort()
+        white_blues.sort()
+        avg_white_red = int(sum(white_reds) / len(white_reds))
+        avg_white_green = int(sum(white_greens) / len(white_greens))
+        avg_white_blue = int(sum(white_blues) / len(white_blues))
+        median_white_red = median(white_reds)
+        median_white_green = median(white_greens)
+        median_white_blue = median(white_blues)
+        log.debug(f"WHITE reds {white_reds},  avg {avg_white_red}, median {median_white_red}")
+        log.debug(f"WHITE greens {white_greens},  avg {avg_white_green}, median {median_white_green}")
+        log.debug(f"WHITE blues {white_blues},  avg {avg_white_blue}, median {median_white_blue}")
+
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h2>Mean white square</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+            lab = rgb2lab((avg_white_red, avg_white_green, avg_white_blue))
+
+            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                (avg_white_red, avg_white_green, avg_white_blue,
+                 avg_white_red, avg_white_green, avg_white_blue,
+                 int(lab.L), int(lab.a), int(lab.b),
+                 'Wh',
+                 0))
+            fh.write("<br>")
+            fh.write("</div>\n")
+
+        max_input_red = avg_white_red
+        max_input_green = avg_white_green
+        max_input_blue = avg_white_blue
+        #max_input_red = median_white_red
+        #max_input_green = median_white_green
+        #max_input_blue = median_white_blue
+        #max_input_red = darkest_white_red
+        #max_input_green = darkest_white_green
+        #max_input_blue = darkest_white_blue
+
+        for square in all_squares:
+            # https://pythontic.com/image-processing/pillow/contrast%20stretching
+            # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
+            new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
+            new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
+            new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
+
+            #new_red = int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red))
+            #new_green = int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green))
+            #new_blue = int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue))
+
+            new_red = min(max_output_red, new_red)
+            new_green = min(max_output_green, new_green)
+            new_blue = min(max_output_blue, new_blue)
+            delta_to_add = 0
+
+            if new_red < min_output_red:
+                delta_to_add = max(delta_to_add, min_output_red - new_red)
+
+            if new_green < min_output_green:
+                delta_to_add = max(delta_to_add, min_output_green - new_green)
+
+            if new_blue < min_output_blue:
+                delta_to_add = max(delta_to_add, min_output_blue - new_blue)
+
+            # Add enough so that red, green, and blue are all >= min_output_red, etc
+            if delta_to_add:
+                new_red += delta_to_add
+                new_green += delta_to_add
+                new_blue += delta_to_add
+
+            new_red = min(max_output_red, new_red)
+            new_green = min(max_output_green, new_green)
+            new_blue = min(max_output_blue, new_blue)
+
+            square.rgb = (new_red, new_green, new_blue)
+            square.red = new_red
+            square.green = new_green
+            square.blue = new_blue
+            square.lab = rgb2lab((new_red, new_green, new_blue))
+
+    def find_orange_and_red_baselines(self):
+
+        # The ORANGE/RED baselines are only used for sanity checking edges
+        # so we can return here for 2x2x2
+        if self.width == 2:
             return
+        elif self.width in (3, 4, 5, 7):
+            centers_for_red_orange_baseline = "centers"
+        elif self.width == 6:
+            centers_for_red_orange_baseline = "inner x-centers"
+        else:
+            raise Exception("What centers to use for orange/red baseline?")
+
+        for (desc, centers_squares) in center_groups[self.width]:
+            if desc != centers_for_red_orange_baseline:
+                continue
+
+            orange_reds = []
+            orange_greens = []
+            orange_blues = []
+            red_reds = []
+            red_greens = []
+            red_blues = []
+
+            for index in centers_squares:
+                square = self.get_square(index)
+
+                if square.color_name == "OR":
+                    orange_reds.append(square.red)
+                    orange_greens.append(square.green)
+                    orange_blues.append(square.blue)
+
+                elif square.color_name == "Rd":
+                    red_reds.append(square.red)
+                    red_greens.append(square.green)
+                    red_blues.append(square.blue)
+
+            new_orange_red = int(mean(orange_reds))
+            new_orange_green = int(mean(orange_greens))
+            new_orange_blue = int(mean(orange_blues))
+            self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
+
+            new_red_red = int(mean(red_reds))
+            new_red_green = int(mean(red_greens))
+            new_red_blue = int(mean(red_blues))
+            self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
+
+            log.debug("orange baseline: %s" % self.orange_baseline)
+            log.debug("red baseline: %s" % self.red_baseline)
+
+            with open(HTML_FILENAME, 'a') as fh:
+                fh.write("<h2>ORANGE baseline</h2>\n")
+                fh.write("<div class='clear colors'>\n")
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (new_orange_red, new_orange_green, new_orange_blue,
+                     new_orange_red, new_orange_green, new_orange_blue,
+                     int(self.orange_baseline.L), int(self.orange_baseline.a), int(self.orange_baseline.b),
+                     'OR',
+                     0))
+                fh.write("<br>")
+                fh.write("</div>\n")
+
+                fh.write("<h2>RED baseline</h2>\n")
+                fh.write("<div class='clear colors'>\n")
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                    (new_red_red, new_red_green, new_red_blue,
+                     new_red_red, new_red_green, new_red_blue,
+                     int(self.red_baseline.L), int(self.red_baseline.a), int(self.red_baseline.b),
+                     'Rd',
+                     0))
+                fh.write("<br>")
+                fh.write("</div>\n")
+
+    def set_state(self):
+        self.state = []
 
         if self.sideU.mid_pos is not None:
-            color_to_side_name = {}
 
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                mid_square = side.squares[side.mid_pos]
+            # Assign a color name to each center square. Compute
+            # which naming scheme results in the least total color distance in
+            # terms of the assigned color name vs. the colors in crayola_colors.
+            min_distance = None
+            min_distance_permutation = None
 
-                if mid_square.color_name in color_to_side_name:
-                    log.info("color_to_side_name:\n%s" % pformat(color_to_side_name))
-                    raise Exception("side %s with color %s, %s is already in color_to_side_name" %\
-                        (side, mid_square.color_name, mid_square.color_name))
-                color_to_side_name[mid_square.color_name] = side.name
+            # Build a list of all center squares
+            center_squares = []
+            for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+                square = side.squares[side.mid_pos]
+                center_squares.append(square)
+            desc = "middle center"
+            #log.info("center_squares: %s" % pformat(center_squares))
+
+            for permutation in odd_cube_center_color_permutations:
+                distance = 0
+
+                for (index, center_square) in enumerate(center_squares):
+                    color_name = permutation[index]
+                    color_obj = self.crayola_colors[color_name]
+                    distance += get_euclidean_lab_distance(center_square.lab, color_obj)
+
+                if min_distance is None or distance < min_distance:
+                    min_distance = distance
+                    min_distance_permutation = permutation
+                    '''
+                    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
+                else:
+                    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+                    '''
+
+            self.color_to_side_name = {
+                min_distance_permutation[0] : 'U',
+                min_distance_permutation[1] : 'L',
+                min_distance_permutation[2] : 'F',
+                min_distance_permutation[3] : 'R',
+                min_distance_permutation[4] : 'B',
+                min_distance_permutation[5] : 'D'
+            }
+
+            #log.info("{} FINAL PERMUTATION {}".format(desc, min_distance_permutation))
 
         else:
-            color_to_side_name = {
+            self.color_to_side_name = {
                 'Wh' : 'U',
                 'OR' : 'L',
                 'Gr' : 'F',
@@ -1364,22 +1634,19 @@ div#anchorsquares {
                 'Ye' : 'D'
             }
 
-        self.state = ['placeholder', ]
-
-        for side_name in self.side_order:
-            side = self.sides[side_name]
-
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
-                color_name = side.squares[x].color_name
-                self.state.append(color_to_side_name[color_name])
+                square = side.squares[x]
+                square.side_name = self.color_to_side_name[square.color_name]
 
     def cube_for_kociemba_strict(self):
-        self.set_state()
-
+        log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
         data = []
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
-                data.append(self.state[x])
+                square = side.squares[x]
+                #data.append(self.color_to_side_name[square.color_name])
+                data.append(square.side_name)
 
         return data
 
@@ -1391,738 +1658,560 @@ div#anchorsquares {
         data['kociemba'] = ''.join(self.cube_for_kociemba_strict())
         data['sides'] = {}
         data['squares'] = {}
-        color_to_side = {}
-
-        html_color = {
-            'Gr' : {'red' :   0, 'green' : 102, 'blue' : 0},
-            'Bu' : {'red' :   0, 'green' :   0, 'blue' : 153},
-            'OR' : {'red' : 255, 'green' : 102, 'blue' : 0},
-            'Rd' : {'red' : 204, 'green' :   0, 'blue' : 0},
-            'Wh' : {'red' : 255, 'green' : 255, 'blue' : 255},
-            'Ye' : {'red' : 255, 'green' : 204, 'blue' : 0},
-        }
 
         for side in self.sides.values():
-            color_to_side[side.color] = side
             data['sides'][side.name] = {
                 'colorName' : side.color_name,
-                'colorScan' : {
-                    'red'   : side.red,
-                    'green' : side.green,
-                    'blue'  : side.blue,
-                },
                 'colorHTML' : html_color[side.color_name]
             }
+
+        #log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
-                color = square.color
-                final_side = color_to_side[color]
+                color = square.color_name
                 data['squares'][square.position] = {
-                    'colorScan' : {
-                        'red'   : square.red,
-                        'green' : square.green,
-                        'blue'  : square.blue,
-                    },
-                    'finalSide' : color_to_side[color].name
+                    'finalSide' : self.color_to_side_name[color]
                 }
 
         return data
 
-    def sort_squares(self, target_square, squares_to_sort):
-        rank = []
-        for square in squares_to_sort:
-            distance = get_euclidean_lab_distance(target_square.rawcolor, square.rawcolor)
-            rank.append((distance, square))
-        rank = list(sorted(rank))
+    def assign_color_names(self, desc, squares_lists_all):
 
-        result = []
-        for (distance, square) in rank:
-            log.info("%s vs %s distance %s (%s vs %s)" % (target_square, square, distance, pformat(target_square.rgb), pformat(square.rgb)))
-            result.append(square)
-        return result
+        # split squares_lists_all up into 6 evenly sized lists
+        squares_per_row = int(len(squares_lists_all)/6)
+        squares_lists = []
+        square_list = []
 
-    def bind_center_squares_to_anchor(self, square_indexes, desc):
-        center_colors = OrderedDict()
+        for square in squares_lists_all:
+            square_list.append(square)
 
-        # We must add the anchor squares first
-        for anchor_square in self.anchor_squares:
-            center_colors[anchor_square.position] = anchor_square.rgb
+            if len(square_list) == squares_per_row:
+                squares_lists.append(square_list)
+                square_list = []
 
-        for side_name in self.side_order:
-            side = self.sides[side_name]
-
-            for square_index in square_indexes:
-                square = side.center_squares[square_index]
-                if square not in self.anchor_squares:
-                    center_colors[square.position] = square.rgb
-
-        sorted_center_colors = kmeans_sort_colors_static_anchors(desc, self, center_colors)
-        self.write_colors(desc, sorted_center_colors)
-
-        # The first entry on each list is the anchor square
-        for cluster_square_list in sorted_center_colors:
-            anchor_square_index = cluster_square_list[0].index
-            anchor_square = self.get_square(anchor_square_index)
-
-            for cluster_square in cluster_square_list[1:]:
-                square = self.get_square(cluster_square.index)
-                square.anchor_square = anchor_square
-                log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
-
-    def identify_anchor_squares(self):
-
-        # Odd cube, use the centers
-        if self.width % 2 == 1:
-
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                anchor_square = side.squares[side.mid_pos]
-                self.anchor_squares.append(anchor_square)
-                log.info("center anchor square %s (odd) with color %s" % (anchor_square, anchor_square.color_name))
-
-        # Even cube, use corners
-        else:
-
-            # Start with the LFU corner, that corner will give us the first three anchor squares
-            self.anchor_squares.append(self.sideL.corner_squares[1])
-            self.anchor_squares.append(self.sideF.corner_squares[0])
-            self.anchor_squares.append(self.sideU.corner_squares[2])
-            anchor1 = self.sideL.corner_squares[1]
-            anchor2 = self.sideF.corner_squares[0]
-            anchor3 = self.sideU.corner_squares[2]
-            anchor1_rgb = (anchor1.red, anchor1.green, anchor1.blue)
-            anchor2_rgb = (anchor2.red, anchor2.green, anchor2.blue)
-            anchor3_rgb = (anchor3.red, anchor3.green, anchor3.blue)
-
-            # Build an OrderedDict we can pass to kmeans_sort_colors_static_anchors()
-            # This will contain all corner squares. Add the three anchors first, this
-            # is a must for kmeans_sort_colors_static_anchors().
-            square_by_index = {}
-            corner_colors = OrderedDict()
-            corner_colors[anchor1.position] = anchor1_rgb
-            corner_colors[anchor2.position] = anchor2_rgb
-            corner_colors[anchor3.position] = anchor3_rgb
-
-            for corner in self.corners:
-                if corner.square1.position not in corner_colors:
-                    corner_colors[corner.square1.position] = corner.square1.rgb
-                    square_by_index[corner.square1.position] = corner.square1
-
-                if corner.square2.position not in corner_colors:
-                    corner_colors[corner.square2.position] = corner.square2.rgb
-                    square_by_index[corner.square2.position] = corner.square2
-
-                if corner.square3.position not in corner_colors:
-                    corner_colors[corner.square3.position] = corner.square3.rgb
-                    square_by_index[corner.square3.position] = corner.square3
-
-            # We know three anchors for sure, group all corner squares into three
-            # groups based on these anchors
-            sorted_corner_colors = kmeans_sort_colors_static_anchors("First Three Anchors", self, corner_colors, 3)
-            self.write_colors("find anchors among corners", sorted_corner_colors)
-
-            # Now we have three "rows" of colors where the anchor squares we know
-            # for sure are on the far left.  Use the three squares on the far
-            # right as the other three anchor squares.
-            for cluster_squares_for_anchor in sorted_corner_colors:
-                last_cluster_square = cluster_squares_for_anchor[-2]
-                last_square = square_by_index[last_cluster_square.index]
-                self.anchor_squares.append(last_square)
-
-        # Assign color names to each anchor_square. We compute which naming
-        # scheme results in the least total color distance in terms of the anchor
-        # square colors vs the colors in crayola_colors
+        # Assign a color name to each squares in each square_list. Compute
+        # which naming scheme results in the least total color distance in
+        # terms of the assigned color name vs. the colors in crayola_colors.
         min_distance = None
         min_distance_permutation = None
 
-        for permutation in permutations(self.crayola_colors.keys()):
+        if self.odd and desc == "centers":
+            crayola_color_permutations = odd_cube_center_color_permutations
+        else:
+            crayola_color_permutations = permutations(self.crayola_colors.keys())
+
+        for permutation in crayola_color_permutations:
             distance = 0
 
-            for (anchor_square, color_name) in zip(self.anchor_squares, permutation):
-                color_obj = self.crayola_colors[color_name]
-                distance += get_euclidean_lab_distance(anchor_square.rawcolor, color_obj)
+            for (index, squares_list) in enumerate(squares_lists):
+                color_name = permutation[index]
+                crayola_color_lab = self.crayola_colors[color_name]
+
+                for square in squares_list:
+                    distance += get_euclidean_lab_distance(square.lab, crayola_color_lab)
 
             if min_distance is None or distance < min_distance:
                 min_distance = distance
                 min_distance_permutation = permutation
 
-        log.info('assign color names to anchor squares and sides')
-        for (anchor_square, color_name) in zip(self.anchor_squares, min_distance_permutation):
-            color_obj = self.crayola_colors[color_name]
-            # I used to set this to the crayola_color object but I don't think
-            # that buys us anything, it is better to use our rawcolor as our color
-            # since other squares will be comparing themselves to our 'color'.  They
-            # will line up more closely with it than they will the crayola_color object.
-            # anchor_square.color = color_obj
-            anchor_square.color = anchor_square.rawcolor
-            anchor_square.color.name = color_name
-            anchor_square.color_name = color_name
+                '''
+                if desc == "centers":
+                    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
+            else:
+                if desc == "centers":
+                    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+                '''
 
-        for anchor_square in self.anchor_squares:
-            log.info("anchor square %s with color %s" % (anchor_square, anchor_square.color_name))
+        # Assign the color name to the Square object
+        for (index, squares_list) in enumerate(squares_lists):
+            color_name = min_distance_permutation[index]
 
+            for square in squares_list:
+                square.color_name = color_name
+                #log.info("%s SQUARE %s color_name is now %s" % (desc, square, square.color_name))
 
-        # No center squares
-        if self.width == 2:
-            pass
+                # TODO what about for even cubes?
+                # Odd cubes are awesome because we can easily find one square of each color by
+                # looking at the square in the exact center.
+                if self.odd and desc == "centers":
+                    #log.warning(f"update crayola_colors[{color_name}] from {self.crayola_colors[color_name]} to {square.lab}")
+                    self.crayola_colors[color_name] = square.lab
 
-        # The only center squares are the anchors
-        elif self.width == 3:
-            pass
+    def validate_edge_orbit(self, orbit_id):
+        valid = True
 
-        elif self.width == 4:
-            self.bind_center_squares_to_anchor((0, 1, 2, 3), '4x4x4 centers')
+        # We need to see which orange/red we can flip that will make the edges valid
+        wing_pair_counts = {}
 
-        elif self.width == 5:
-            # t-centers
-            self.bind_center_squares_to_anchor((1, 3, 5, 7), '5x5x5 t-centers')
+        for (square1_position, square2_position) in edge_orbit_wing_pairs[self.width][orbit_id]:
+            square1 = self.get_square(square1_position)
+            square2 = self.get_square(square2_position)
+            wing_pair_string = ", ".join(sorted([square1.color_name, square2.color_name]))
+            #log.info("orbit {}: ({}, {}) is ({})".format(orbit_id, square1_position, square2_position, wing_pair_string))
 
-            # x-centers
-            self.bind_center_squares_to_anchor((0, 2, 6, 8), '5x5x5 x-centers')
+            if wing_pair_string not in wing_pair_counts:
+                wing_pair_counts[wing_pair_string] = 0
+            wing_pair_counts[wing_pair_string] += 1
 
-        elif self.width == 6:
+        # Are all counts the same?
+        target_count = None
+        for (wing_pair, count) in wing_pair_counts.items():
 
-            # inside x-centers
-            self.bind_center_squares_to_anchor((5, 6, 9, 10), '6x6x6 inside x-centers')
+            if target_count is None:
+                target_count = count
+            else:
+                if count != target_count:
+                    valid = False
+                    break
 
-            # outside x-centers
-            self.bind_center_squares_to_anchor((0, 3, 12, 15), '6x6x6 outside x-centers')
+        if not valid:
+            log.info("wing_pair_counts:\n{}\n".format(pformat(wing_pair_counts)))
+            log.warning("valid: {}".format(valid))
 
-            # left oblique edges
-            self.bind_center_squares_to_anchor((1, 7, 8, 14), '6x6x6 left oblique edges')
+        #assert valid, "Cube is invalid"
+        return valid
 
-            # right oblique edges
-            self.bind_center_squares_to_anchor((2, 4, 11, 13), '6x6x6 right oblique edges')
+    def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
 
-        elif self.width == 7:
-            # inside x-centers
-            self.bind_center_squares_to_anchor((6, 8, 16, 18), '7x7x7 inside x-centers')
+        def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
 
-            # inside t-centers
-            self.bind_center_squares_to_anchor((7, 11, 13, 17), '7x7x7 inside t-centers')
+            if len(target_color_red_or_orange_edges) == 2:
+                red_orange_permutations = (
+                    ("OR", "Rd"),
+                    ("Rd", "OR"),
+                )
+            elif len(target_color_red_or_orange_edges) == 4:
+                # 4!/(2!*2!) = 6
+                red_orange_permutations = (
+                    ("OR", "OR", "Rd", "Rd"),
+                    ("OR", "Rd", "OR", "Rd"),
+                    ("OR", "Rd", "Rd", "OR"),
+                    ("Rd", "Rd", "OR", "OR"),
+                    ("Rd", "OR", "Rd", "OR"),
+                    ("Rd", "OR", "OR", "Rd"),
+                )
+            else:
+                raise Exception(f"There should be either 2 or 4 but we have {target_color_red_or_orange_edges}")
 
-            # left oblique edges
-            self.bind_center_squares_to_anchor((1, 9, 15, 23), '7x7x7 left oblique edges')
+            min_distance = None
+            min_distance_permutation = None
 
-            # right oblique edges
-            self.bind_center_squares_to_anchor((3, 5, 19, 21), '7x7x7 right oblique edges')
+            for red_orange_permutation in red_orange_permutations:
+                distance = 0
 
-            # outside x-centers
-            self.bind_center_squares_to_anchor((0, 4, 20, 24), '7x7x7 outside x-centers')
+                for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
+                    red_orange = red_orange_permutation[index]
 
-            # outside t-centers
-            self.bind_center_squares_to_anchor((2, 10, 14, 22), '7x7x7 outside t-centers')
+                    if red_orange == "OR":
+                        distance += get_euclidean_lab_distance(partner_square.lab, self.orange_baseline)
+                    elif red_orange == "Rd":
+                        distance += get_euclidean_lab_distance(partner_square.lab, self.red_baseline)
+                    else:
+                        raise Exception(red_orange)
 
-        else:
-            raise Exception("Add anchor/center support for %dx%dx%d cubes" % (self.width, self.width, self.width))
+                    partner_square.color_name = red_orange
+                    partner_square.side_name = self.color_to_side_name[partner_square.color_name]
 
-        # Now that our anchor squares have been assigned a color/color_name, go back and
-        # assign the same color/color_name to all of the other center_squares. This ends
-        # up being a no-op for 2x2x2 and 3x3x3 but for 4x4x4 and up larger this does something.
-        for side_name in self.side_order:
-            side = self.sides[side_name]
+                if self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0):
+                    for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
+                        red_orange = red_orange_permutation[index]
+                        high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
+                        edge_color_pair = edge_color_pair_map[f"{target_color_square.color_name}/{partner_square.color_name}"]
+                        #log.info("high_low_edge_per_color\n%s" % pformat(high_low_edge_per_color))
 
-            for square in side.center_squares:
-                if square.anchor_square:
-                    square.color = square.anchor_square.color
-                    square.color_name = square.anchor_square.color_name
-                    square.color.name = square.anchor_square.color.name
+                        if len(high_low_edge_per_color[edge_color_pair]) != 2:
+                            #log.warning("*" * 40)
+                            #log.warning("edge_color_pair %s high_low is %s" % (edge_color_pair, high_low_edge_per_color[edge_color_pair]))
+                            #log.warning("*" * 40)
+                            distance += 999
 
-        # Assign each Side a color
-        if self.sideU.mid_pos:
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                side.red = side.squares[side.mid_pos].red
-                side.green = side.squares[side.mid_pos].green
-                side.blue = side.squares[side.mid_pos].blue
-                side.color = side.squares[side.mid_pos].color
-                side.color_name = side.squares[side.mid_pos].color_name
-
-        else:
-            all_squares = []
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                all_squares.extend(side.squares.values())
-
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-
-                if side_name == 'U':
-                    target_color_name = 'Wh'
-                elif side_name == 'L':
-                    target_color_name = 'OR'
-                elif side_name == 'F':
-                    target_color_name = 'Gr'
-                elif side_name == 'R':
-                    target_color_name = 'Rd'
-                elif side_name == 'D':
-                    target_color_name = 'Ye'
-                elif side_name == 'B':
-                    target_color_name = 'Bu'
-
-                for square in all_squares:
-                    if square.color_name == target_color_name:
-                        side.red = square.red
-                        side.green = square.green
-                        side.blue = square.blue
-                        side.color = square.color
-                        side.color_name = square.color_name
-                        break
+                if min_distance is None or distance < min_distance:
+                    min_distance = distance
+                    min_distance_permutation = red_orange_permutation
+                    log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance} (NEW MIN)")
                 else:
-                    raise Exception("%s: could not determine color, target %s" % (side, target_color_name))
+                    log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance}")
 
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write('<div id="colormapping">\n')
-            fh.write('<h1>Side => Color Mapping</h1>\n')
-            fh.write('<ul>\n')
-            for side_name in self.side_order:
-                side = self.sides[side_name]
-                fh.write('<li>%s => %s</li>\n' % (side_name, side.color_name))
-            fh.write('</ul>\n')
-            fh.write('</div>\n')
+            log.info(f"min_distance_permutation {min_distance_permutation}")
+            for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
+                if partner_square.color_name != min_distance_permutation[index]:
+                    log.warning("change %s edge partner %s from %s to %s" %
+                        (target_color, partner_square, partner_square.color_name, min_distance_permutation[index]))
+                    partner_square.color_name = min_distance_permutation[index]
+                    partner_square.side_name = self.color_to_side_name[partner_square.color_name]
+                else:
+                    log.info("%s edge partner %s is %s" %
+                        (target_color, partner_square, partner_square.color_name))
 
-            fh.write('<div id="anchorsquares">\n')
-            fh.write('<h1>Anchor Squares</h1>\n')
-            for anchor_square in self.anchor_squares:
-                fh.write("<div class='square' title='RGB (%d, %d, %d)' style='background-color: #%02x%02x%02x;'><span>%02d/%s</span></div>\n" %
-                         (anchor_square.color.red, anchor_square.color.green, anchor_square.color.blue,
-                          anchor_square.color.red, anchor_square.color.green, anchor_square.color.blue,
-                          anchor_square.position, anchor_square.color_name))
-            fh.write('</div>\n')
+            log.info("\n\n")
 
-    def create_corner_objects(self):
-        # Corners
-        self.corners = []
+        green_red_orange_color_names = ("Gr", "Rd", "OR")
+        blue_red_orange_color_names = ("Bu", "Rd", "OR")
+        white_red_orange_color_names = ("Wh", "Rd", "OR")
+        yellow_red_orange_color_names = ("Ye", "Rd", "OR")
+        green_red_or_orange_edges = []
+        blue_red_or_orange_edges = []
+        white_red_or_orange_edges = []
+        yellow_red_or_orange_edges = []
 
-        # U
-        self.corners.append(Corner(self, self.sideU.corner_pos[0], self.sideL.corner_pos[0], self.sideB.corner_pos[1]))
-        self.corners.append(Corner(self, self.sideU.corner_pos[1], self.sideB.corner_pos[0], self.sideR.corner_pos[1]))
-        self.corners.append(Corner(self, self.sideU.corner_pos[2], self.sideF.corner_pos[0], self.sideL.corner_pos[1]))
-        self.corners.append(Corner(self, self.sideU.corner_pos[3], self.sideR.corner_pos[0], self.sideF.corner_pos[1]))
+        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
+            square = self.get_square(square_index)
+            partner = self.get_square(partner_index)
 
-        # D
-        self.corners.append(Corner(self, self.sideD.corner_pos[0], self.sideL.corner_pos[3], self.sideF.corner_pos[2]))
-        self.corners.append(Corner(self, self.sideD.corner_pos[1], self.sideF.corner_pos[3], self.sideR.corner_pos[2]))
-        self.corners.append(Corner(self, self.sideD.corner_pos[2], self.sideB.corner_pos[3], self.sideL.corner_pos[2]))
-        self.corners.append(Corner(self, self.sideD.corner_pos[3], self.sideR.corner_pos[3], self.sideB.corner_pos[2]))
+            if square.color_name in green_red_orange_color_names and partner.color_name in green_red_orange_color_names:
+                if square.color_name == "Gr":
+                    green_red_or_orange_edges.append((square, partner))
+                else:
+                    green_red_or_orange_edges.append((partner, square))
 
-    def identify_corner_squares(self):
-        self.valid_corner_colors = []
-        self.valid_corner_colors.append((self.sideU.color, self.sideF.color, self.sideL.color))
-        self.valid_corner_colors.append((self.sideU.color, self.sideR.color, self.sideF.color))
-        self.valid_corner_colors.append((self.sideU.color, self.sideL.color, self.sideB.color))
-        self.valid_corner_colors.append((self.sideU.color, self.sideB.color, self.sideR.color))
+            elif square.color_name in blue_red_orange_color_names and partner.color_name in blue_red_orange_color_names:
+                if square.color_name == "Bu":
+                    blue_red_or_orange_edges.append((square, partner))
+                else:
+                    blue_red_or_orange_edges.append((partner, square))
 
-        self.valid_corner_colors.append((self.sideD.color, self.sideL.color, self.sideF.color))
-        self.valid_corner_colors.append((self.sideD.color, self.sideF.color, self.sideR.color))
-        self.valid_corner_colors.append((self.sideD.color, self.sideB.color, self.sideL.color))
-        self.valid_corner_colors.append((self.sideD.color, self.sideR.color, self.sideB.color))
-        self.valid_corner_colors = sorted(self.valid_corner_colors)
+            elif square.color_name in white_red_orange_color_names and partner.color_name in white_red_orange_color_names:
+                if square.color_name == "Wh":
+                    white_red_or_orange_edges.append((square, partner))
+                else:
+                    white_red_or_orange_edges.append((partner, square))
 
-    def max_orbit_index(self, orbit_id):
+            elif square.color_name in yellow_red_orange_color_names and partner.color_name in yellow_red_orange_color_names:
+                if square.color_name == "Ye":
+                    yellow_red_or_orange_edges.append((square, partner))
+                else:
+                    yellow_red_or_orange_edges.append((partner, square))
 
-        if (self.width == 4 or self.width == 6 or
-            (self.width == 5 and orbit_id == 0) or
-            (self.width == 7 and (orbit_id == 0 or orbit_id == 1))):
-            return 1
+        log.info(f"orbit {target_orbit_id} green_red_or_orange_edges {green_red_or_orange_edges}")
+        fix_orange_vs_red_for_color('green', green_red_or_orange_edges)
 
-        if self.width > 7:
-            raise Exception("Add max_orbit_index() support for this size cube")
+        log.info(f"orbit {target_orbit_id} blue_red_or_orange_edges {blue_red_or_orange_edges}")
+        fix_orange_vs_red_for_color('blue', blue_red_or_orange_edges)
 
-        return 0
+        log.info(f"orbit {target_orbit_id} white_red_or_orange_edges {white_red_or_orange_edges}")
+        fix_orange_vs_red_for_color('white', white_red_or_orange_edges)
 
-    def identify_edge_squares(self):
+        log.info(f"orbit {target_orbit_id} yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
+        fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
 
-        # valid_edges are the color combos that we need to look for. edges are Edge
-        # objects, eventually we try to fill in the colors for each Edge object with
-        # a color tuple from valid_edges
-        self.valid_edge_colors = []
-        self.edges = []
+        self.validate_edge_orbit(target_orbit_id)
 
-        num_of_edge_squares_per_side = len(self.sideU.edge_squares)
+    def get_high_low_per_edge_color(self, target_orbit_id):
 
-        # A 2x2x2 has no edges
-        if not num_of_edge_squares_per_side:
-            return
+        high_low_per_edge_color = {
+            "Gr/Wh" : set(),
+            "Bu/Wh" : set(),
+            "OR/Wh" : set(),
+            "Rd/Wh" : set(),
+
+            "Gr/OR" : set(),
+            "Bu/OR" : set(),
+            "Gr/Rd" : set(),
+            "Bu/Rd" : set(),
+
+            "Gr/Ye" : set(),
+            "Bu/Ye" : set(),
+            "OR/Ye" : set(),
+            "Rd/Ye" : set(),
+        }
+
+        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
+            square = self.get_square(square_index)
+            partner = self.get_square(partner_index)
+
+            if self.width == 6:
+                highlow = highlow_edge_values_666[(square_index, partner_index, square.side_name, partner.side_name)]
+            elif self.width == 5:
+                highlow = highlow_edge_values_555[(square_index, partner_index, square.side_name, partner.side_name)]
+            elif self.width == 4:
+                highlow = highlow_edge_values_444[(square_index, partner_index, square.side_name, partner.side_name)]
+
+            # log.info(f"orbit {target_orbit_id} ({square_index}, {partner_index}) is {square.color_name}/{partner.color_name} {square.side_name}/{partner.side_name} which is {highlow}")
+
+            edge_color_pair = edge_color_pair_map[f"{square.color_name}/{partner.color_name}"]
+            high_low_per_edge_color[edge_color_pair].add(highlow)
+
+        # log.info("high_low_per_edge_color for orbit %d\n%s" % (target_orbit_id, pformat(high_low_per_edge_color)))
+        # log.info("")
+        return high_low_per_edge_color
+
+    def sanity_check_edge_squares(self):
+
+        # Nothing to be done for 2x2x2
+        if self.width == 2:
+            return True
 
         for orbit_id in range(self.orbits):
-            self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id))
-            self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id))
-            self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id))
-
-            self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id))
-
-            self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id))
-
-            self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id))
-            self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id))
-            self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id))
-            self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id))
-
-            if self.max_orbit_index(orbit_id):
-                self.valid_edge_colors.append((self.sideU.color, self.sideB.color, orbit_id))
-                self.valid_edge_colors.append((self.sideU.color, self.sideL.color, orbit_id))
-                self.valid_edge_colors.append((self.sideU.color, self.sideF.color, orbit_id))
-                self.valid_edge_colors.append((self.sideU.color, self.sideR.color, orbit_id))
-
-                self.valid_edge_colors.append((self.sideF.color, self.sideL.color, orbit_id))
-                self.valid_edge_colors.append((self.sideF.color, self.sideR.color, orbit_id))
-
-                self.valid_edge_colors.append((self.sideB.color, self.sideL.color, orbit_id))
-                self.valid_edge_colors.append((self.sideB.color, self.sideR.color, orbit_id))
-
-                self.valid_edge_colors.append((self.sideD.color, self.sideF.color, orbit_id))
-                self.valid_edge_colors.append((self.sideD.color, self.sideL.color, orbit_id))
-                self.valid_edge_colors.append((self.sideD.color, self.sideR.color, orbit_id))
-                self.valid_edge_colors.append((self.sideD.color, self.sideB.color, orbit_id))
-        self.valid_edge_colors = sorted(self.valid_edge_colors)
-
-        # U and B
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos))):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # U and L
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_west_pos, self.sideL.edge_north_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # U and F
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_south_pos, self.sideF.edge_north_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # U and R
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos))):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # F and L
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideL.edge_east_pos, self.sideF.edge_west_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # F and R
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideF.edge_east_pos, self.sideR.edge_west_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # F and D
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideF.edge_south_pos, self.sideD.edge_north_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # L and B
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideL.edge_west_pos, self.sideB.edge_east_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # L and D
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos))):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # R and D
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideR.edge_south_pos, self.sideD.edge_east_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # R and B
-        for (edge_index, (pos1, pos2)) in enumerate(zip(self.sideR.edge_east_pos, self.sideB.edge_west_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-        # B and D
-        for (edge_index, (pos1, pos2)) in enumerate(zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos)):
-            self.edges.append(Edge(self, pos1, pos2, edge_index))
-
-    def resolve_edge_squares_experiment(self):
-        """
-        This only uses kmeans to assign colors, it can produce some invalid cube by doing
-        things like creating two white/red edge pieces on 3x3x3...it needs some more work.
-        """
-
-        # A 2x2x2 will not have edges
-        if not self.edges:
-            return
-
-        for target_orbit_id in range(self.orbits):
-            log.warning('Resolve edges for orbit %d' % target_orbit_id)
-            desc = 'edges - orbit %d' % target_orbit_id
-
-            # We must add the anchor squares first
-            edge_colors = OrderedDict()
-            for anchor_square in self.anchor_squares:
-                edge_colors[anchor_square.position] = anchor_square.rgb
-
-            for edge in self.edges:
-                if edge.orbit_id == target_orbit_id:
-                    edge_colors[edge.square1.position] = edge.square1.rgb
-                    edge_colors[edge.square2.position] = edge.square2.rgb
-
-            sorted_edge_colors = kmeans_sort_colors_static_anchors(desc, self, edge_colors)
-            self.write_colors(desc, sorted_edge_colors)
-
-            # The first entry on each list is the anchor square
-            for cluster_square_list in sorted_edge_colors:
-                anchor_square_index = cluster_square_list[0].index
-                anchor_square = self.get_square(anchor_square_index)
-
-                for cluster_square in cluster_square_list[1:]:
-                    square = self.get_square(cluster_square.index)
-                    square.anchor_square = anchor_square
-                    log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
-
-            # edge.update_colors(colorA, colorB)
-            for edge in self.edges:
-                if edge.orbit_id == target_orbit_id:
-                    log.info("%s square1 %s, square2 %s" % (edge, edge.square1, edge.square2))
-                    edge.square1.color      = edge.square1.anchor_square.color
-                    edge.square1.color_name = edge.square1.anchor_square.color_name
-                    edge.square2.color      = edge.square2.anchor_square.color
-                    edge.square2.color_name = edge.square2.anchor_square.color_name
-
-    def resolve_corner_squares_experiment(self):
-        """
-        This only uses kmeans to assign colors, it can produce some invalid cube by doing
-        things like creating two white/red/blue corner pieces on 3x3x3...it needs some more work.
-        """
-        log.warning('Resolve corners')
-        desc = 'corners'
-
-        # We must add the anchor squares first
-        corner_colors = OrderedDict()
-        for anchor_square in self.anchor_squares:
-            corner_colors[anchor_square.position] = anchor_square.rgb
-
-        for corner in self.corners:
-            corner_colors[corner.square1.position] = corner.square1.rgb
-            corner_colors[corner.square2.position] = corner.square2.rgb
-            corner_colors[corner.square3.position] = corner.square3.rgb
-
-        sorted_corner_colors = kmeans_sort_colors_static_anchors(desc, self, corner_colors)
-        self.write_colors(desc, sorted_corner_colors)
-
-        # The first entry on each list is the anchor square
-        for cluster_square_list in sorted_corner_colors:
-            anchor_square_index = cluster_square_list[0].index
-            anchor_square = self.get_square(anchor_square_index)
-
-            for cluster_square in cluster_square_list[1:]:
-                square = self.get_square(cluster_square.index)
-                square.anchor_square = anchor_square
-                log.info("%s: square %s anchor square is %s" % (desc, square, anchor_square))
-
-        for corner in self.corners:
-            log.info("%s square1 %s, square2 %s, square3 %s" % (corner, corner.square1, corner.square2, corner.square3))
-            corner.square1.color      = corner.square1.anchor_square.color
-            corner.square1.color_name = corner.square1.anchor_square.color_name
-            corner.square2.color      = corner.square2.anchor_square.color
-            corner.square2.color_name = corner.square2.anchor_square.color_name
-            corner.square3.color      = corner.square3.anchor_square.color
-            corner.square3.color_name = corner.square3.anchor_square.color_name
+            self.sanity_check_edges_red_orange_count_for_orbit(orbit_id)
 
     def resolve_edge_squares(self):
+        """
+        Use traveling salesman algorithm to sort the colors
+        """
 
-        # A 2x2x2 will not have edges
-        if not self.edges:
-            return
-
-        # Initially we flag all of our Edge objects as invalid
-        for edge in self.edges:
-            edge.valid = False
+        # Nothing to be done for 2x2x2
+        if self.width == 2:
+            return True
 
         for target_orbit_id in range(self.orbits):
-            log.warning('Resolve edges for orbit id %d' % target_orbit_id)
+            log.info('Resolve edges for orbit %d' % target_orbit_id)
+            edge_squares = []
 
-            resolved_edges = []
-            unresolved_edges = []
-            for edge in self.edges:
-                if edge.orbit_id == target_orbit_id:
-                    unresolved_edges.append(edge)
+            for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+                for square in side.edge_squares:
+                    orbit_id = edge_orbit_id[self.width][square.position]
+                    #log.info("{}: {}, position {}, orbit_id {}".format(self.width, square, square.position, orbit_id))
 
-            # And our 'needed' list of colors will hold the colors of every edge color pair
-            needed_edge_color_tuple = []
+                    if orbit_id == target_orbit_id:
+                        edge_squares.append(square)
 
-            for (edge1_color, edge2_color, orbit_id) in sorted(self.valid_edge_colors):
-                if orbit_id == target_orbit_id:
-                    needed_edge_color_tuple.append((edge1_color, edge2_color))
+            sorted_edge_squares = traveling_salesman(edge_squares, "euclidean")
+            self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_squares)
+            self.write_colors(
+                'edges - orbit %d' % target_orbit_id,
+                sorted_edge_squares)
 
-                assert edge1_color.name != edge2_color.name,\
-                    "Both sides of an edge cannot be the same color, edge1 %s and edge2 %s are both %s" %\
-                    (edge1_color, edge2_color, edge1_color.name)
+    def assign_green_white_corners(self, green_white_corners):
+        #log.info("Gr/Wh corner tuples %s" % pformat(green_white_corners))
+        valid_green_orange_white = (
+            ['Gr', 'OR', 'Wh'],
+            ['Wh', 'Gr', 'OR'],
+            ['OR', 'Wh', 'Gr'],
+        )
 
-            while unresolved_edges:
+        valid_green_white_red = (
+            ['Gr', 'Wh', 'Rd'],
+            ['Rd', 'Gr', 'Wh'],
+            ['Wh', 'Rd', 'Gr'],
+        )
 
-                # Calculate the color distance for each edge vs each of the needed color tuples
-                for edge in unresolved_edges:
-                    edge.first_vs_second_delta = 0
-                    foo = []
-                    colors_checked = []
+        for (corner1_index, corner2_index, corner3_index) in green_white_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
-                    for (colorA, colorB) in needed_edge_color_tuple:
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_green_orange_white and color_seq not in valid_green_white_red:
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change Gr/Wh corner partner %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change Gr/Wh corner partner %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change Gr/Wh corner partner %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change Gr/Wh corner partner %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change Gr/Wh corner partner %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change Gr/Wh corner partner %s from Rd to OR" % corner3)
 
-                        # For 4x4x4 and larger there are multiple edges with the
-                        # same pair of colors so if we've already calculated the
-                        # distance for one of the edges with this color tuple
-                        # don't calculate it again
-                        if (colorA, colorB) in colors_checked:
-                            continue
+    def assign_green_yellow_corners(self, green_yellow_corners):
+        valid_green_yellow_orange = (
+            ['Gr', 'Ye', 'OR'],
+            ['OR', 'Gr', 'Ye'],
+            ['Ye', 'OR', 'Gr'],
+        )
 
-                        # For a 4x4x4 cube there are two UF edges, UF0 and UF1.  We
-                        # have to make sure that we do not resolve edges in a way
-                        # that creates two UF0 edges. If this edge would be UF0 but
-                        # we have already found UF0 then set the distance to be 9999.
-                        orbit_index_already_assigned = False
+        valid_green_red_yellow = (
+            ['Gr', 'Rd', 'Ye'],
+            ['Ye', 'Gr', 'Rd'],
+            ['Rd', 'Ye', 'Gr'],
+        )
 
-                        if self.width >= 4:
-                            edge.update_colors(colorA, colorB)
-                            edge.update_orbit_index()
+        for (corner1_index, corner2_index, corner3_index) in green_yellow_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
-                            for tmp_edge in resolved_edges:
-                                if tmp_edge.orbit_index == edge.orbit_index:
-                                    orbit_index_already_assigned = True
-                                    break
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_green_yellow_orange and color_seq not in valid_green_red_yellow:
 
-                            edge.reset_colors()
-                            edge.reset_orbit_index()
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change Gr/Ye corner partner %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change Gr/Ye corner partner %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change Gr/Ye corner partner %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change Gr/Ye corner partner %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change Gr/Ye corner partner %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change Gr/Ye corner partner %s from Rd to OR" % corner3)
 
-                        if orbit_index_already_assigned:
-                            distance = 9999
-                        else:
-                            distance = edge.color_distance(colorA, colorB)
+    def assign_blue_white_corners(self, blue_white_corners):
+        #log.info("Bu/Wh corner tuples %s" % pformat(blue_white_corners))
+        valid_blue_white_orange = (
+            ['Bu', 'Wh', 'OR'],
+            ['OR', 'Bu', 'Wh'],
+            ['Wh', 'OR', 'Bu'],
+        )
 
-                        foo.append((distance, (colorA, colorB)))
-                        colors_checked.append((colorA, colorB))
+        valid_blue_red_white = (
+            ['Bu', 'Rd', 'Wh'],
+            ['Wh', 'Bu', 'Rd'],
+            ['Rd', 'Wh', 'Bu'],
+        )
 
-                    # Now sort the distance...
-                    foo = sorted(foo)
+        for (corner1_index, corner2_index, corner3_index) in blue_white_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
-                    if len(foo) >= 2:
-                        (first_distance, (first_colorA, first_colorB)) = foo[0]
-                        (second_distance, (second_colorA, second_colorB)) = foo[1]
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_blue_white_orange and color_seq not in valid_blue_red_white:
 
-                        # ...and note the delta from the color pair this edge is the closest
-                        # match with vs the color pair this edge is the second closest match with
-                        edge.first_vs_second_delta = second_distance - first_distance
-                        edge.first_place_colors = (first_colorA, first_colorB)
-                        edge.first_distance = first_distance
-                        log.debug("%s 2nd (%s/%s) vs 1st (%s/%s) delta %d (%d - %d)" %\
-                            (edge,
-                             second_colorA.name, second_colorB.name,
-                             first_colorA.name, first_colorB.name,
-                             edge.first_vs_second_delta, second_distance, first_distance))
-                    else:
-                        (first_distance, (first_colorA, first_colorB)) = foo[0]
-                        edge.first_vs_second_delta = first_distance
-                        edge.first_place_colors = (first_colorA, first_colorB)
-                        edge.first_distance = first_distance
-                        log.debug("%s 1st (%s/%s) delta %d (LAST)" %\
-                            (edge,
-                             first_colorA.name, first_colorB.name,
-                             edge.first_vs_second_delta))
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change Bu/Wh corner partner %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change Bu/Wh corner partner %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change Bu/Wh corner partner %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change Bu/Wh corner partner %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change Bu/Wh corner partner %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change Bu/Wh corner partner %s from Rd to OR" % corner3)
 
-                # Now look at all of the edges and resolve the one whose 2nd vs 1st color
-                # tuple distance is the greatest.  Think of it as the higher this delta
-                # is the more important it is that we resolve this edge to the color tuple
-                # that came in first place.
-                max_delta = None
-                max_delta_edge = None
-                max_delta_distance = None
+    def assign_blue_yellow_corners(self, blue_yellow_corners):
+        valid_blue_yellow_red = (
+            ['Bu', 'Ye', 'Rd'],
+            ['Rd', 'Bu', 'Ye'],
+            ['Ye', 'Rd', 'Bu'],
+        )
 
-                for edge in unresolved_edges:
-                    if max_delta is None or edge.first_vs_second_delta > max_delta:
-                        max_delta = edge.first_vs_second_delta
-                        max_delta_edge = edge
-                        max_delta_distance = edge.first_distance
+        valid_blue_orange_yellow = (
+            ['Bu', 'OR', 'Ye'],
+            ['Ye', 'Bu', 'OR'],
+            ['OR', 'Ye', 'Bu'],
+        )
 
-                distance = max_delta_distance
-                edge = max_delta_edge
-                (colorA, colorB) = edge.first_place_colors
+        for (corner1_index, corner2_index, corner3_index) in blue_yellow_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+            color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
-                edge.update_colors(colorA, colorB)
-                edge.update_orbit_index()
-                edge.valid = True
-                edge.first_vs_second_delta = None
-                edge.first_place_colors = None
-                edge.first_distance = None
+            # If this is the case we must flip the orange to red or vice versa
+            if color_seq not in valid_blue_yellow_red and color_seq not in valid_blue_orange_yellow:
 
-                needed_edge_color_tuple.remove((colorA, colorB))
-                unresolved_edges.remove(edge)
-                resolved_edges.append(edge)
-                log.info("edge %s 2nd vs 1st delta of %d was the highest" % (edge, max_delta))
-                log.debug("")
+                if corner1.color_name == "OR":
+                    corner1.color_name = "Rd"
+                    log.warning("change Bu/Ye corner partner %s from OR to Rd" % corner1)
+                elif corner1.color_name == "Rd":
+                    corner1.color_name = "OR"
+                    log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner1)
+                elif corner2.color_name == "OR":
+                    corner2.color_name = "Rd"
+                    log.warning("change Bu/Ye corner partner %s from OR to Rd" % corner2)
+                elif corner2.color_name == "Rd":
+                    corner2.color_name = "OR"
+                    log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner2)
+                elif corner3.color_name == "OR":
+                    corner3.color_name = "Rd"
+                    log.warning("change Bu/Ye corner partner %s from OR to Rd" % corner3)
+                elif corner3.color_name == "Rd":
+                    corner3.color_name = "OR"
+                    log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner3)
 
     def resolve_corner_squares(self):
+        """
+        Use traveling salesman algorithm to sort the colors
+        """
         log.info('Resolve corners')
+        corner_squares = []
 
-        # Initially we flag all of our Corner objects as invalid
-        for corner in self.corners:
-            corner.valid = False
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.corner_squares:
+                corner_squares.append(square)
 
-        # And our 'needed' list will hold the colors of all 8 corners
-        needed_corner_color_tuple = self.valid_corner_colors
+        sorted_corner_squares = traveling_salesman(corner_squares, "euclidean")
+        self.assign_color_names('corners', sorted_corner_squares)
+        self.write_colors('corners', sorted_corner_squares)
 
-        unresolved_corners = [corner for corner in self.corners if corner.valid is False]
+    def sanity_check_corner_squares(self):
+        green_white_corners = []
+        green_yellow_corners = []
+        blue_white_corners = []
+        blue_yellow_corners = []
 
-        while unresolved_corners:
+        for corner_tuple in corner_tuples[self.width]:
+            corner_colors = []
 
-            for corner in unresolved_corners:
-                corner.first_vs_second_delta = 0
-                foo = []
+            for position in corner_tuple:
+                square = self.get_square(position)
+                #log.info("square %s is %s" % (square, square.color_name))
+                corner_colors.append(square.color_name)
 
-                for (colorA, colorB, colorC) in needed_corner_color_tuple:
-                    distance = corner.color_distance(colorA, colorB, colorC)
-                    foo.append((distance, (colorA, colorB, colorC)))
+            if "Gr" in corner_colors and "Wh" in corner_colors:
+                #log.info("%s is Gr/Wh corner" % " ".join(map(str, corner_tuple)))
+                green_white_corners.append(corner_tuple)
 
-                # Now sort the distances...
-                foo = sorted(foo)
+            elif "Gr" in corner_colors and "Ye" in corner_colors:
+                #log.info("%s is Gr/Ye corner" % " ".join(map(str, corner_tuple)))
+                green_yellow_corners.append(corner_tuple)
 
-                if len(foo) >= 2:
-                    (first_distance, (first_colorA, first_colorB, first_colorC)) = foo[0]
-                    (second_distance, (second_colorA, second_colorB, second_colorC)) = foo[1]
+            elif "Bu" in corner_colors and "Wh" in corner_colors:
+                #log.info("%s is Bu/Wh corner" % " ".join(map(str, corner_tuple)))
+                blue_white_corners.append(corner_tuple)
 
-                    # ...and note the delta from the color pair this corner is the closest
-                    # match with vs the color pair this corner is the second closest match with
-                    corner.first_vs_second_delta = second_distance - first_distance
-                    corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
-                    corner.first_distance = first_distance
-                    log.debug("%s 2nd (%s/%s/%s) vs 1st (%s/%s/%s) delta %d (%d - %d)" %\
-                        (corner,
-                         second_colorA.name, second_colorB.name, second_colorC.name,
-                         first_colorA.name, first_colorB.name, first_colorC.name,
-                         corner.first_vs_second_delta, second_distance, first_distance))
-                else:
-                    (first_distance, (first_colorA, first_colorB, first_colorC)) = foo[0]
-                    corner.first_vs_second_delta = first_distance
-                    corner.first_place_colors = (first_colorA, first_colorB, first_colorC)
-                    corner.first_distance = first_distance
-                    log.debug("%s 1st (%s/%s/%s) delta %d (LAST)" %\
-                        (corner,
-                         second_colorA.name, second_colorB.name, second_colorC.name,
-                         corner.first_vs_second_delta))
+            elif "Bu" in corner_colors and "Ye" in corner_colors:
+                #log.info("%s is Bu/Ye corner" % " ".join(map(str, corner_tuple)))
+                blue_yellow_corners.append(corner_tuple)
 
-            # Now look at all of the corners and resolve the one whose 2nd vs 1st color
-            # tuple distance is the greatest.  Think of it as the higher this delta
-            # is the more important it is that we resolve this corner to the color tuple
-            # that came in first place.
-            max_delta = None
-            max_delta_corner = None
-            max_delta_distance = None
+        self.assign_green_white_corners(green_white_corners)
+        self.assign_green_yellow_corners(green_yellow_corners)
+        self.assign_blue_white_corners(blue_white_corners)
+        self.assign_blue_yellow_corners(blue_yellow_corners)
 
-            for corner in unresolved_corners:
-                if max_delta is None or corner.first_vs_second_delta > max_delta:
-                    max_delta = corner.first_vs_second_delta
-                    max_delta_corner = corner
-                    max_delta_distance = corner.first_distance
+    def resolve_center_squares(self):
+        """
+        Use traveling salesman algorithm to sort the squares by color
+        """
 
-            distance = max_delta_distance
-            corner = max_delta_corner
-            (colorA, colorB, colorC) = corner.first_place_colors
+        # Nothing to be done for 2x2x2
+        if self.width == 2:
+            return
 
-            corner.update_colors(colorA, colorB, colorC)
-            corner.valid = True
-            corner.first_vs_second_delta = None
-            corner.first_place_colors = None
-            corner.first_distance = None
-            needed_corner_color_tuple.remove((colorA, colorB, colorC))
-            unresolved_corners.remove(corner)
-            log.info("corner %s 2nd vs 1st delta of %d was the highest" % (corner, max_delta))
-            log.debug("")
+        for (desc, centers_squares) in center_groups[self.width]:
+            log.info('Resolve {}'.format(desc))
+            center_squares = []
+
+            for position in centers_squares:
+                square = self.get_square(position)
+                center_squares.append(square)
+
+            if len(centers_squares) == 6:
+                sorted_center_squares = center_squares[:]
+            else:
+                sorted_center_squares = traveling_salesman(center_squares, "euclidean")
+
+            self.assign_color_names(desc, sorted_center_squares)
+            self.write_colors(desc, sorted_center_squares)
 
     def get_corner_swap_count(self, debug=False):
 
@@ -2149,10 +2238,10 @@ div#anchorsquares {
 
         current_corners = []
         for (square_index1, square_index2, square_index3) in to_check:
-            square1 = self.state[square_index1]
-            square2 = self.state[square_index2]
-            square3 = self.state[square_index3]
-            corner_str = ''.join(sorted([square1, square2, square3]))
+            square1 = self.get_square(square_index1)
+            square2 = self.get_square(square_index2)
+            square3 = self.get_square(square_index3)
+            corner_str = ''.join(sorted([square1.side_name, square2.side_name, square3.side_name]))
             current_corners.append(corner_str)
 
         if debug:
@@ -2178,150 +2267,80 @@ div#anchorsquares {
             return True
         return False
 
-    def get_edge_swap_count(self, edges_paired, orbit, debug=False):
+    def get_edge_swap_count(self, orbit, debug=False):
         needed_edges = []
         to_check = []
-
-        # should not happen
-        if edges_paired and orbit is not None:
-            raise Exception("edges_paired is True and orbit is %s" % orbit)
-
         edges_per_side = len(self.sideU.edge_north_pos)
 
         # Upper
         for (edge_index, square_index) in enumerate(self.sideU.edge_north_pos):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('UB')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('UB%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('UB')
+            break
 
         for (edge_index, square_index) in enumerate(reversed(self.sideU.edge_west_pos)):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('UL')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('UL%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('UL')
+            break
 
         for (edge_index, square_index) in enumerate(reversed(self.sideU.edge_south_pos)):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('UF')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('UF%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('UF')
+            break
 
         for (edge_index, square_index) in enumerate(self.sideU.edge_east_pos):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('UR')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('UR%d' % edge_index)
-
+            to_check.append(square_index)
+            needed_edges.append('UR')
+            break
 
         # Left
         for (edge_index, square_index) in enumerate(reversed(self.sideL.edge_west_pos)):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('LB')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('LB%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('LB')
+            break
 
         for (edge_index, square_index) in enumerate(self.sideL.edge_east_pos):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('LF')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('LF%d' % edge_index)
-
+            to_check.append(square_index)
+            needed_edges.append('LF')
+            break
 
         # Right
         for (edge_index, square_index) in enumerate(reversed(self.sideR.edge_west_pos)):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('RF')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('RF%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('RF')
+            break
 
         for (edge_index, square_index) in enumerate(self.sideR.edge_east_pos):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('RB')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('RB%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('RB')
+            break
 
         # Down
         for (edge_index, square_index) in enumerate(self.sideD.edge_north_pos):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('DF')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('DF%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('DF')
+            break
 
         for (edge_index, square_index) in enumerate(reversed(self.sideD.edge_west_pos)):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('DL')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('DL%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('DL')
+            break
 
         for (edge_index, square_index) in enumerate(reversed(self.sideD.edge_south_pos)):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('DB')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('DB%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('DB')
+            break
 
         for (edge_index, square_index) in enumerate(self.sideD.edge_east_pos):
-            if edges_paired:
-                to_check.append(square_index)
-                needed_edges.append('DR')
-                break
-            else:
-                if orbit_matches(edges_per_side, orbit, edge_index):
-                    to_check.append(square_index)
-                    needed_edges.append('DR%d' % edge_index)
+            to_check.append(square_index)
+            needed_edges.append('DR')
+            break
 
         if debug:
             to_check_str = ''
 
             for x in to_check:
-                if edges_paired:
-                    to_check_str += "%3s" % x
-                else:
-                    to_check_str += "%4s" % x
+                to_check_str += "%3s" % x
 
             log.info("to_check     :%s" % to_check_str)
             log.info("needed edges : %s" % ' '.join(needed_edges))
@@ -2331,116 +2350,19 @@ div#anchorsquares {
         for square_index in to_check:
             side = self.get_side(square_index)
             partner_index = side.get_wing_partner(square_index)
-            square1 = self.state[square_index]
-            square2 = self.state[partner_index]
+            square1 = self.get_square(square_index)
+            square2 = self.get_square(partner_index)
 
-            if square1 in ('U', 'D'):
-                wing_str = square1 + square2
-            elif square2 in ('U', 'D'):
-                wing_str = square2 + square1
-            elif square1 in ('L', 'R'):
-                wing_str = square1 + square2
-            elif square2 in ('L', 'R'):
-                wing_str = square2 + square1
+            if square1.side_name in ('U', 'D'):
+                wing_str = square1.side_name + square2.side_name
+            elif square2.side_name in ('U', 'D'):
+                wing_str = square2.side_name + square1.side_name
+            elif square1.side_name in ('L', 'R'):
+                wing_str = square1.side_name + square2.side_name
+            elif square2.side_name in ('L', 'R'):
+                wing_str = square2.side_name + square1.side_name
             else:
                 raise Exception("Could not determine wing_str for (%s, %s)" % (square1, square2))
-
-            if not edges_paired:
-                # - backup the current state
-                # - add an 'x' to the end of the square_index/partner_index
-                # - move square_index/partner_index to its final edge location
-                # - look for the 'x' to determine if this is the '0' vs '1' wing
-                # - restore the original state
-
-                square1_with_x = square1 + 'x'
-                square2_with_x = square2 + 'x'
-
-                original_state = self.state[:]
-                original_solution = self.solution[:]
-                self.state[square_index] = square1_with_x
-                self.state[partner_index] = square2_with_x
-
-                # 'UB0', 'UB1', 'UL0', 'UL1', 'UF0', 'UF1', 'UR0', 'UR1',
-                # 'LB0', 'LB1', 'LF0', 'LF1', 'RF0', 'RF1', 'RB0', 'RB1',
-                # 'DF0', 'DF1', 'DL0', 'DL1', 'DB0', 'DB1', 'DR0', 'DR1
-                if wing_str == 'UB':
-                    self.move_wing_to_U_north(square_index)
-                    edge_to_check = self.sideU.edge_north_pos
-                    target_side = self.sideU
-
-                elif wing_str == 'UL':
-                    self.move_wing_to_U_west(square_index)
-                    edge_to_check = reversed(self.sideU.edge_west_pos)
-                    target_side = self.sideU
-
-                elif wing_str == 'UF':
-                    self.move_wing_to_U_south(square_index)
-                    edge_to_check = reversed(self.sideU.edge_south_pos)
-                    target_side = self.sideU
-
-                elif wing_str == 'UR':
-                    self.move_wing_to_U_east(square_index)
-                    edge_to_check = self.sideU.edge_east_pos
-                    target_side = self.sideU
-
-                elif wing_str == 'LB':
-                    self.move_wing_to_L_west(square_index)
-                    edge_to_check = reversed(self.sideL.edge_west_pos)
-                    target_side = self.sideL
-
-                elif wing_str == 'LF':
-                    self.move_wing_to_L_east(square_index)
-                    edge_to_check = self.sideL.edge_east_pos
-                    target_side = self.sideL
-
-                elif wing_str == 'RF':
-                    self.move_wing_to_R_west(square_index)
-                    edge_to_check = reversed(self.sideR.edge_west_pos)
-                    target_side = self.sideR
-
-                elif wing_str == 'RB':
-                    self.move_wing_to_R_east(square_index)
-                    edge_to_check = self.sideR.edge_east_pos
-                    target_side = self.sideR
-
-                elif wing_str == 'DF':
-                    self.move_wing_to_D_north(square_index)
-                    edge_to_check = self.sideD.edge_north_pos
-                    target_side = self.sideD
-
-                elif wing_str == 'DL':
-                    self.move_wing_to_D_west(square_index)
-                    edge_to_check = reversed(self.sideD.edge_west_pos)
-                    target_side = self.sideD
-
-                elif wing_str == 'DB':
-                    self.move_wing_to_D_south(square_index)
-                    edge_to_check = reversed(self.sideD.edge_south_pos)
-                    target_side = self.sideD
-
-                elif wing_str == 'DR':
-                    self.move_wing_to_D_east(square_index)
-                    edge_to_check = self.sideD.edge_east_pos
-                    target_side = self.sideD
-
-                else:
-                    raise Exception("invalid wing %s" % wing_str)
-
-                for (edge_index, wing_index) in enumerate(edge_to_check):
-                    wing_value = self.state[wing_index]
-
-                    if wing_value.endswith('x'):
-                        if wing_value.startswith(target_side.name):
-                            wing_str += str(edge_index)
-                        else:
-                            max_edge_index = len(target_side.edge_east_pos) - 1
-                            wing_str += str(max_edge_index - edge_index)
-                        break
-                else:
-                    raise Exception("Could not find wing %s (%d, %d) among %s" % (wing_str, square_index, partner_index, str(edge_to_check)))
-
-                self.state = original_state[:]
-                self.solution = original_solution[:]
 
             current_edges.append(wing_str)
 
@@ -2449,123 +2371,145 @@ div#anchorsquares {
 
         return get_swap_count(needed_edges, current_edges, debug)
 
-    def edge_swaps_even(self, edges_paired, orbit, debug):
-        if self.get_edge_swap_count(edges_paired, orbit, debug) % 2 == 0:
+    def edge_swaps_even(self, orbit, debug):
+        if self.get_edge_swap_count(orbit, debug) % 2 == 0:
             return True
         return False
 
-    def edge_swaps_odd(self, edges_paired, orbit, debug):
-        if self.get_edge_swap_count(edges_paired, orbit, debug) % 2 == 1:
+    def edge_swaps_odd(self, orbit, debug):
+        if self.get_edge_swap_count(orbit, debug) % 2 == 1:
             return True
         return False
 
-    def validate_parity(self):
-        self.set_state()
+    def validate_odd_cube_midge_vs_corner_parity(self):
+        """
+        http://www.ryanheise.com/cube/parity.html
 
-        if self.width == 3:
-            '''
-            http://www.ryanheise.com/cube/parity.html
+        When considering the permutation of all edges and corners together, the
+        overall parity must be even, as dictated by laws of the cube. However,
+        when considering only edges or corners alone, it is possible for their
+        parity to be either even or odd. To obey the laws of the cube, if the edge
+        parity is even then the corner parity must also be even, and if the edge
+        parity is odd then the corner parity must also be odd.
+        """
 
-            When considering the permutation of all edges and corners together, the
-            overall parity must be even, as dictated by laws of the cube. However,
-            when considering only edges or corners alone, it is possible for their
-            parity to be either even or odd. To obey the laws of the cube, if the edge
-            parity is even then the corner parity must also be even, and if the edge
-            parity is odd then the corner parity must also be odd.
-            '''
-            debug = False
-            edges_even = self.edge_swaps_even(True, None, debug)
-            corners_even = self.corner_swaps_even(debug)
+        if self.even:
+            return
 
-            if edges_even != corners_even:
-                log.warning("edges_even %s != corners_even %s, swap most ambiguous corner or edge to create valid parity" % (edges_even, corners_even))
-                distances = []
+        # TODO add support for 555 and 777
+        if self.width != 3:
+            return
 
-                # which two corners are the closest in terms of color
-                for cornerA in self.corners:
-                    for cornerB in self.corners:
-                        if cornerA == cornerB:
-                            continue
+        debug = False
+        edges_even = self.edge_swaps_even(None, debug)
+        corners_even = self.corner_swaps_even(debug)
 
-                        distance = cornerA.color_distance(cornerB.square1.color, cornerB.square2.color, cornerB.square3.color)
-                        distance = float(distance / 3)
-                        distances.append((distance, cornerA, cornerB))
+        if edges_even == corners_even:
+            return
 
-                # which two edges are the closest in terms of color
-                for edgeA in self.edges:
-                    for edgeB in self.edges:
-                        if edgeA == edgeB:
-                            continue
+        log.warning("edges_even %s != corners_even %s, swap most ambiguous orange or red edges to create valid parity" % (edges_even, corners_even))
 
-                        distance = edgeA.color_distance(edgeB.square1.color, edgeB.square2.color)
-                        distance = float(distance / 2)
-                        distances.append((distance, edgeA, edgeB))
+        # Reasonable assumptions we can make about why our parity is off:
+        # - we have a red vs orange backwards somewhere
+        # - the error will be made on an edge, not a corner.  Corners are much easier to get
+        #   correct because once you have correctly IDed green, white, blue and yellow you
+        #   can figure out which corner squares are red and which are orange.  Green, white,
+        #   yellow and blue are easy to get correct so it is extremely rare for us to mislabel
+        #   a corner
+        green_orange_position = None
+        green_red_position = None
+        blue_orange_position = None
+        blue_red_position = None
 
-                distances = sorted(distances)
-                log.info("distances\n%s\n" % pformat(distances))
-                (_, corner_or_edgeA, corner_or_edgeB) = distances[0]
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square in side.edge_squares:
+                partner_position = side.get_wing_partner(square.position)
+                partner = self.get_square(partner_position)
 
-                if isinstance(corner_or_edgeA, Corner):
-                    cornerA = corner_or_edgeA
-                    cornerB = corner_or_edgeB
+                if square.color_name == "Gr" and partner.color_name == "OR":
+                    green_orange_position = partner_position
+                elif square.color_name == "Gr" and partner.color_name == "Rd":
+                    green_red_position = partner_position
+                elif square.color_name == "Bu" and partner.color_name == "OR":
+                    blue_orange_position = partner_position
+                elif square.color_name == "Bu" and partner.color_name == "Rd":
+                    blue_red_position = partner_position
 
-                    tmp_cornerA_square1_color = cornerA.square1.color
-                    tmp_cornerA_square2_color = cornerA.square2.color
-                    tmp_cornerA_square3_color = cornerA.square3.color
-                    tmp_cornerB_square1_color = cornerB.square1.color
-                    tmp_cornerB_square2_color = cornerB.square2.color
-                    tmp_cornerB_square3_color = cornerB.square3.color
+        log.debug(f"green_orange_position {green_orange_position}")
+        log.debug(f"green_red_position {green_red_position}")
+        log.debug(f"blue_orange_position {blue_orange_position}")
+        log.debug(f"blue_red_position {blue_red_position}")
 
-                    cornerA.update_colors(tmp_cornerB_square1_color, tmp_cornerB_square2_color, tmp_cornerB_square3_color)
-                    cornerB.update_colors(tmp_cornerA_square1_color, tmp_cornerA_square2_color, tmp_cornerA_square3_color)
+        square_green_orange = self.get_square(green_orange_position)
+        square_green_red = self.get_square(green_red_position)
+        square_blue_orange = self.get_square(blue_orange_position)
+        square_blue_red = self.get_square(blue_red_position)
 
-                else:
-                    edgeA = corner_or_edgeA
-                    edgeB = corner_or_edgeB
+        # To correct the parity we can swap orange/red for the green edges or
+        # we can swap orange/red for the blue edges. Which will result in the
+        # lowest color distance with our orange/red baselines?
+        distance_swap_green_edge = 0
+        distance_swap_green_edge += get_euclidean_lab_distance(square_blue_orange.lab, self.orange_baseline)
+        distance_swap_green_edge += get_euclidean_lab_distance(square_blue_red.lab, self.red_baseline)
+        distance_swap_green_edge += get_euclidean_lab_distance(square_green_orange.lab, self.red_baseline)
+        distance_swap_green_edge += get_euclidean_lab_distance(square_green_red.lab, self.orange_baseline)
 
-                    tmp_edgeA_square1_color = edgeA.square1.color
-                    tmp_edgeA_square2_color = edgeA.square2.color
-                    tmp_edgeB_square1_color = edgeB.square1.color
-                    tmp_edgeB_square2_color = edgeB.square2.color
+        distance_swap_blue_edge = 0
+        distance_swap_blue_edge += get_euclidean_lab_distance(square_green_orange.lab, self.orange_baseline)
+        distance_swap_blue_edge += get_euclidean_lab_distance(square_green_red.lab, self.red_baseline)
+        distance_swap_blue_edge += get_euclidean_lab_distance(square_blue_orange.lab, self.red_baseline)
+        distance_swap_blue_edge += get_euclidean_lab_distance(square_blue_red.lab, self.orange_baseline)
 
-                    edgeA.update_colors(tmp_edgeB_square1_color, tmp_edgeB_square2_color)
-                    edgeB.update_colors(tmp_edgeA_square1_color, tmp_edgeA_square2_color)
+        log.info(f"distance_swap_green_edge {distance_swap_green_edge}")
+        log.info(f"distance_swap_blue_edge {distance_swap_blue_edge}")
 
-                self.state = []
-                self.set_state()
-                edges_even = self.edge_swaps_even(True, None, debug)
-                corners_even = self.corner_swaps_even(debug)
-                log.warning("edges_even %s, corners_even %s" % (edges_even, corners_even))
+        if distance_swap_green_edge < distance_swap_blue_edge:
+            log.warning("edge parity correction: change %s from %s to Rd" % (square_green_orange, square_green_orange.color_name))
+            log.warning("edge parity correction: change %s from %s to OR" % (square_green_red, square_green_red.color_name))
+            square_green_orange.color_name = "Rd"
+            square_green_red.color_name = "OR"
+            square_green_orange.side_name = self.color_to_side_name[square_green_orange.color_name]
+            square_green_red.side_name = self.color_to_side_name[square_green_red.color_name]
+        else:
+            log.warning("edge parity correction: change %s from %s to Rd" % (square_blue_orange, square_blue_orange.color_name))
+            log.warning("edge parity correction: change %s from %s to OR" % (square_blue_red, square_blue_red.color_name))
+            square_blue_orange.color_name = "Rd"
+            square_blue_red.color_name = "OR"
+            square_blue_orange.side_name = self.color_to_side_name[square_blue_orange.color_name]
+            square_blue_red.side_name = self.color_to_side_name[square_blue_red.color_name]
 
-    def write_final_cube(self):
-        data = self.cube_for_json()
-        cube = ['dummy', ]
-
-        for square_index in sorted(data['squares'].keys()):
-            value = data['squares'][square_index]
-            #log.info("write_final_cube square_index %d value %s" % (square_index, pformat(value)))
-            html_colors = data['sides'][value['finalSide']]['colorHTML']
-            cube.append((html_colors['red'], html_colors['green'], html_colors['blue']))
-
-        self.write_cube('Final Cube', cube)
+        edges_even = self.edge_swaps_even(None, debug)
+        corners_even = self.corner_swaps_even(debug)
+        assert edges_even == corners_even, f"parity is still broken, edges_even {edges_even}, corners_even {corners_even}"
 
     def crunch_colors(self):
-        self.anchor_squares = []
+        self.write_cube("Initial RGB values", False)
 
-        self.create_corner_objects()
-        self.identify_anchor_squares()
-        self.identify_corner_squares()
-        self.identify_edge_squares()
-        self.print_cube()
+        # Find all of the white squares
+        self.find_white_squares()
 
-        #self.resolve_edge_squares_experiment()
-        self.resolve_edge_squares()
+        # Now that we know what white looks like, contrast stretch the colors
+        self.contrast_stretch()
+        self.write_cube("Contrast Stretched RGB values", False)
 
-        #self.resolve_corner_squares_experiment()
+        self.resolve_center_squares()
+
         self.resolve_corner_squares()
+        self.sanity_check_corner_squares()
 
-        self.validate_parity()
+        self.resolve_edge_squares()
+        self.find_orange_and_red_baselines()
+        self.set_state()
+        self.sanity_check_edge_squares()
+        self.validate_odd_cube_midge_vs_corner_parity()
+
+        '''
+        for orbit_id in range(self.orbits):
+            if self.width == 4 or self.width == 6 or (self.width == 5 and orbit_id == 0):
+                high_low_edge_per_color = self.get_high_low_per_edge_color(orbit_id)
+                log.info("orbit %d final high_low_edge_per_color\n%s" % (orbit_id, pformat(high_low_edge_per_color)))
+        '''
+
+        self.write_cube("Final Cube", True)
         self.print_cube()
-        self.print_layout()
-        self.write_final_cube()
         self.www_footer()
