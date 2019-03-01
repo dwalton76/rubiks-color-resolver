@@ -1659,11 +1659,13 @@ div#colormapping {
         data['sides'] = {}
         data['squares'] = {}
 
+        '''
         for side in self.sides.values():
             data['sides'][side.name] = {
                 'colorName' : side.color_name,
                 'colorHTML' : html_color[side.color_name]
             }
+        '''
 
         #log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
 
