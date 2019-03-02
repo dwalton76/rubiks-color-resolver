@@ -1456,12 +1456,6 @@ div#colormapping {
         max_input_red = avg_white_red
         max_input_green = avg_white_green
         max_input_blue = avg_white_blue
-        #max_input_red = median_white_red
-        #max_input_green = median_white_green
-        #max_input_blue = median_white_blue
-        #max_input_red = darkest_white_red
-        #max_input_green = darkest_white_green
-        #max_input_blue = darkest_white_blue
 
         for square in all_squares:
             # https://pythontic.com/image-processing/pillow/contrast%20stretching
@@ -1469,11 +1463,6 @@ div#colormapping {
             new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
             new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
             new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
-
-            #new_red = int((square.red - min_input_red) * (((max_output_red - min_output_red) / (max_input_red - min_input_red)) + min_output_red))
-            #new_green = int((square.green - min_input_green) * (((max_output_green - min_output_green) / (max_input_green - min_input_green)) + min_output_green))
-            #new_blue = int((square.blue - min_input_blue) * (((max_output_blue - min_output_blue) / (max_input_blue - min_input_blue)) + min_output_blue))
-
             new_red = min(max_output_red, new_red)
             new_green = min(max_output_green, new_green)
             new_blue = min(max_output_blue, new_blue)
@@ -1504,78 +1493,71 @@ div#colormapping {
             square.blue = new_blue
             square.lab = rgb2lab((new_red, new_green, new_blue))
 
-    def find_orange_and_red_baselines(self):
+    def write_orange_red_baselines(self):
+        log.debug("orange baseline: %s" % self.orange_baseline)
+        log.debug("red baseline: %s" % self.red_baseline)
 
-        # The ORANGE/RED baselines are only used for sanity checking edges
-        # so we can return here for 2x2x2
-        if self.width == 2:
-            return
-        elif self.width in (3, 4, 5, 7):
-            centers_for_red_orange_baseline = "centers"
-        elif self.width == 6:
-            centers_for_red_orange_baseline = "inner x-centers"
-        else:
-            raise Exception("What centers to use for orange/red baseline?")
+        with open(HTML_FILENAME, 'a') as fh:
+            fh.write("<h2>ORANGE baseline</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                (self.orange_baseline.red, self.orange_baseline.green, self.orange_baseline.blue,
+                 self.orange_baseline.red, self.orange_baseline.green, self.orange_baseline.blue,
+                 int(self.orange_baseline.L), int(self.orange_baseline.a), int(self.orange_baseline.b),
+                 'OR',
+                 0))
+            fh.write("<br>")
+            fh.write("</div>\n")
+
+            fh.write("<h2>RED baseline</h2>\n")
+            fh.write("<div class='clear colors'>\n")
+            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                (self.red_baseline.red, self.red_baseline.green, self.red_baseline.blue,
+                 self.red_baseline.red, self.red_baseline.green, self.red_baseline.blue,
+                 int(self.red_baseline.L), int(self.red_baseline.a), int(self.red_baseline.b),
+                 'Rd',
+                 0))
+            fh.write("<br>")
+            fh.write("</div>\n")
+
+    def find_orange_and_red_baselines_odd(self):
 
         for (desc, centers_squares) in center_groups[self.width]:
-            if desc != centers_for_red_orange_baseline:
-                continue
+            if desc == "centers":
+                break
+        else:
+            raise Exception(f"Could not find 'centers' in center_groups\n{center_groups}\n")
 
-            orange_reds = []
-            orange_greens = []
-            orange_blues = []
-            red_reds = []
-            red_greens = []
-            red_blues = []
+        self.orange_baseline = None
+        self.red_baseline = None
 
-            for index in centers_squares:
-                square = self.get_square(index)
+        for index in centers_squares:
+            square = self.get_square(index)
 
-                if square.color_name == "OR":
-                    orange_reds.append(square.red)
-                    orange_greens.append(square.green)
-                    orange_blues.append(square.blue)
+            if square.color_name == "OR":
+                self.orange_baseline = square.lab
 
-                elif square.color_name == "Rd":
-                    red_reds.append(square.red)
-                    red_greens.append(square.green)
-                    red_blues.append(square.blue)
+            elif square.color_name == "Rd":
+                self.red_baseline = square.lab
 
-            new_orange_red = int(mean(orange_reds))
-            new_orange_green = int(mean(orange_greens))
-            new_orange_blue = int(mean(orange_blues))
-            self.orange_baseline = rgb2lab((new_orange_red, new_orange_green, new_orange_blue))
+        if self.orange_baseline is None:
+            raise Exception("Could not find OR baseline")
 
-            new_red_red = int(mean(red_reds))
-            new_red_green = int(mean(red_greens))
-            new_red_blue = int(mean(red_blues))
-            self.red_baseline = rgb2lab((new_red_red, new_red_green, new_red_blue))
+        if self.red_baseline is None:
+            raise Exception("Could not find Rd baseline")
 
-            log.debug("orange baseline: %s" % self.orange_baseline)
-            log.debug("red baseline: %s" % self.red_baseline)
+        self.write_orange_red_baselines()
 
-            with open(HTML_FILENAME, 'a') as fh:
-                fh.write("<h2>ORANGE baseline</h2>\n")
-                fh.write("<div class='clear colors'>\n")
-                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                    (new_orange_red, new_orange_green, new_orange_blue,
-                     new_orange_red, new_orange_green, new_orange_blue,
-                     int(self.orange_baseline.L), int(self.orange_baseline.a), int(self.orange_baseline.b),
-                     'OR',
-                     0))
-                fh.write("<br>")
-                fh.write("</div>\n")
+    def find_orange_and_red_baselines_even(self):
+        raise Exception("Implement this")
 
-                fh.write("<h2>RED baseline</h2>\n")
-                fh.write("<div class='clear colors'>\n")
-                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                    (new_red_red, new_red_green, new_red_blue,
-                     new_red_red, new_red_green, new_red_blue,
-                     int(self.red_baseline.L), int(self.red_baseline.a), int(self.red_baseline.b),
-                     'Rd',
-                     0))
-                fh.write("<br>")
-                fh.write("</div>\n")
+    def find_orange_and_red_baselines(self):
+        if self.odd:
+            self.find_orange_and_red_baselines_odd()
+        elif self.even:
+            self.find_orange_and_red_baselines_even()
+        else:
+            raise Exception("Cube is neither odd or even?")
 
     def set_state(self):
         self.state = []
