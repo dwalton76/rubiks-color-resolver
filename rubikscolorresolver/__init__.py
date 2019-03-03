@@ -59,6 +59,8 @@ odd_cube_center_color_permutations = (
     ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
 )
 
+even_cube_center_color_permutations = list(permutations(['Wh', 'Ye', 'OR', 'Rd', 'Gr', 'Bu']))
+
 edge_color_pair_map = {
 
     # Up (white)
@@ -235,6 +237,7 @@ edge_orbit_id = {
 }
 
 edge_orbit_wing_pairs = {
+    2 : (()),
     3 : (
         # orbit 0
         ((2, 38), (4, 11), (6, 29), (8, 20),
@@ -310,6 +313,7 @@ edge_orbit_wing_pairs = {
 }
 
 center_groups = {
+    2: (),
     3: (
         ("centers", (5, 14, 23, 32, 41, 50)),
     ),
@@ -428,6 +432,7 @@ center_groups = {
         )),
     )
 }
+
 
 SIDES_COUNT = 6
 HTML_DIRECTORY = '/tmp/rubiks-color-resolver/'
@@ -771,6 +776,27 @@ def hashtag_rgb_to_labcolor(rgb_string):
     return rgb2lab((red, green, blue))
 
 
+crayola_colors = {
+    # Handy website for converting RGB tuples to hex
+    # http://www.w3schools.com/colors/colors_converter.asp
+    #
+    # These are the RGB values as seen via a webcam
+    #   white = (235, 254, 250)
+    #   green = (20, 105, 74)
+    #   yellow = (210, 208, 2)
+    #   orange = (148, 53, 9)
+    #   blue = (22, 57, 103)
+    #   red = (104, 4, 2)
+    #
+    'Wh': hashtag_rgb_to_labcolor('#FFFFFF'),
+    'Gr': hashtag_rgb_to_labcolor('#14694a'),
+    'Ye': hashtag_rgb_to_labcolor('#FFFF00'),
+    'OR': hashtag_rgb_to_labcolor('#943509'),
+    'Bu': hashtag_rgb_to_labcolor('#163967'),
+    'Rd': hashtag_rgb_to_labcolor('#680402')
+}
+
+
 def get_row_color_distances(squares, row_baseline_lab):
     """
     'colors' is list if (index, (red, green, blue)) tuples
@@ -813,6 +839,23 @@ def get_squares_for_row(squares, target_row_index):
             row_index += 1
 
     return results
+
+
+def rgb_list_to_lab(rgbs):
+    reds = []
+    greens = []
+    blues = []
+
+    for (red, green, blue) in rgbs:
+        reds.append(red)
+        greens.append(green)
+        blues.append(blue)
+
+    mean_red = mean(reds)
+    mean_green = mean(greens)
+    mean_blue = mean(blues)
+
+    return rgb2lab((mean_red, mean_green, mean_blue))
 
 
 class Square(object):
@@ -1050,25 +1093,6 @@ class RubiksColorSolverGeneric(object):
         for side in self.sides.values():
             side.calculate_wing_partners()
 
-        self.crayola_colors = {
-            # Handy website for converting RGB tuples to hex
-            # http://www.w3schools.com/colors/colors_converter.asp
-            #
-            # These are the RGB values as seen via a webcam
-            #   white = (235, 254, 250)
-            #   green = (20, 105, 74)
-            #   yellow = (210, 208, 2)
-            #   orange = (148, 53, 9)
-            #   blue = (22, 57, 103)
-            #   red = (104, 4, 2)
-            #
-            'Wh': hashtag_rgb_to_labcolor('#FFFFFF'),
-            'Gr': hashtag_rgb_to_labcolor('#14694a'),
-            'Ye': hashtag_rgb_to_labcolor('#FFFF00'),
-            'OR': hashtag_rgb_to_labcolor('#943509'),
-            'Bu': hashtag_rgb_to_labcolor('#163967'),
-            'Rd': hashtag_rgb_to_labcolor('#680402')
-        }
         self.www_header()
 
     def www_header(self):
@@ -1549,7 +1573,53 @@ div#colormapping {
         self.write_orange_red_baselines()
 
     def find_orange_and_red_baselines_even(self):
-        raise Exception("Implement this")
+        self.orange_baseline = None
+        self.red_baseline = None
+
+        (_green_white_corners, _green_yellow_corners,
+         blue_white_corners, _blue_yellow_corners) = self.find_corners_by_color()
+        log.info(f"blue_white_corners {blue_white_corners}")
+
+        # There are two blue/white corners
+        # - one of them will be blue/white/orange
+        # - one of them will be blue/red/white
+        #
+        # We can look at the order of just the blue and white squares and determine
+        # if the third square is orange or red
+        for (corner1_index, corner2_index, corner3_index) in blue_white_corners:
+            corner1 = self.get_square(corner1_index)
+            corner2 = self.get_square(corner2_index)
+            corner3 = self.get_square(corner3_index)
+
+            # Possible combinations of blue, white and orange:
+            #   blue white orange
+            #   orange blue white
+            #   white orange blue
+            if corner1.color_name == "Bu" and corner2.color_name == "Wh":
+                self.orange_baseline = corner3.lab
+            elif corner2.color_name == "Bu" and corner3.color_name == "Wh":
+                self.orange_baseline = corner1.lab
+            elif corner3.color_name == "Bu" and corner1.color_name == "Wh":
+                self.orange_baseline = corner2.lab
+
+            # Possible combinations of blue, white and red:
+            #   blue red white
+            #   white blue red
+            #   red white blue
+            elif corner1.color_name == "Bu" and corner3.color_name == "Wh":
+                self.red_baseline = corner2.lab
+            elif corner2.color_name == "Bu" and corner1.color_name == "Wh":
+                self.red_baseline = corner3.lab
+            elif corner3.color_name == "Bu" and corner2.color_name == "Wh":
+                self.red_baseline = corner1.lab
+
+        if self.orange_baseline is None:
+            raise Exception("Could not find OR baseline")
+
+        if self.red_baseline is None:
+            raise Exception("Could not find Rd baseline")
+
+        self.write_orange_red_baselines()
 
     def find_orange_and_red_baselines(self):
         if self.odd:
@@ -1583,7 +1653,7 @@ div#colormapping {
 
                 for (index, center_square) in enumerate(center_squares):
                     color_name = permutation[index]
-                    color_obj = self.crayola_colors[color_name]
+                    color_obj = crayola_colors[color_name]
                     distance += get_euclidean_lab_distance(center_square.lab, color_obj)
 
                 if min_distance is None or distance < min_distance:
@@ -1661,7 +1731,14 @@ div#colormapping {
 
         return data
 
-    def assign_color_names(self, desc, squares_lists_all):
+    def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
+        assert color_permutations
+        assert color_box
+
+        #log.info(f"assign_color_names for '{desc}'")
+        #log.info(f"squares_lists_all {squares_lists_all}")
+        #log.info(f"color_permutations {color_permutations}")
+        #log.info(f"color_box {color_box}")
 
         # split squares_lists_all up into 6 evenly sized lists
         squares_per_row = int(len(squares_lists_all)/6)
@@ -1677,36 +1754,26 @@ div#colormapping {
 
         # Assign a color name to each squares in each square_list. Compute
         # which naming scheme results in the least total color distance in
-        # terms of the assigned color name vs. the colors in crayola_colors.
+        # terms of the assigned color name vs. the colors in color_box.
         min_distance = None
         min_distance_permutation = None
 
-        if self.odd and desc == "centers":
-            crayola_color_permutations = odd_cube_center_color_permutations
-        else:
-            crayola_color_permutations = permutations(self.crayola_colors.keys())
-
-        for permutation in crayola_color_permutations:
+        for permutation in color_permutations:
             distance = 0
 
             for (index, squares_list) in enumerate(squares_lists):
                 color_name = permutation[index]
-                crayola_color_lab = self.crayola_colors[color_name]
+                color_lab = color_box[color_name]
 
                 for square in squares_list:
-                    distance += get_euclidean_lab_distance(square.lab, crayola_color_lab)
+                    distance += get_euclidean_lab_distance(square.lab, color_lab)
 
             if min_distance is None or distance < min_distance:
                 min_distance = distance
                 min_distance_permutation = permutation
-
-                '''
-                if desc == "centers":
-                    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
-            else:
-                if desc == "centers":
-                    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
-                '''
+            #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
+            #else:
+            #    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
 
         # Assign the color name to the Square object
         for (index, squares_list) in enumerate(squares_lists):
@@ -1714,14 +1781,95 @@ div#colormapping {
 
             for square in squares_list:
                 square.color_name = color_name
-                #log.info("%s SQUARE %s color_name is now %s" % (desc, square, square.color_name))
 
-                # TODO what about for even cubes?
-                # Odd cubes are awesome because we can easily find one square of each color by
-                # looking at the square in the exact center.
-                if self.odd and desc == "centers":
-                    #log.warning(f"update crayola_colors[{color_name}] from {self.crayola_colors[color_name]} to {square.lab}")
-                    self.crayola_colors[color_name] = square.lab
+    def find_color_baselines_odd(self):
+        """
+        assign names to the center squares, use crayola colors as reference point
+        """
+        sorted_center_squares = []
+        for (desc, centers_squares) in center_groups[self.width]:
+            if desc == "centers":
+                for position in centers_squares:
+                    square = self.get_square(position)
+                    sorted_center_squares.append(square)
+                break
+        else:
+            raise Exception("Could not find 'centers' squares")
+
+        # assign names to the center squares, use crayola colors as reference point
+        self.assign_color_names('centers', sorted_center_squares, odd_cube_center_color_permutations, crayola_colors)
+
+        # Build a color_box dictionary from the centers
+        self.color_box = {}
+
+        for (desc, centers_squares) in center_groups[self.width]:
+            if desc == "centers":
+                for position in centers_squares:
+                    square = self.get_square(position)
+                    self.color_box[square.color_name] = square.lab
+
+    def find_color_baselines_even(self):
+        """
+        assign names to the corner squares, use crayola colors as reference point
+        """
+        # dwalton
+        corner_squares = []
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.corner_squares:
+                corner_squares.append(square)
+
+        sorted_corner_squares = traveling_salesman(corner_squares, "euclidean")
+        self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, crayola_colors)
+        self.sanity_check_corner_squares()
+
+        # Build a color_box dictionary from the centers
+        self.color_box = {}
+
+        white_corners = []
+        yellow_corners = []
+        orange_corners = []
+        red_corners = []
+        green_corners = []
+        blue_corners = []
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.corner_squares:
+                if square.color_name == "Wh":
+                    white_corners.append(square.rgb)
+                elif square.color_name == "Ye":
+                    yellow_corners.append(square.rgb)
+                elif square.color_name == "OR":
+                    orange_corners.append(square.rgb)
+                elif square.color_name == "Rd":
+                    red_corners.append(square.rgb)
+                elif square.color_name == "Gr":
+                    green_corners.append(square.rgb)
+                elif square.color_name == "Bu":
+                    blue_corners.append(square.rgb)
+
+        self.color_box["Wh"] = rgb_list_to_lab(white_corners)
+        self.color_box["Ye"] = rgb_list_to_lab(yellow_corners)
+        self.color_box["OR"] = rgb_list_to_lab(orange_corners)
+        self.color_box["Rd"] = rgb_list_to_lab(red_corners)
+        self.color_box["Gr"] = rgb_list_to_lab(green_corners)
+        self.color_box["Bu"] = rgb_list_to_lab(blue_corners)
+
+    def find_color_baselines(self):
+        self.find_color_baselines_even()
+
+        '''
+        if self.odd:
+            self.find_color_baselines_odd()
+        elif self.even:
+            self.find_color_baselines_even()
+        else:
+            raise Exception("Cube is neither odd nor even")
+        '''
+        # log.info(f"self.color_box: {self.color_box}")
+
+        self.orange_baseline = self.color_box["OR"]
+        self.red_baseline = self.color_box["Rd"]
 
     def validate_edge_orbit(self, orbit_id):
         valid = True
@@ -1756,6 +1904,78 @@ div#colormapping {
 
         #assert valid, "Cube is invalid"
         return valid
+
+    def find_corners_by_color(self):
+        green_white_corners = []
+        green_yellow_corners = []
+        blue_white_corners = []
+        blue_yellow_corners = []
+
+        for corner_tuple in corner_tuples[self.width]:
+            corner_colors = []
+
+            for position in corner_tuple:
+                square = self.get_square(position)
+                #log.info("square %s is %s" % (square, square.color_name))
+                corner_colors.append(square.color_name)
+
+            if "Gr" in corner_colors and "Wh" in corner_colors:
+                #log.info("%s is Gr/Wh corner" % " ".join(map(str, corner_tuple)))
+                green_white_corners.append(corner_tuple)
+
+            elif "Gr" in corner_colors and "Ye" in corner_colors:
+                #log.info("%s is Gr/Ye corner" % " ".join(map(str, corner_tuple)))
+                green_yellow_corners.append(corner_tuple)
+
+            elif "Bu" in corner_colors and "Wh" in corner_colors:
+                #log.info("%s is Bu/Wh corner" % " ".join(map(str, corner_tuple)))
+                blue_white_corners.append(corner_tuple)
+
+            elif "Bu" in corner_colors and "Ye" in corner_colors:
+                #log.info("%s is Bu/Ye corner" % " ".join(map(str, corner_tuple)))
+                blue_yellow_corners.append(corner_tuple)
+
+        return (green_white_corners, green_yellow_corners, blue_white_corners, blue_yellow_corners)
+
+    def find_edges_by_color(self, orbit_id):
+        green_red_orange_color_names = ("Gr", "Rd", "OR")
+        blue_red_orange_color_names = ("Bu", "Rd", "OR")
+        white_red_orange_color_names = ("Wh", "Rd", "OR")
+        yellow_red_orange_color_names = ("Ye", "Rd", "OR")
+        green_red_or_orange_edges = []
+        blue_red_or_orange_edges = []
+        white_red_or_orange_edges = []
+        yellow_red_or_orange_edges = []
+
+        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][orbit_id]:
+            square = self.get_square(square_index)
+            partner = self.get_square(partner_index)
+
+            if square.color_name in green_red_orange_color_names and partner.color_name in green_red_orange_color_names:
+                if square.color_name == "Gr":
+                    green_red_or_orange_edges.append((square, partner))
+                else:
+                    green_red_or_orange_edges.append((partner, square))
+
+            elif square.color_name in blue_red_orange_color_names and partner.color_name in blue_red_orange_color_names:
+                if square.color_name == "Bu":
+                    blue_red_or_orange_edges.append((square, partner))
+                else:
+                    blue_red_or_orange_edges.append((partner, square))
+
+            elif square.color_name in white_red_orange_color_names and partner.color_name in white_red_orange_color_names:
+                if square.color_name == "Wh":
+                    white_red_or_orange_edges.append((square, partner))
+                else:
+                    white_red_or_orange_edges.append((partner, square))
+
+            elif square.color_name in yellow_red_orange_color_names and partner.color_name in yellow_red_orange_color_names:
+                if square.color_name == "Ye":
+                    yellow_red_or_orange_edges.append((square, partner))
+                else:
+                    yellow_red_or_orange_edges.append((partner, square))
+
+        return (green_red_or_orange_edges, blue_red_or_orange_edges, white_red_or_orange_edges, yellow_red_or_orange_edges)
 
     def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
 
@@ -1831,43 +2051,8 @@ div#colormapping {
 
             log.info("\n\n")
 
-        green_red_orange_color_names = ("Gr", "Rd", "OR")
-        blue_red_orange_color_names = ("Bu", "Rd", "OR")
-        white_red_orange_color_names = ("Wh", "Rd", "OR")
-        yellow_red_orange_color_names = ("Ye", "Rd", "OR")
-        green_red_or_orange_edges = []
-        blue_red_or_orange_edges = []
-        white_red_or_orange_edges = []
-        yellow_red_or_orange_edges = []
-
-        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][target_orbit_id]:
-            square = self.get_square(square_index)
-            partner = self.get_square(partner_index)
-
-            if square.color_name in green_red_orange_color_names and partner.color_name in green_red_orange_color_names:
-                if square.color_name == "Gr":
-                    green_red_or_orange_edges.append((square, partner))
-                else:
-                    green_red_or_orange_edges.append((partner, square))
-
-            elif square.color_name in blue_red_orange_color_names and partner.color_name in blue_red_orange_color_names:
-                if square.color_name == "Bu":
-                    blue_red_or_orange_edges.append((square, partner))
-                else:
-                    blue_red_or_orange_edges.append((partner, square))
-
-            elif square.color_name in white_red_orange_color_names and partner.color_name in white_red_orange_color_names:
-                if square.color_name == "Wh":
-                    white_red_or_orange_edges.append((square, partner))
-                else:
-                    white_red_or_orange_edges.append((partner, square))
-
-            elif square.color_name in yellow_red_orange_color_names and partner.color_name in yellow_red_orange_color_names:
-                if square.color_name == "Ye":
-                    yellow_red_or_orange_edges.append((square, partner))
-                else:
-                    yellow_red_or_orange_edges.append((partner, square))
-
+        (green_red_or_orange_edges, blue_red_or_orange_edges,
+         white_red_or_orange_edges, yellow_red_or_orange_edges) = self.find_edges_by_color(target_orbit_id)
         log.info(f"orbit {target_orbit_id} green_red_or_orange_edges {green_red_or_orange_edges}")
         fix_orange_vs_red_for_color('green', green_red_or_orange_edges)
 
@@ -1922,11 +2107,6 @@ div#colormapping {
         return high_low_per_edge_color
 
     def sanity_check_edge_squares(self):
-
-        # Nothing to be done for 2x2x2
-        if self.width == 2:
-            return True
-
         for orbit_id in range(self.orbits):
             self.sanity_check_edges_red_orange_count_for_orbit(orbit_id)
 
@@ -1952,7 +2132,7 @@ div#colormapping {
                         edge_squares.append(square)
 
             sorted_edge_squares = traveling_salesman(edge_squares, "euclidean")
-            self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_squares)
+            self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_squares, even_cube_center_color_permutations, self.color_box)
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
                 sorted_edge_squares)
@@ -2126,6 +2306,7 @@ div#colormapping {
         """
         Use traveling salesman algorithm to sort the colors
         """
+        # dwalton - reference
         log.info('Resolve corners')
         corner_squares = []
 
@@ -2134,39 +2315,11 @@ div#colormapping {
                 corner_squares.append(square)
 
         sorted_corner_squares = traveling_salesman(corner_squares, "euclidean")
-        self.assign_color_names('corners', sorted_corner_squares)
+        self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, self.color_box)
         self.write_colors('corners', sorted_corner_squares)
 
     def sanity_check_corner_squares(self):
-        green_white_corners = []
-        green_yellow_corners = []
-        blue_white_corners = []
-        blue_yellow_corners = []
-
-        for corner_tuple in corner_tuples[self.width]:
-            corner_colors = []
-
-            for position in corner_tuple:
-                square = self.get_square(position)
-                #log.info("square %s is %s" % (square, square.color_name))
-                corner_colors.append(square.color_name)
-
-            if "Gr" in corner_colors and "Wh" in corner_colors:
-                #log.info("%s is Gr/Wh corner" % " ".join(map(str, corner_tuple)))
-                green_white_corners.append(corner_tuple)
-
-            elif "Gr" in corner_colors and "Ye" in corner_colors:
-                #log.info("%s is Gr/Ye corner" % " ".join(map(str, corner_tuple)))
-                green_yellow_corners.append(corner_tuple)
-
-            elif "Bu" in corner_colors and "Wh" in corner_colors:
-                #log.info("%s is Bu/Wh corner" % " ".join(map(str, corner_tuple)))
-                blue_white_corners.append(corner_tuple)
-
-            elif "Bu" in corner_colors and "Ye" in corner_colors:
-                #log.info("%s is Bu/Ye corner" % " ".join(map(str, corner_tuple)))
-                blue_yellow_corners.append(corner_tuple)
-
+        (green_white_corners, green_yellow_corners, blue_white_corners, blue_yellow_corners) = self.find_corners_by_color()
         self.assign_green_white_corners(green_white_corners)
         self.assign_green_yellow_corners(green_yellow_corners)
         self.assign_blue_white_corners(blue_white_corners)
@@ -2176,11 +2329,6 @@ div#colormapping {
         """
         Use traveling salesman algorithm to sort the squares by color
         """
-
-        # Nothing to be done for 2x2x2
-        if self.width == 2:
-            return
-
         for (desc, centers_squares) in center_groups[self.width]:
             log.info('Resolve {}'.format(desc))
             center_squares = []
@@ -2189,12 +2337,8 @@ div#colormapping {
                 square = self.get_square(position)
                 center_squares.append(square)
 
-            if len(centers_squares) == 6:
-                sorted_center_squares = center_squares[:]
-            else:
-                sorted_center_squares = traveling_salesman(center_squares, "euclidean")
-
-            self.assign_color_names(desc, sorted_center_squares)
+            sorted_center_squares = traveling_salesman(center_squares, "euclidean")
+            self.assign_color_names(desc, sorted_center_squares, even_cube_center_color_permutations, self.color_box)
             self.write_colors(desc, sorted_center_squares)
 
     def get_corner_swap_count(self, debug=False):
@@ -2476,13 +2620,19 @@ div#colormapping {
         self.contrast_stretch()
         self.write_cube("Contrast Stretched RGB values", False)
 
+        # The first thing we need to do is find a baseline for each color
+        self.find_color_baselines()
+
+        # centers
         self.resolve_center_squares()
 
+        # corners
         self.resolve_corner_squares()
         self.sanity_check_corner_squares()
 
+        # edges
         self.resolve_edge_squares()
-        self.find_orange_and_red_baselines()
+        #self.find_orange_and_red_baselines()
         self.set_state()
         self.sanity_check_edge_squares()
         self.validate_odd_cube_midge_vs_corner_parity()
