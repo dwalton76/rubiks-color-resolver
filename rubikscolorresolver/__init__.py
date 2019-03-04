@@ -318,7 +318,7 @@ center_groups = {
         ("centers", (5, 14, 23, 32, 41, 50)),
     ),
     4: (
-        ("centers", (
+        ("x-centers", (
             6, 7, 10, 11, # Upper
             22, 23, 26, 27, # Left
             38, 39, 42, 43, # Front
@@ -851,9 +851,9 @@ def rgb_list_to_lab(rgbs):
         greens.append(green)
         blues.append(blue)
 
-    mean_red = mean(reds)
-    mean_green = mean(greens)
-    mean_blue = mean(blues)
+    mean_red = int(mean(reds))
+    mean_green = int(mean(greens))
+    mean_blue = int(mean(blues))
 
     return rgb2lab((mean_red, mean_green, mean_blue))
 
@@ -1517,117 +1517,22 @@ div#colormapping {
             square.blue = new_blue
             square.lab = rgb2lab((new_red, new_green, new_blue))
 
-    def write_orange_red_baselines(self):
-        log.debug("orange baseline: %s" % self.orange_baseline)
-        log.debug("red baseline: %s" % self.red_baseline)
-
+    def write_color_box(self):
         with open(HTML_FILENAME, 'a') as fh:
-            fh.write("<h2>ORANGE baseline</h2>\n")
+            fh.write("<h2>color_box</h2>\n")
             fh.write("<div class='clear colors'>\n")
-            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                (self.orange_baseline.red, self.orange_baseline.green, self.orange_baseline.blue,
-                 self.orange_baseline.red, self.orange_baseline.green, self.orange_baseline.blue,
-                 int(self.orange_baseline.L), int(self.orange_baseline.a), int(self.orange_baseline.b),
-                 'OR',
-                 0))
+            for color_name in ("Wh", "Ye", "Gr", "Bu", "OR", "Rd"):
+                lab = self.color_box[color_name]
+
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%s</span>\n" %
+                    (lab.red, lab.green, lab.blue,
+                    lab.red, lab.green, lab.blue,
+                    int(lab.L), int(lab.a), int(lab.b),
+                    color_name,
+                    color_name))
+
             fh.write("<br>")
             fh.write("</div>\n")
-
-            fh.write("<h2>RED baseline</h2>\n")
-            fh.write("<div class='clear colors'>\n")
-            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                (self.red_baseline.red, self.red_baseline.green, self.red_baseline.blue,
-                 self.red_baseline.red, self.red_baseline.green, self.red_baseline.blue,
-                 int(self.red_baseline.L), int(self.red_baseline.a), int(self.red_baseline.b),
-                 'Rd',
-                 0))
-            fh.write("<br>")
-            fh.write("</div>\n")
-
-    def find_orange_and_red_baselines_odd(self):
-
-        for (desc, centers_squares) in center_groups[self.width]:
-            if desc == "centers":
-                break
-        else:
-            raise Exception(f"Could not find 'centers' in center_groups\n{center_groups}\n")
-
-        self.orange_baseline = None
-        self.red_baseline = None
-
-        for index in centers_squares:
-            square = self.get_square(index)
-
-            if square.color_name == "OR":
-                self.orange_baseline = square.lab
-
-            elif square.color_name == "Rd":
-                self.red_baseline = square.lab
-
-        if self.orange_baseline is None:
-            raise Exception("Could not find OR baseline")
-
-        if self.red_baseline is None:
-            raise Exception("Could not find Rd baseline")
-
-        self.write_orange_red_baselines()
-
-    def find_orange_and_red_baselines_even(self):
-        self.orange_baseline = None
-        self.red_baseline = None
-
-        (_green_white_corners, _green_yellow_corners,
-         blue_white_corners, _blue_yellow_corners) = self.find_corners_by_color()
-        log.info(f"blue_white_corners {blue_white_corners}")
-
-        # There are two blue/white corners
-        # - one of them will be blue/white/orange
-        # - one of them will be blue/red/white
-        #
-        # We can look at the order of just the blue and white squares and determine
-        # if the third square is orange or red
-        for (corner1_index, corner2_index, corner3_index) in blue_white_corners:
-            corner1 = self.get_square(corner1_index)
-            corner2 = self.get_square(corner2_index)
-            corner3 = self.get_square(corner3_index)
-
-            # Possible combinations of blue, white and orange:
-            #   blue white orange
-            #   orange blue white
-            #   white orange blue
-            if corner1.color_name == "Bu" and corner2.color_name == "Wh":
-                self.orange_baseline = corner3.lab
-            elif corner2.color_name == "Bu" and corner3.color_name == "Wh":
-                self.orange_baseline = corner1.lab
-            elif corner3.color_name == "Bu" and corner1.color_name == "Wh":
-                self.orange_baseline = corner2.lab
-
-            # Possible combinations of blue, white and red:
-            #   blue red white
-            #   white blue red
-            #   red white blue
-            elif corner1.color_name == "Bu" and corner3.color_name == "Wh":
-                self.red_baseline = corner2.lab
-            elif corner2.color_name == "Bu" and corner1.color_name == "Wh":
-                self.red_baseline = corner3.lab
-            elif corner3.color_name == "Bu" and corner2.color_name == "Wh":
-                self.red_baseline = corner1.lab
-
-        if self.orange_baseline is None:
-            raise Exception("Could not find OR baseline")
-
-        if self.red_baseline is None:
-            raise Exception("Could not find Rd baseline")
-
-        self.write_orange_red_baselines()
-
-    def find_orange_and_red_baselines(self):
-        if self.odd:
-            self.find_orange_and_red_baselines_odd()
-        elif self.even:
-            self.find_orange_and_red_baselines_even()
-        else:
-            raise Exception("Cube is neither odd or even?")
 
     def set_state(self):
         self.state = []
@@ -1782,37 +1687,14 @@ div#colormapping {
             for square in squares_list:
                 square.color_name = color_name
 
-    def find_color_baselines_odd(self):
+    def resolve_corner_squares(self):
         """
-        assign names to the center squares, use crayola colors as reference point
+        Assign names to the corner squares, use crayola colors as reference point.
+
+        We use these name assignments to build our "color_box" which will be our
+        references Wh, Ye, OR, Rd, Gr, Bu colors for assigning color names to edge
+        and center squares.
         """
-        sorted_center_squares = []
-        for (desc, centers_squares) in center_groups[self.width]:
-            if desc == "centers":
-                for position in centers_squares:
-                    square = self.get_square(position)
-                    sorted_center_squares.append(square)
-                break
-        else:
-            raise Exception("Could not find 'centers' squares")
-
-        # assign names to the center squares, use crayola colors as reference point
-        self.assign_color_names('centers', sorted_center_squares, odd_cube_center_color_permutations, crayola_colors)
-
-        # Build a color_box dictionary from the centers
-        self.color_box = {}
-
-        for (desc, centers_squares) in center_groups[self.width]:
-            if desc == "centers":
-                for position in centers_squares:
-                    square = self.get_square(position)
-                    self.color_box[square.color_name] = square.lab
-
-    def find_color_baselines_even(self):
-        """
-        assign names to the corner squares, use crayola colors as reference point
-        """
-        # dwalton
         corner_squares = []
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
@@ -1822,6 +1704,7 @@ div#colormapping {
         sorted_corner_squares = traveling_salesman(corner_squares, "euclidean")
         self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, crayola_colors)
         self.sanity_check_corner_squares()
+        self.write_colors('corners', sorted_corner_squares)
 
         # Build a color_box dictionary from the centers
         self.color_box = {}
@@ -1854,18 +1737,6 @@ div#colormapping {
         self.color_box["Rd"] = rgb_list_to_lab(red_corners)
         self.color_box["Gr"] = rgb_list_to_lab(green_corners)
         self.color_box["Bu"] = rgb_list_to_lab(blue_corners)
-
-    def find_color_baselines(self):
-        self.find_color_baselines_even()
-
-        '''
-        if self.odd:
-            self.find_color_baselines_odd()
-        elif self.even:
-            self.find_color_baselines_even()
-        else:
-            raise Exception("Cube is neither odd nor even")
-        '''
         # log.info(f"self.color_box: {self.color_box}")
 
         self.orange_baseline = self.color_box["OR"]
@@ -2302,22 +2173,6 @@ div#colormapping {
                     corner3.color_name = "OR"
                     log.warning("change Bu/Ye corner partner %s from Rd to OR" % corner3)
 
-    def resolve_corner_squares(self):
-        """
-        Use traveling salesman algorithm to sort the colors
-        """
-        # dwalton - reference
-        log.info('Resolve corners')
-        corner_squares = []
-
-        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
-            for square in side.corner_squares:
-                corner_squares.append(square)
-
-        sorted_corner_squares = traveling_salesman(corner_squares, "euclidean")
-        self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, self.color_box)
-        self.write_colors('corners', sorted_corner_squares)
-
     def sanity_check_corner_squares(self):
         (green_white_corners, green_yellow_corners, blue_white_corners, blue_yellow_corners) = self.find_corners_by_color()
         self.assign_green_white_corners(green_white_corners)
@@ -2337,8 +2192,16 @@ div#colormapping {
                 square = self.get_square(position)
                 center_squares.append(square)
 
-            sorted_center_squares = traveling_salesman(center_squares, "euclidean")
-            self.assign_color_names(desc, sorted_center_squares, even_cube_center_color_permutations, self.color_box)
+
+            if desc == "centers":
+                sorted_center_squares = center_squares[:]
+                permutations = odd_cube_center_color_permutations
+                #permutations = even_cube_center_color_permutations
+            else:
+                sorted_center_squares = traveling_salesman(center_squares, "euclidean")
+                permutations = even_cube_center_color_permutations
+
+            self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
             self.write_colors(desc, sorted_center_squares)
 
     def get_corner_swap_count(self, debug=False):
@@ -2620,19 +2483,15 @@ div#colormapping {
         self.contrast_stretch()
         self.write_cube("Contrast Stretched RGB values", False)
 
-        # The first thing we need to do is find a baseline for each color
-        self.find_color_baselines()
+        # corners...this also finds a baseline for each color
+        self.resolve_corner_squares()
+        self.write_color_box()
 
         # centers
         self.resolve_center_squares()
 
-        # corners
-        self.resolve_corner_squares()
-        self.sanity_check_corner_squares()
-
         # edges
         self.resolve_edge_squares()
-        #self.find_orange_and_red_baselines()
         self.set_state()
         self.sanity_check_edge_squares()
         self.validate_odd_cube_midge_vs_corner_parity()
