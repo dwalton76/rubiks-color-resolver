@@ -1216,7 +1216,7 @@ div#colormapping {
         # There are six "rows" of colors, which row is the closest to pure white?
         white_lab = rgb2lab(WHITE)
         row_distances = get_row_color_distances(sorted_all_squares, [white_lab] * 6)
-        log.debug(f"row_distances {row_distances}")
+        log.info(f"find_white_squares row_distances {row_distances}")
         min_distance = 99999
         min_distance_row_index = None
 
@@ -2477,11 +2477,13 @@ div#colormapping {
         self.write_cube("Initial RGB values", False)
 
         # Find all of the white squares
+        '''
         self.find_white_squares()
 
         # Now that we know what white looks like, contrast stretch the colors
         self.contrast_stretch()
         self.write_cube("Contrast Stretched RGB values", False)
+        '''
 
         # corners...this also finds a baseline for each color
         self.resolve_corner_squares()
@@ -2495,13 +2497,6 @@ div#colormapping {
         self.set_state()
         self.sanity_check_edge_squares()
         self.validate_odd_cube_midge_vs_corner_parity()
-
-        '''
-        for orbit_id in range(self.orbits):
-            if self.width == 4 or self.width == 6 or (self.width == 5 and orbit_id == 0):
-                high_low_edge_per_color = self.get_high_low_per_edge_color(orbit_id)
-                log.info("orbit %d final high_low_edge_per_color\n%s" % (orbit_id, pformat(high_low_edge_per_color)))
-        '''
 
         self.write_cube("Final Cube", True)
         self.print_cube()
