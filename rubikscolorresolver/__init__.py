@@ -1216,7 +1216,7 @@ div#colormapping {
         # There are six "rows" of colors, which row is the closest to pure white?
         white_lab = rgb2lab(WHITE)
         row_distances = get_row_color_distances(sorted_all_squares, [white_lab] * 6)
-        log.info(f"find_white_squares row_distances {row_distances}")
+        log.info("find_white_squares row_distances %s" % pformat(row_distances))
         min_distance = 99999
         min_distance_row_index = None
 
@@ -1440,9 +1440,9 @@ div#colormapping {
             if blue < darkest_white_blue:
                 darkest_white_blue = blue
 
-        log.debug(f"min_input_red {min_input_red}, max_input_red {max_input_red}")
-        log.debug(f"min_input_green {min_input_green}, max_input_green {max_input_green}")
-        log.debug(f"min_input_blue {min_input_blue}, max_input_blue {max_input_blue}")
+        log.debug("min_input_red %s, max_input_red %s" % (min_input_red, max_input_red))
+        log.debug("min_input_green %s, max_input_red %s" % (min_input_red, max_input_red))
+        log.debug("min_input_blue %s, max_input_blue %s" % (min_input_blue, max_input_blue))
         min_output_red = 30
         min_output_green = 30
         min_output_blue = 30
@@ -1459,9 +1459,9 @@ div#colormapping {
         median_white_red = median(white_reds)
         median_white_green = median(white_greens)
         median_white_blue = median(white_blues)
-        log.debug(f"WHITE reds {white_reds},  avg {avg_white_red}, median {median_white_red}")
-        log.debug(f"WHITE greens {white_greens},  avg {avg_white_green}, median {median_white_green}")
-        log.debug(f"WHITE blues {white_blues},  avg {avg_white_blue}, median {median_white_blue}")
+        log.debug("WHITE reds %s,  avg %s, median %s" % (pformat(white_reds), avg_white_red, median_white_red))
+        log.debug("WHITE greens %s,  avg %s, median %s" % (pformat(white_greens), avg_white_green, median_white_green))
+        log.debug("WHITE blues %s,  avg %s, median %s" % (pformat(white_blues), avg_white_blue, median_white_blue))
 
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h2>Mean white square</h2>\n")
@@ -1868,7 +1868,7 @@ div#colormapping {
                     ("Rd", "OR", "OR", "Rd"),
                 )
             else:
-                raise Exception(f"There should be either 2 or 4 but we have {target_color_red_or_orange_edges}")
+                raise Exception("There should be either 2 or 4 but we have %s" % pformat(target_color_red_or_orange_edges))
 
             min_distance = None
             min_distance_permutation = None
@@ -1893,7 +1893,7 @@ div#colormapping {
                     for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                         red_orange = red_orange_permutation[index]
                         high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
-                        edge_color_pair = edge_color_pair_map[f"{target_color_square.color_name}/{partner_square.color_name}"]
+                        edge_color_pair = edge_color_pair_map["%s/%s" % (target_color_square.color_name, partner_square.color_name)]
                         #log.info("high_low_edge_per_color\n%s" % pformat(high_low_edge_per_color))
 
                         if len(high_low_edge_per_color[edge_color_pair]) != 2:
@@ -1905,11 +1905,11 @@ div#colormapping {
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = red_orange_permutation
-                    log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance} (NEW MIN)")
+                    log.info("target edge %s, red_orange_permutation %s, distance %s (NEW MIN)" % (target_color, pformat(red_orange_permutation), distance))
                 else:
-                    log.info(f"target edge {target_color}, red_orange_permutation {red_orange_permutation}, distance {distance}")
+                    log.info("target edge %s, red_orange_permutation %s, distance %s)" % (target_color, pformat(red_orange_permutation), distance))
 
-            log.info(f"min_distance_permutation {min_distance_permutation}")
+            log.info("min_distance_permutation %s" % pformat(min_distance_permutation))
             for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                 if partner_square.color_name != min_distance_permutation[index]:
                     log.warning("change %s edge partner %s from %s to %s" %
@@ -1924,16 +1924,16 @@ div#colormapping {
 
         (green_red_or_orange_edges, blue_red_or_orange_edges,
          white_red_or_orange_edges, yellow_red_or_orange_edges) = self.find_edges_by_color(target_orbit_id)
-        log.info(f"orbit {target_orbit_id} green_red_or_orange_edges {green_red_or_orange_edges}")
+        log.info("orbit %s green_red_or_orange_edges %s" % (target_orbit_id, pformat(green_red_or_orange_edges)))
         fix_orange_vs_red_for_color('green', green_red_or_orange_edges)
 
-        log.info(f"orbit {target_orbit_id} blue_red_or_orange_edges {blue_red_or_orange_edges}")
+        log.info("orbit %s blue_red_or_orange_edges %s" % (target_orbit_id, pformat(blue_red_or_orange_edges)))
         fix_orange_vs_red_for_color('blue', blue_red_or_orange_edges)
 
-        log.info(f"orbit {target_orbit_id} white_red_or_orange_edges {white_red_or_orange_edges}")
+        log.info("orbit %s white_red_or_orange_edges %s" % (target_orbit_id, pformat(white_red_or_orange_edges)))
         fix_orange_vs_red_for_color('white', white_red_or_orange_edges)
 
-        log.info(f"orbit {target_orbit_id} yellow_red_or_orange_edges {yellow_red_or_orange_edges}")
+        log.info("orbit %s yellow_red_or_orange_edges %s" % (target_orbit_id, pformat(yellow_red_or_orange_edges)))
         fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
 
         self.validate_edge_orbit(target_orbit_id)
@@ -1968,9 +1968,7 @@ div#colormapping {
             elif self.width == 4:
                 highlow = highlow_edge_values_444[(square_index, partner_index, square.side_name, partner.side_name)]
 
-            # log.info(f"orbit {target_orbit_id} ({square_index}, {partner_index}) is {square.color_name}/{partner.color_name} {square.side_name}/{partner.side_name} which is {highlow}")
-
-            edge_color_pair = edge_color_pair_map[f"{square.color_name}/{partner.color_name}"]
+            edge_color_pair = edge_color_pair_map["%s/%s" % (square.color_name, partner.color_name)]
             high_low_per_edge_color[edge_color_pair].add(highlow)
 
         # log.info("high_low_per_edge_color for orbit %d\n%s" % (target_orbit_id, pformat(high_low_per_edge_color)))
@@ -2426,10 +2424,10 @@ div#colormapping {
                 elif square.color_name == "Bu" and partner.color_name == "Rd":
                     blue_red_position = partner_position
 
-        log.debug(f"green_orange_position {green_orange_position}")
-        log.debug(f"green_red_position {green_red_position}")
-        log.debug(f"blue_orange_position {blue_orange_position}")
-        log.debug(f"blue_red_position {blue_red_position}")
+        log.debug("green_orange_position %s" % pformat(green_orange_position))
+        log.debug("green_red_position %s" % pformat(green_red_position))
+        log.debug("blue_orange_position %s" % pformat(blue_orange_position))
+        log.debug("blue_red_position %s" % pformat(blue_red_position))
 
         square_green_orange = self.get_square(green_orange_position)
         square_green_red = self.get_square(green_red_position)
@@ -2451,8 +2449,8 @@ div#colormapping {
         distance_swap_blue_edge += get_euclidean_lab_distance(square_blue_orange.lab, self.red_baseline)
         distance_swap_blue_edge += get_euclidean_lab_distance(square_blue_red.lab, self.orange_baseline)
 
-        log.info(f"distance_swap_green_edge {distance_swap_green_edge}")
-        log.info(f"distance_swap_blue_edge {distance_swap_blue_edge}")
+        log.info("distance_swap_green_edge %s" % distance_swap_green_edge)
+        log.info("distance_swap_blue_edge %s" % distance_swap_blue_edge)
 
         if distance_swap_green_edge < distance_swap_blue_edge:
             log.warning("edge parity correction: change %s from %s to Rd" % (square_green_orange, square_green_orange.color_name))
@@ -2471,7 +2469,7 @@ div#colormapping {
 
         edges_even = self.edge_swaps_even(None, debug)
         corners_even = self.corner_swaps_even(debug)
-        assert edges_even == corners_even, f"parity is still broken, edges_even {edges_even}, corners_even {corners_even}"
+        assert edges_even == corners_even, "parity is still broken, edges_even %s, corners_even %s" % (edges_even, corners_even)
 
     def crunch_colors(self):
         self.write_cube("Initial RGB values", False)
