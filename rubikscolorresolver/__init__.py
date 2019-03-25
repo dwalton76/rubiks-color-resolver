@@ -16,6 +16,10 @@ import sys
 
 log = logging.getLogger(__name__)
 
+LAB_DISTANCE_ALGORITHM = 'cie2000'
+# LAB_DISTANCE_ALGORITHM = 'euclidean'
+# LAB_DISTANCE_ALGORITHM = 'both'
+
 WHITE = (255, 255, 255)
 
 html_color = {
@@ -439,6 +443,10 @@ HTML_DIRECTORY = '/tmp/rubiks-color-resolver/'
 HTML_FILENAME = os.path.join(HTML_DIRECTORY, 'index.html')
 
 
+class ListMissingValue(Exception):
+    pass
+
+
 def get_euclidean_lab_distance(lab1, lab2):
     """
     http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
@@ -453,11 +461,103 @@ def get_euclidean_lab_distance(lab1, lab2):
     return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
 
 
+def delta_e_cie2000(lab1, lab2):
+    """
+    Ported from this php implementation
+    https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
+    """
+    l1 = lab1.L
+    a1 = lab1.a
+    b1 = lab1.b
+
+    l2 = lab2.L
+    a2 = lab2.a
+    b2 = lab2.b
+
+    avg_lp = (l1 + l2) / 2.0
+    c1 = sqrt(pow(a1, 2) + pow(b1, 2))
+    c2 = sqrt(pow(a2, 2) + pow(b2, 2))
+    avg_c = (c1 + c2) / 2.0
+    g = (1 - sqrt(pow(avg_c, 7) / (pow(avg_c, 7) + pow(25, 7)))) / 2.0
+    a1p = a1 * (1 + g)
+    a2p = a2 * (1 + g)
+    c1p = sqrt(pow(a1p, 2) + pow(b1, 2))
+    c2p = sqrt(pow(a2p, 2) + pow(b2, 2))
+    avg_cp = (c1p + c2p) / 2.0
+    h1p = degrees(atan2(b1, a1p))
+
+    if h1p < 0:
+        h1p += 360
+
+    h2p = degrees(atan2(b2, a2p))
+
+    if h2p < 0:
+        h2p += 360
+
+    if abs(h1p - h2p) > 180:
+        avg_hp = (h1p + h2p + 360) / 2.0
+    else:
+        avg_hp = (h1p + h2p) / 2.0
+
+    t = (1 - 0.17 * cos(radians(avg_hp - 30)) +
+         0.24 * cos(radians(2 * avg_hp)) +
+         0.32 * cos(radians(3 * avg_hp + 6)) - 0.2 * cos(radians(4 * avg_hp - 63)))
+    delta_hp = h2p - h1p
+
+    if abs(delta_hp) > 180:
+        if h2p <= h1p:
+            delta_hp += 360
+        else:
+            delta_hp -= 360
+
+    delta_lp = l2 - l1
+    delta_cp = c2p - c1p
+    delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
+    s_l = 1 + ((0.015 * pow(avg_lp - 50, 2)) / sqrt(20 + pow(avg_lp - 50, 2)))
+    s_c = 1 + 0.045 * avg_cp
+    s_h = 1 + 0.015 * avg_cp * t
+
+    delta_ro = 30 * exp(-(pow((avg_hp - 275) / 25.0, 2)))
+    r_c = 2 * sqrt(pow(avg_cp, 7) / (pow(avg_cp, 7) + pow(25, 7)))
+    r_t = -r_c * sin(2 * radians(delta_ro))
+    kl = 1.0
+    kc = 1.0
+    kh = 1.0
+    delta_e = sqrt(pow(delta_lp / (s_l * kl), 2) +
+                   pow(delta_cp / (s_c * kc), 2) +
+                   pow(delta_hp / (s_h * kh), 2) +
+                   r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
+
+    return delta_e
+
+
+def get_lab_distance(lab1, lab2):
+
+    if LAB_DISTANCE_ALGORITHM == 'cie2000':
+        distance_xy = delta_e_cie2000(lab1, lab2)
+        distance_yx = delta_e_cie2000(lab2, lab1)
+        distance = max(distance_xy, distance_yx)
+
+    elif LAB_DISTANCE_ALGORITHM == 'euclidean':
+        distance = get_euclidean_lab_distance(lab1, lab2)
+
+    elif LAB_DISTANCE_ALGORITHM == 'both':
+        distance_xy = delta_e_cie2000(lab1, lab2)
+        distance_yx = delta_e_cie2000(lab2, lab1)
+        distance = max(distance_xy, distance_yx)
+        distance += get_euclidean_lab_distance(lab1, lab2)
+
+    else:
+        raise Exception("Invalid LAB_DISTANCE_ALGORITHM %s" % LAB_DISTANCE_ALGORITHM)
+
+    return distance
+
+
 def find_index_for_value(list_foo, target, min_index):
     for (index, value) in enumerate(list_foo):
         if value == target and index >= min_index:
             return index
-    raise Exception("Did not find %s in list %s" % (target, pformat(list_foo)))
+    raise ListMissingValue("Did not find %s in list %s" % (target, pformat(list_foo)))
 
 
 def get_swap_count(listA, listB, debug):
@@ -543,8 +643,14 @@ def traveling_salesman(squares, alg):
             elif alg == "euclidean":
                 distance = get_euclidean_lab_distance(x_lab, y_lab)
 
+            elif alg == "both":
+                distance_xy = delta_e_cie2000(x_lab, y_lab)
+                distance_yx = delta_e_cie2000(y_lab, x_lab)
+                distance = max(distance_xy, distance_yx)
+                distance += get_euclidean_lab_distance(x_lab, y_lab)
+
             else:
-                raise Exception("Implement {}".format(alg))
+                raise Exception("Implement algorithm %s" % alg)
 
             matrix[x][y] = distance
             matrix[y][x] = distance
@@ -688,76 +794,6 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
-def delta_e_cie2000(lab1, lab2):
-    """
-    Ported from this php implementation
-    https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
-    """
-    l1 = lab1.L
-    a1 = lab1.a
-    b1 = lab1.b
-
-    l2 = lab2.L
-    a2 = lab2.a
-    b2 = lab2.b
-
-    avg_lp = (l1 + l2) / 2.0
-    c1 = sqrt(pow(a1, 2) + pow(b1, 2))
-    c2 = sqrt(pow(a2, 2) + pow(b2, 2))
-    avg_c = (c1 + c2) / 2.0
-    g = (1 - sqrt(pow(avg_c, 7) / (pow(avg_c, 7) + pow(25, 7)))) / 2.0
-    a1p = a1 * (1 + g)
-    a2p = a2 * (1 + g)
-    c1p = sqrt(pow(a1p, 2) + pow(b1, 2))
-    c2p = sqrt(pow(a2p, 2) + pow(b2, 2))
-    avg_cp = (c1p + c2p) / 2.0
-    h1p = degrees(atan2(b1, a1p))
-
-    if h1p < 0:
-        h1p += 360
-
-    h2p = degrees(atan2(b2, a2p))
-
-    if h2p < 0:
-        h2p += 360
-
-    if abs(h1p - h2p) > 180:
-        avg_hp = (h1p + h2p + 360) / 2.0
-    else:
-        avg_hp = (h1p + h2p) / 2.0
-
-    t = (1 - 0.17 * cos(radians(avg_hp - 30)) +
-         0.24 * cos(radians(2 * avg_hp)) +
-         0.32 * cos(radians(3 * avg_hp + 6)) - 0.2 * cos(radians(4 * avg_hp - 63)))
-    delta_hp = h2p - h1p
-
-    if abs(delta_hp) > 180:
-        if h2p <= h1p:
-            delta_hp += 360
-        else:
-            delta_hp -= 360
-
-    delta_lp = l2 - l1
-    delta_cp = c2p - c1p
-    delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
-    s_l = 1 + ((0.015 * pow(avg_lp - 50, 2)) / sqrt(20 + pow(avg_lp - 50, 2)))
-    s_c = 1 + 0.045 * avg_cp
-    s_h = 1 + 0.015 * avg_cp * t
-
-    delta_ro = 30 * exp(-(pow((avg_hp - 275) / 25.0, 2)))
-    r_c = 2 * sqrt(pow(avg_cp, 7) / (pow(avg_cp, 7) + pow(25, 7)))
-    r_t = -r_c * sin(2 * radians(delta_ro))
-    kl = 1.0
-    kc = 1.0
-    kh = 1.0
-    delta_e = sqrt(pow(delta_lp / (s_l * kl), 2) +
-                   pow(delta_cp / (s_c * kc), 2) +
-                   pow(delta_hp / (s_h * kh), 2) +
-                   r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
-
-    return delta_e
-
-
 def hex_to_rgb(rgb_string):
     """
     Takes #112233 and returns the RGB values in decimal
@@ -813,7 +849,7 @@ def get_row_color_distances(squares, row_baseline_lab):
 
     for square in squares:
         baseline_lab = row_baseline_lab[row_index]
-        distance += get_euclidean_lab_distance(baseline_lab, square.lab)
+        distance += get_lab_distance(baseline_lab, square.lab)
         count += 1
 
         if count % squares_per_row == 0:
@@ -851,11 +887,19 @@ def rgb_list_to_lab(rgbs):
         greens.append(green)
         blues.append(blue)
 
+    '''
     mean_red = int(mean(reds))
     mean_green = int(mean(greens))
     mean_blue = int(mean(blues))
 
     return rgb2lab((mean_red, mean_green, mean_blue))
+    '''
+
+    median_red = int(median(reds))
+    median_green = int(median(greens))
+    median_blue = int(median(blues))
+
+    return rgb2lab((median_red, median_green, median_blue))
 
 
 class Square(object):
@@ -1189,11 +1233,12 @@ div#colormapping {
             count = 0
             for square in squares:
                 (red, green, blue) = square.rgb
-                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
+                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s, side %s'>%d</span>\n" %
                     (red, green, blue,
                      red, green, blue,
                      int(square.lab.L), int(square.lab.a), int(square.lab.b),
                      square.color_name,
+                     square.side_name,
                      square.position))
 
                 count += 1
@@ -1208,7 +1253,7 @@ div#colormapping {
             for square in side.squares.values():
                 all_squares.append(square)
 
-        sorted_all_squares = traveling_salesman(all_squares, "euclidean")
+        sorted_all_squares = traveling_salesman(all_squares, LAB_DISTANCE_ALGORITHM)
         self.write_colors(
             'finding white colors',
             sorted_all_squares)
@@ -1559,7 +1604,7 @@ div#colormapping {
                 for (index, center_square) in enumerate(center_squares):
                     color_name = permutation[index]
                     color_obj = crayola_colors[color_name]
-                    distance += get_euclidean_lab_distance(center_square.lab, color_obj)
+                    distance += get_lab_distance(center_square.lab, color_obj)
 
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
@@ -1671,7 +1716,7 @@ div#colormapping {
                 color_lab = color_box[color_name]
 
                 for square in squares_list:
-                    distance += get_euclidean_lab_distance(square.lab, color_lab)
+                    distance += get_lab_distance(square.lab, color_lab)
 
             if min_distance is None or distance < min_distance:
                 min_distance = distance
@@ -1687,7 +1732,7 @@ div#colormapping {
             for square in squares_list:
                 square.color_name = color_name
 
-    def resolve_corner_squares(self):
+    def resolve_color_box(self):
         """
         Assign names to the corner squares, use crayola colors as reference point.
 
@@ -1695,16 +1740,18 @@ div#colormapping {
         references Wh, Ye, OR, Rd, Gr, Bu colors for assigning color names to edge
         and center squares.
         """
+        log.debug('\n\n\n\n')
+        log.info('Resolve color_box')
         corner_squares = []
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.corner_squares:
                 corner_squares.append(square)
 
-        sorted_corner_squares = traveling_salesman(corner_squares, "euclidean")
+        sorted_corner_squares = traveling_salesman(corner_squares, LAB_DISTANCE_ALGORITHM)
         self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, crayola_colors)
         self.sanity_check_corner_squares()
-        self.write_colors('corners', sorted_corner_squares)
+        self.write_colors('color_box corners', sorted_corner_squares)
 
         # Build a color_box dictionary from the centers
         self.color_box = {}
@@ -1731,6 +1778,7 @@ div#colormapping {
                 elif square.color_name == "Bu":
                     blue_corners.append(square.rgb)
 
+        # dwalton
         self.color_box["Wh"] = rgb_list_to_lab(white_corners)
         self.color_box["Ye"] = rgb_list_to_lab(yellow_corners)
         self.color_box["OR"] = rgb_list_to_lab(orange_corners)
@@ -1739,8 +1787,44 @@ div#colormapping {
         self.color_box["Bu"] = rgb_list_to_lab(blue_corners)
         # log.info(f"self.color_box: {self.color_box}")
 
+        '''
+        wh_lab = self.color_box["Wh"]
+        ye_lab = self.color_box["Ye"]
+        or_lab = self.color_box["OR"]
+        rd_lab = self.color_box["Rd"]
+        gr_lab = self.color_box["Gr"]
+        bu_lab = self.color_box["Bu"]
+
+        self.color_box_squares = []
+        self.color_box_squares.append(Square(self, None, 999, wh_lab.red, wh_lab.green, wh_lab.blue))
+        self.color_box_squares.append(Square(self, None, 999, ye_lab.red, ye_lab.green, ye_lab.blue))
+        self.color_box_squares.append(Square(self, None, 999, or_lab.red, or_lab.green, or_lab.blue))
+        self.color_box_squares.append(Square(self, None, 999, rd_lab.red, rd_lab.green, rd_lab.blue))
+        self.color_box_squares.append(Square(self, None, 999, gr_lab.red, gr_lab.green, gr_lab.blue))
+        self.color_box_squares.append(Square(self, None, 999, bu_lab.red, bu_lab.green, bu_lab.blue))
+        '''
+
         self.orange_baseline = self.color_box["OR"]
         self.red_baseline = self.color_box["Rd"]
+
+    def resolve_corner_squares(self):
+        """
+        Assign names to the corner squares
+        """
+        log.debug('\n\n\n\n')
+        log.info('Resolve corners')
+        corner_squares = []
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.corner_squares:
+                corner_squares.append(square)
+
+        #corner_squares.extend(self.color_box_squares)
+
+        sorted_corner_squares = traveling_salesman(corner_squares, LAB_DISTANCE_ALGORITHM)
+        self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, self.color_box)
+        self.sanity_check_corner_squares()
+        self.write_colors('corners', sorted_corner_squares)
 
     def validate_edge_orbit(self, orbit_id):
         valid = True
@@ -1880,9 +1964,9 @@ div#colormapping {
                     red_orange = red_orange_permutation[index]
 
                     if red_orange == "OR":
-                        distance += get_euclidean_lab_distance(partner_square.lab, self.orange_baseline)
+                        distance += get_lab_distance(partner_square.lab, self.orange_baseline)
                     elif red_orange == "Rd":
-                        distance += get_euclidean_lab_distance(partner_square.lab, self.red_baseline)
+                        distance += get_lab_distance(partner_square.lab, self.red_baseline)
                     else:
                         raise Exception(red_orange)
 
@@ -1989,6 +2073,7 @@ div#colormapping {
             return True
 
         for target_orbit_id in range(self.orbits):
+            log.debug('\n\n\n\n')
             log.info('Resolve edges for orbit %d' % target_orbit_id)
             edge_squares = []
 
@@ -2000,7 +2085,8 @@ div#colormapping {
                     if orbit_id == target_orbit_id:
                         edge_squares.append(square)
 
-            sorted_edge_squares = traveling_salesman(edge_squares, "euclidean")
+            #edge_squares.extend(self.color_box_squares)
+            sorted_edge_squares = traveling_salesman(edge_squares, LAB_DISTANCE_ALGORITHM)
             self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_squares, even_cube_center_color_permutations, self.color_box)
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
@@ -2183,6 +2269,7 @@ div#colormapping {
         Use traveling salesman algorithm to sort the squares by color
         """
         for (desc, centers_squares) in center_groups[self.width]:
+            log.debug('\n\n\n\n')
             log.info('Resolve {}'.format(desc))
             center_squares = []
 
@@ -2196,7 +2283,7 @@ div#colormapping {
                 permutations = odd_cube_center_color_permutations
                 #permutations = even_cube_center_color_permutations
             else:
-                sorted_center_squares = traveling_salesman(center_squares, "euclidean")
+                sorted_center_squares = traveling_salesman(center_squares, LAB_DISTANCE_ALGORITHM)
                 permutations = even_cube_center_color_permutations
 
             self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
@@ -2370,6 +2457,42 @@ div#colormapping {
             return True
         return False
 
+    def validate_all_corners_found(self):
+        needed_corners = [
+            'BLU',
+            'BRU',
+            'FLU',
+            'FRU',
+            'DFL',
+            'DFR',
+            'BDL',
+            'BDR']
+
+        to_check = [
+            (self.sideU.corner_pos[0], self.sideL.corner_pos[0], self.sideB.corner_pos[1]), # ULB
+            (self.sideU.corner_pos[1], self.sideR.corner_pos[1], self.sideB.corner_pos[0]), # URB
+            (self.sideU.corner_pos[2], self.sideL.corner_pos[1], self.sideF.corner_pos[0]), # ULF
+            (self.sideU.corner_pos[3], self.sideF.corner_pos[1], self.sideR.corner_pos[0]), # UFR
+            (self.sideD.corner_pos[0], self.sideL.corner_pos[3], self.sideF.corner_pos[2]), # DLF
+            (self.sideD.corner_pos[1], self.sideF.corner_pos[3], self.sideR.corner_pos[2]), # DFR
+            (self.sideD.corner_pos[2], self.sideL.corner_pos[2], self.sideB.corner_pos[3]), # DLB
+            (self.sideD.corner_pos[3], self.sideR.corner_pos[3], self.sideB.corner_pos[2])  # DRB
+        ]
+
+        current_corners = []
+        for (square_index1, square_index2, square_index3) in to_check:
+            square1 = self.get_square(square_index1)
+            square2 = self.get_square(square_index2)
+            square3 = self.get_square(square_index3)
+            corner_str = ''.join(sorted([square1.side_name, square2.side_name, square3.side_name]))
+            current_corners.append(corner_str)
+
+        # We need a way to validate all of the needed_corners are present and
+        # if not, what do we flip so that we do have all of the needed corners?
+        for corner in needed_corners:
+            if corner not in current_corners:
+                raise Exception("corner %s is missing" % pformat(corner))
+
     def validate_odd_cube_midge_vs_corner_parity(self):
         """
         http://www.ryanheise.com/cube/parity.html
@@ -2390,13 +2513,18 @@ div#colormapping {
             return
 
         debug = False
-        edges_even = self.edge_swaps_even(None, debug)
-        corners_even = self.corner_swaps_even(debug)
 
-        if edges_even == corners_even:
-            return
+        try:
+            edges_even = self.edge_swaps_even(None, debug)
+            corners_even = self.corner_swaps_even(debug)
 
-        log.warning("edges_even %s != corners_even %s, swap most ambiguous orange or red edges to create valid parity" % (edges_even, corners_even))
+            if edges_even == corners_even:
+                return
+
+            log.warning("edges_even %s != corners_even %s, swap most ambiguous orange or red edges to create valid parity" % (edges_even, corners_even))
+
+        except ListMissingValue:
+            log.warning("Either edges or corners are off, swap most ambiguous orange or red edges to create valid parity")
 
         # Reasonable assumptions we can make about why our parity is off:
         # - we have a red vs orange backwards somewhere
@@ -2438,16 +2566,16 @@ div#colormapping {
         # we can swap orange/red for the blue edges. Which will result in the
         # lowest color distance with our orange/red baselines?
         distance_swap_green_edge = 0
-        distance_swap_green_edge += get_euclidean_lab_distance(square_blue_orange.lab, self.orange_baseline)
-        distance_swap_green_edge += get_euclidean_lab_distance(square_blue_red.lab, self.red_baseline)
-        distance_swap_green_edge += get_euclidean_lab_distance(square_green_orange.lab, self.red_baseline)
-        distance_swap_green_edge += get_euclidean_lab_distance(square_green_red.lab, self.orange_baseline)
+        distance_swap_green_edge += get_lab_distance(square_blue_orange.lab, self.orange_baseline)
+        distance_swap_green_edge += get_lab_distance(square_blue_red.lab, self.red_baseline)
+        distance_swap_green_edge += get_lab_distance(square_green_orange.lab, self.red_baseline)
+        distance_swap_green_edge += get_lab_distance(square_green_red.lab, self.orange_baseline)
 
         distance_swap_blue_edge = 0
-        distance_swap_blue_edge += get_euclidean_lab_distance(square_green_orange.lab, self.orange_baseline)
-        distance_swap_blue_edge += get_euclidean_lab_distance(square_green_red.lab, self.red_baseline)
-        distance_swap_blue_edge += get_euclidean_lab_distance(square_blue_orange.lab, self.red_baseline)
-        distance_swap_blue_edge += get_euclidean_lab_distance(square_blue_red.lab, self.orange_baseline)
+        distance_swap_blue_edge += get_lab_distance(square_green_orange.lab, self.orange_baseline)
+        distance_swap_blue_edge += get_lab_distance(square_green_red.lab, self.red_baseline)
+        distance_swap_blue_edge += get_lab_distance(square_blue_orange.lab, self.red_baseline)
+        distance_swap_blue_edge += get_lab_distance(square_blue_red.lab, self.orange_baseline)
 
         log.info("distance_swap_green_edge %s" % distance_swap_green_edge)
         log.info("distance_swap_blue_edge %s" % distance_swap_blue_edge)
@@ -2483,9 +2611,11 @@ div#colormapping {
         self.write_cube("Contrast Stretched RGB values", False)
         '''
 
-        # corners...this also finds a baseline for each color
-        self.resolve_corner_squares()
+        self.resolve_color_box()
         self.write_color_box()
+
+        # corners
+        self.resolve_corner_squares()
 
         # centers
         self.resolve_center_squares()
@@ -2494,6 +2624,7 @@ div#colormapping {
         self.resolve_edge_squares()
         self.set_state()
         self.sanity_check_edge_squares()
+        self.validate_all_corners_found()
         self.validate_odd_cube_midge_vs_corner_parity()
 
         self.write_cube("Final Cube", True)
