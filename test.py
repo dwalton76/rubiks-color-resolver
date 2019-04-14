@@ -12,9 +12,6 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)5s: %(message)s')
 log = logging.getLogger(__name__)
 
-# Color the errors and warnings in red
-logging.addLevelName(logging.ERROR, "\033[91m  %s\033[0m" % logging.getLevelName(logging.ERROR))
-logging.addLevelName(logging.WARNING, "\033[91m%s\033[0m" % logging.getLevelName(logging.WARNING))
 
 # To add a test case:
 # - place the cube in the robot, solve it

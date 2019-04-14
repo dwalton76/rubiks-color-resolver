@@ -205,10 +205,6 @@ if __name__ == '__main__':
                         format='%(asctime)s %(filename)12s %(levelname)8s: %(message)s')
     log = logging.getLogger(__name__)
 
-    # Color the errors and warnings in red
-    logging.addLevelName(logging.ERROR, "\033[91m   %s\033[0m" % logging.getLevelName(logging.ERROR))
-    logging.addLevelName(logging.WARNING, "\033[91m %s\033[0m" % logging.getLevelName(logging.WARNING))
-
     filename = sys.argv[1]
 
     with open(filename, 'r') as fh:

@@ -2,14 +2,17 @@
 from rubikscolorresolver.cube_444 import highlow_edge_values_444
 from rubikscolorresolver.cube_555 import highlow_edge_values_555
 from rubikscolorresolver.cube_666 import highlow_edge_values_666
-from tsp_solver.greedy import solve_tsp
-from collections import OrderedDict
-from itertools import combinations, permutations
-from math import atan2, cos, degrees, exp, radians, sin
-from math import sqrt, ceil
-from pprint import pformat
-from statistics import median, mean
-from json import dumps as json_dumps
+from rubikscolorresolver.tsp_solver_greedy import solve_tsp
+
+try:
+    from collections import OrderedDict
+    from json import dumps as json_dumps
+except ImportError:
+    from ucollections import OrderedDict
+    from ujson import dumps as json_dumps
+
+from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
+
 import logging
 import os
 import sys
@@ -63,7 +66,734 @@ odd_cube_center_color_permutations = (
     ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
 )
 
-even_cube_center_color_permutations = list(permutations(['Wh', 'Ye', 'OR', 'Rd', 'Gr', 'Bu']))
+# from itertools import permutations
+# from pprint import pprint
+# even_cube_center_color_permutations = list(permutations(['Wh', 'Ye', 'OR', 'Rd', 'Gr', 'Bu']))
+# even_cube_center_color_permutations.sort()
+# pprint(even_cube_center_color_permutations)
+even_cube_center_color_permutations = [
+    ('Bu', 'Gr', 'OR', 'Rd', 'Wh', 'Ye'),
+    ('Bu', 'Gr', 'OR', 'Rd', 'Ye', 'Wh'),
+    ('Bu', 'Gr', 'OR', 'Wh', 'Rd', 'Ye'),
+    ('Bu', 'Gr', 'OR', 'Wh', 'Ye', 'Rd'),
+    ('Bu', 'Gr', 'OR', 'Ye', 'Rd', 'Wh'),
+    ('Bu', 'Gr', 'OR', 'Ye', 'Wh', 'Rd'),
+    ('Bu', 'Gr', 'Rd', 'OR', 'Wh', 'Ye'),
+    ('Bu', 'Gr', 'Rd', 'OR', 'Ye', 'Wh'),
+    ('Bu', 'Gr', 'Rd', 'Wh', 'OR', 'Ye'),
+    ('Bu', 'Gr', 'Rd', 'Wh', 'Ye', 'OR'),
+    ('Bu', 'Gr', 'Rd', 'Ye', 'OR', 'Wh'),
+    ('Bu', 'Gr', 'Rd', 'Ye', 'Wh', 'OR'),
+    ('Bu', 'Gr', 'Wh', 'OR', 'Rd', 'Ye'),
+    ('Bu', 'Gr', 'Wh', 'OR', 'Ye', 'Rd'),
+    ('Bu', 'Gr', 'Wh', 'Rd', 'OR', 'Ye'),
+    ('Bu', 'Gr', 'Wh', 'Rd', 'Ye', 'OR'),
+    ('Bu', 'Gr', 'Wh', 'Ye', 'OR', 'Rd'),
+    ('Bu', 'Gr', 'Wh', 'Ye', 'Rd', 'OR'),
+    ('Bu', 'Gr', 'Ye', 'OR', 'Rd', 'Wh'),
+    ('Bu', 'Gr', 'Ye', 'OR', 'Wh', 'Rd'),
+    ('Bu', 'Gr', 'Ye', 'Rd', 'OR', 'Wh'),
+    ('Bu', 'Gr', 'Ye', 'Rd', 'Wh', 'OR'),
+    ('Bu', 'Gr', 'Ye', 'Wh', 'OR', 'Rd'),
+    ('Bu', 'Gr', 'Ye', 'Wh', 'Rd', 'OR'),
+    ('Bu', 'OR', 'Gr', 'Rd', 'Wh', 'Ye'),
+    ('Bu', 'OR', 'Gr', 'Rd', 'Ye', 'Wh'),
+    ('Bu', 'OR', 'Gr', 'Wh', 'Rd', 'Ye'),
+    ('Bu', 'OR', 'Gr', 'Wh', 'Ye', 'Rd'),
+    ('Bu', 'OR', 'Gr', 'Ye', 'Rd', 'Wh'),
+    ('Bu', 'OR', 'Gr', 'Ye', 'Wh', 'Rd'),
+    ('Bu', 'OR', 'Rd', 'Gr', 'Wh', 'Ye'),
+    ('Bu', 'OR', 'Rd', 'Gr', 'Ye', 'Wh'),
+    ('Bu', 'OR', 'Rd', 'Wh', 'Gr', 'Ye'),
+    ('Bu', 'OR', 'Rd', 'Wh', 'Ye', 'Gr'),
+    ('Bu', 'OR', 'Rd', 'Ye', 'Gr', 'Wh'),
+    ('Bu', 'OR', 'Rd', 'Ye', 'Wh', 'Gr'),
+    ('Bu', 'OR', 'Wh', 'Gr', 'Rd', 'Ye'),
+    ('Bu', 'OR', 'Wh', 'Gr', 'Ye', 'Rd'),
+    ('Bu', 'OR', 'Wh', 'Rd', 'Gr', 'Ye'),
+    ('Bu', 'OR', 'Wh', 'Rd', 'Ye', 'Gr'),
+    ('Bu', 'OR', 'Wh', 'Ye', 'Gr', 'Rd'),
+    ('Bu', 'OR', 'Wh', 'Ye', 'Rd', 'Gr'),
+    ('Bu', 'OR', 'Ye', 'Gr', 'Rd', 'Wh'),
+    ('Bu', 'OR', 'Ye', 'Gr', 'Wh', 'Rd'),
+    ('Bu', 'OR', 'Ye', 'Rd', 'Gr', 'Wh'),
+    ('Bu', 'OR', 'Ye', 'Rd', 'Wh', 'Gr'),
+    ('Bu', 'OR', 'Ye', 'Wh', 'Gr', 'Rd'),
+    ('Bu', 'OR', 'Ye', 'Wh', 'Rd', 'Gr'),
+    ('Bu', 'Rd', 'Gr', 'OR', 'Wh', 'Ye'),
+    ('Bu', 'Rd', 'Gr', 'OR', 'Ye', 'Wh'),
+    ('Bu', 'Rd', 'Gr', 'Wh', 'OR', 'Ye'),
+    ('Bu', 'Rd', 'Gr', 'Wh', 'Ye', 'OR'),
+    ('Bu', 'Rd', 'Gr', 'Ye', 'OR', 'Wh'),
+    ('Bu', 'Rd', 'Gr', 'Ye', 'Wh', 'OR'),
+    ('Bu', 'Rd', 'OR', 'Gr', 'Wh', 'Ye'),
+    ('Bu', 'Rd', 'OR', 'Gr', 'Ye', 'Wh'),
+    ('Bu', 'Rd', 'OR', 'Wh', 'Gr', 'Ye'),
+    ('Bu', 'Rd', 'OR', 'Wh', 'Ye', 'Gr'),
+    ('Bu', 'Rd', 'OR', 'Ye', 'Gr', 'Wh'),
+    ('Bu', 'Rd', 'OR', 'Ye', 'Wh', 'Gr'),
+    ('Bu', 'Rd', 'Wh', 'Gr', 'OR', 'Ye'),
+    ('Bu', 'Rd', 'Wh', 'Gr', 'Ye', 'OR'),
+    ('Bu', 'Rd', 'Wh', 'OR', 'Gr', 'Ye'),
+    ('Bu', 'Rd', 'Wh', 'OR', 'Ye', 'Gr'),
+    ('Bu', 'Rd', 'Wh', 'Ye', 'Gr', 'OR'),
+    ('Bu', 'Rd', 'Wh', 'Ye', 'OR', 'Gr'),
+    ('Bu', 'Rd', 'Ye', 'Gr', 'OR', 'Wh'),
+    ('Bu', 'Rd', 'Ye', 'Gr', 'Wh', 'OR'),
+    ('Bu', 'Rd', 'Ye', 'OR', 'Gr', 'Wh'),
+    ('Bu', 'Rd', 'Ye', 'OR', 'Wh', 'Gr'),
+    ('Bu', 'Rd', 'Ye', 'Wh', 'Gr', 'OR'),
+    ('Bu', 'Rd', 'Ye', 'Wh', 'OR', 'Gr'),
+    ('Bu', 'Wh', 'Gr', 'OR', 'Rd', 'Ye'),
+    ('Bu', 'Wh', 'Gr', 'OR', 'Ye', 'Rd'),
+    ('Bu', 'Wh', 'Gr', 'Rd', 'OR', 'Ye'),
+    ('Bu', 'Wh', 'Gr', 'Rd', 'Ye', 'OR'),
+    ('Bu', 'Wh', 'Gr', 'Ye', 'OR', 'Rd'),
+    ('Bu', 'Wh', 'Gr', 'Ye', 'Rd', 'OR'),
+    ('Bu', 'Wh', 'OR', 'Gr', 'Rd', 'Ye'),
+    ('Bu', 'Wh', 'OR', 'Gr', 'Ye', 'Rd'),
+    ('Bu', 'Wh', 'OR', 'Rd', 'Gr', 'Ye'),
+    ('Bu', 'Wh', 'OR', 'Rd', 'Ye', 'Gr'),
+    ('Bu', 'Wh', 'OR', 'Ye', 'Gr', 'Rd'),
+    ('Bu', 'Wh', 'OR', 'Ye', 'Rd', 'Gr'),
+    ('Bu', 'Wh', 'Rd', 'Gr', 'OR', 'Ye'),
+    ('Bu', 'Wh', 'Rd', 'Gr', 'Ye', 'OR'),
+    ('Bu', 'Wh', 'Rd', 'OR', 'Gr', 'Ye'),
+    ('Bu', 'Wh', 'Rd', 'OR', 'Ye', 'Gr'),
+    ('Bu', 'Wh', 'Rd', 'Ye', 'Gr', 'OR'),
+    ('Bu', 'Wh', 'Rd', 'Ye', 'OR', 'Gr'),
+    ('Bu', 'Wh', 'Ye', 'Gr', 'OR', 'Rd'),
+    ('Bu', 'Wh', 'Ye', 'Gr', 'Rd', 'OR'),
+    ('Bu', 'Wh', 'Ye', 'OR', 'Gr', 'Rd'),
+    ('Bu', 'Wh', 'Ye', 'OR', 'Rd', 'Gr'),
+    ('Bu', 'Wh', 'Ye', 'Rd', 'Gr', 'OR'),
+    ('Bu', 'Wh', 'Ye', 'Rd', 'OR', 'Gr'),
+    ('Bu', 'Ye', 'Gr', 'OR', 'Rd', 'Wh'),
+    ('Bu', 'Ye', 'Gr', 'OR', 'Wh', 'Rd'),
+    ('Bu', 'Ye', 'Gr', 'Rd', 'OR', 'Wh'),
+    ('Bu', 'Ye', 'Gr', 'Rd', 'Wh', 'OR'),
+    ('Bu', 'Ye', 'Gr', 'Wh', 'OR', 'Rd'),
+    ('Bu', 'Ye', 'Gr', 'Wh', 'Rd', 'OR'),
+    ('Bu', 'Ye', 'OR', 'Gr', 'Rd', 'Wh'),
+    ('Bu', 'Ye', 'OR', 'Gr', 'Wh', 'Rd'),
+    ('Bu', 'Ye', 'OR', 'Rd', 'Gr', 'Wh'),
+    ('Bu', 'Ye', 'OR', 'Rd', 'Wh', 'Gr'),
+    ('Bu', 'Ye', 'OR', 'Wh', 'Gr', 'Rd'),
+    ('Bu', 'Ye', 'OR', 'Wh', 'Rd', 'Gr'),
+    ('Bu', 'Ye', 'Rd', 'Gr', 'OR', 'Wh'),
+    ('Bu', 'Ye', 'Rd', 'Gr', 'Wh', 'OR'),
+    ('Bu', 'Ye', 'Rd', 'OR', 'Gr', 'Wh'),
+    ('Bu', 'Ye', 'Rd', 'OR', 'Wh', 'Gr'),
+    ('Bu', 'Ye', 'Rd', 'Wh', 'Gr', 'OR'),
+    ('Bu', 'Ye', 'Rd', 'Wh', 'OR', 'Gr'),
+    ('Bu', 'Ye', 'Wh', 'Gr', 'OR', 'Rd'),
+    ('Bu', 'Ye', 'Wh', 'Gr', 'Rd', 'OR'),
+    ('Bu', 'Ye', 'Wh', 'OR', 'Gr', 'Rd'),
+    ('Bu', 'Ye', 'Wh', 'OR', 'Rd', 'Gr'),
+    ('Bu', 'Ye', 'Wh', 'Rd', 'Gr', 'OR'),
+    ('Bu', 'Ye', 'Wh', 'Rd', 'OR', 'Gr'),
+    ('Gr', 'Bu', 'OR', 'Rd', 'Wh', 'Ye'),
+    ('Gr', 'Bu', 'OR', 'Rd', 'Ye', 'Wh'),
+    ('Gr', 'Bu', 'OR', 'Wh', 'Rd', 'Ye'),
+    ('Gr', 'Bu', 'OR', 'Wh', 'Ye', 'Rd'),
+    ('Gr', 'Bu', 'OR', 'Ye', 'Rd', 'Wh'),
+    ('Gr', 'Bu', 'OR', 'Ye', 'Wh', 'Rd'),
+    ('Gr', 'Bu', 'Rd', 'OR', 'Wh', 'Ye'),
+    ('Gr', 'Bu', 'Rd', 'OR', 'Ye', 'Wh'),
+    ('Gr', 'Bu', 'Rd', 'Wh', 'OR', 'Ye'),
+    ('Gr', 'Bu', 'Rd', 'Wh', 'Ye', 'OR'),
+    ('Gr', 'Bu', 'Rd', 'Ye', 'OR', 'Wh'),
+    ('Gr', 'Bu', 'Rd', 'Ye', 'Wh', 'OR'),
+    ('Gr', 'Bu', 'Wh', 'OR', 'Rd', 'Ye'),
+    ('Gr', 'Bu', 'Wh', 'OR', 'Ye', 'Rd'),
+    ('Gr', 'Bu', 'Wh', 'Rd', 'OR', 'Ye'),
+    ('Gr', 'Bu', 'Wh', 'Rd', 'Ye', 'OR'),
+    ('Gr', 'Bu', 'Wh', 'Ye', 'OR', 'Rd'),
+    ('Gr', 'Bu', 'Wh', 'Ye', 'Rd', 'OR'),
+    ('Gr', 'Bu', 'Ye', 'OR', 'Rd', 'Wh'),
+    ('Gr', 'Bu', 'Ye', 'OR', 'Wh', 'Rd'),
+    ('Gr', 'Bu', 'Ye', 'Rd', 'OR', 'Wh'),
+    ('Gr', 'Bu', 'Ye', 'Rd', 'Wh', 'OR'),
+    ('Gr', 'Bu', 'Ye', 'Wh', 'OR', 'Rd'),
+    ('Gr', 'Bu', 'Ye', 'Wh', 'Rd', 'OR'),
+    ('Gr', 'OR', 'Bu', 'Rd', 'Wh', 'Ye'),
+    ('Gr', 'OR', 'Bu', 'Rd', 'Ye', 'Wh'),
+    ('Gr', 'OR', 'Bu', 'Wh', 'Rd', 'Ye'),
+    ('Gr', 'OR', 'Bu', 'Wh', 'Ye', 'Rd'),
+    ('Gr', 'OR', 'Bu', 'Ye', 'Rd', 'Wh'),
+    ('Gr', 'OR', 'Bu', 'Ye', 'Wh', 'Rd'),
+    ('Gr', 'OR', 'Rd', 'Bu', 'Wh', 'Ye'),
+    ('Gr', 'OR', 'Rd', 'Bu', 'Ye', 'Wh'),
+    ('Gr', 'OR', 'Rd', 'Wh', 'Bu', 'Ye'),
+    ('Gr', 'OR', 'Rd', 'Wh', 'Ye', 'Bu'),
+    ('Gr', 'OR', 'Rd', 'Ye', 'Bu', 'Wh'),
+    ('Gr', 'OR', 'Rd', 'Ye', 'Wh', 'Bu'),
+    ('Gr', 'OR', 'Wh', 'Bu', 'Rd', 'Ye'),
+    ('Gr', 'OR', 'Wh', 'Bu', 'Ye', 'Rd'),
+    ('Gr', 'OR', 'Wh', 'Rd', 'Bu', 'Ye'),
+    ('Gr', 'OR', 'Wh', 'Rd', 'Ye', 'Bu'),
+    ('Gr', 'OR', 'Wh', 'Ye', 'Bu', 'Rd'),
+    ('Gr', 'OR', 'Wh', 'Ye', 'Rd', 'Bu'),
+    ('Gr', 'OR', 'Ye', 'Bu', 'Rd', 'Wh'),
+    ('Gr', 'OR', 'Ye', 'Bu', 'Wh', 'Rd'),
+    ('Gr', 'OR', 'Ye', 'Rd', 'Bu', 'Wh'),
+    ('Gr', 'OR', 'Ye', 'Rd', 'Wh', 'Bu'),
+    ('Gr', 'OR', 'Ye', 'Wh', 'Bu', 'Rd'),
+    ('Gr', 'OR', 'Ye', 'Wh', 'Rd', 'Bu'),
+    ('Gr', 'Rd', 'Bu', 'OR', 'Wh', 'Ye'),
+    ('Gr', 'Rd', 'Bu', 'OR', 'Ye', 'Wh'),
+    ('Gr', 'Rd', 'Bu', 'Wh', 'OR', 'Ye'),
+    ('Gr', 'Rd', 'Bu', 'Wh', 'Ye', 'OR'),
+    ('Gr', 'Rd', 'Bu', 'Ye', 'OR', 'Wh'),
+    ('Gr', 'Rd', 'Bu', 'Ye', 'Wh', 'OR'),
+    ('Gr', 'Rd', 'OR', 'Bu', 'Wh', 'Ye'),
+    ('Gr', 'Rd', 'OR', 'Bu', 'Ye', 'Wh'),
+    ('Gr', 'Rd', 'OR', 'Wh', 'Bu', 'Ye'),
+    ('Gr', 'Rd', 'OR', 'Wh', 'Ye', 'Bu'),
+    ('Gr', 'Rd', 'OR', 'Ye', 'Bu', 'Wh'),
+    ('Gr', 'Rd', 'OR', 'Ye', 'Wh', 'Bu'),
+    ('Gr', 'Rd', 'Wh', 'Bu', 'OR', 'Ye'),
+    ('Gr', 'Rd', 'Wh', 'Bu', 'Ye', 'OR'),
+    ('Gr', 'Rd', 'Wh', 'OR', 'Bu', 'Ye'),
+    ('Gr', 'Rd', 'Wh', 'OR', 'Ye', 'Bu'),
+    ('Gr', 'Rd', 'Wh', 'Ye', 'Bu', 'OR'),
+    ('Gr', 'Rd', 'Wh', 'Ye', 'OR', 'Bu'),
+    ('Gr', 'Rd', 'Ye', 'Bu', 'OR', 'Wh'),
+    ('Gr', 'Rd', 'Ye', 'Bu', 'Wh', 'OR'),
+    ('Gr', 'Rd', 'Ye', 'OR', 'Bu', 'Wh'),
+    ('Gr', 'Rd', 'Ye', 'OR', 'Wh', 'Bu'),
+    ('Gr', 'Rd', 'Ye', 'Wh', 'Bu', 'OR'),
+    ('Gr', 'Rd', 'Ye', 'Wh', 'OR', 'Bu'),
+    ('Gr', 'Wh', 'Bu', 'OR', 'Rd', 'Ye'),
+    ('Gr', 'Wh', 'Bu', 'OR', 'Ye', 'Rd'),
+    ('Gr', 'Wh', 'Bu', 'Rd', 'OR', 'Ye'),
+    ('Gr', 'Wh', 'Bu', 'Rd', 'Ye', 'OR'),
+    ('Gr', 'Wh', 'Bu', 'Ye', 'OR', 'Rd'),
+    ('Gr', 'Wh', 'Bu', 'Ye', 'Rd', 'OR'),
+    ('Gr', 'Wh', 'OR', 'Bu', 'Rd', 'Ye'),
+    ('Gr', 'Wh', 'OR', 'Bu', 'Ye', 'Rd'),
+    ('Gr', 'Wh', 'OR', 'Rd', 'Bu', 'Ye'),
+    ('Gr', 'Wh', 'OR', 'Rd', 'Ye', 'Bu'),
+    ('Gr', 'Wh', 'OR', 'Ye', 'Bu', 'Rd'),
+    ('Gr', 'Wh', 'OR', 'Ye', 'Rd', 'Bu'),
+    ('Gr', 'Wh', 'Rd', 'Bu', 'OR', 'Ye'),
+    ('Gr', 'Wh', 'Rd', 'Bu', 'Ye', 'OR'),
+    ('Gr', 'Wh', 'Rd', 'OR', 'Bu', 'Ye'),
+    ('Gr', 'Wh', 'Rd', 'OR', 'Ye', 'Bu'),
+    ('Gr', 'Wh', 'Rd', 'Ye', 'Bu', 'OR'),
+    ('Gr', 'Wh', 'Rd', 'Ye', 'OR', 'Bu'),
+    ('Gr', 'Wh', 'Ye', 'Bu', 'OR', 'Rd'),
+    ('Gr', 'Wh', 'Ye', 'Bu', 'Rd', 'OR'),
+    ('Gr', 'Wh', 'Ye', 'OR', 'Bu', 'Rd'),
+    ('Gr', 'Wh', 'Ye', 'OR', 'Rd', 'Bu'),
+    ('Gr', 'Wh', 'Ye', 'Rd', 'Bu', 'OR'),
+    ('Gr', 'Wh', 'Ye', 'Rd', 'OR', 'Bu'),
+    ('Gr', 'Ye', 'Bu', 'OR', 'Rd', 'Wh'),
+    ('Gr', 'Ye', 'Bu', 'OR', 'Wh', 'Rd'),
+    ('Gr', 'Ye', 'Bu', 'Rd', 'OR', 'Wh'),
+    ('Gr', 'Ye', 'Bu', 'Rd', 'Wh', 'OR'),
+    ('Gr', 'Ye', 'Bu', 'Wh', 'OR', 'Rd'),
+    ('Gr', 'Ye', 'Bu', 'Wh', 'Rd', 'OR'),
+    ('Gr', 'Ye', 'OR', 'Bu', 'Rd', 'Wh'),
+    ('Gr', 'Ye', 'OR', 'Bu', 'Wh', 'Rd'),
+    ('Gr', 'Ye', 'OR', 'Rd', 'Bu', 'Wh'),
+    ('Gr', 'Ye', 'OR', 'Rd', 'Wh', 'Bu'),
+    ('Gr', 'Ye', 'OR', 'Wh', 'Bu', 'Rd'),
+    ('Gr', 'Ye', 'OR', 'Wh', 'Rd', 'Bu'),
+    ('Gr', 'Ye', 'Rd', 'Bu', 'OR', 'Wh'),
+    ('Gr', 'Ye', 'Rd', 'Bu', 'Wh', 'OR'),
+    ('Gr', 'Ye', 'Rd', 'OR', 'Bu', 'Wh'),
+    ('Gr', 'Ye', 'Rd', 'OR', 'Wh', 'Bu'),
+    ('Gr', 'Ye', 'Rd', 'Wh', 'Bu', 'OR'),
+    ('Gr', 'Ye', 'Rd', 'Wh', 'OR', 'Bu'),
+    ('Gr', 'Ye', 'Wh', 'Bu', 'OR', 'Rd'),
+    ('Gr', 'Ye', 'Wh', 'Bu', 'Rd', 'OR'),
+    ('Gr', 'Ye', 'Wh', 'OR', 'Bu', 'Rd'),
+    ('Gr', 'Ye', 'Wh', 'OR', 'Rd', 'Bu'),
+    ('Gr', 'Ye', 'Wh', 'Rd', 'Bu', 'OR'),
+    ('Gr', 'Ye', 'Wh', 'Rd', 'OR', 'Bu'),
+    ('OR', 'Bu', 'Gr', 'Rd', 'Wh', 'Ye'),
+    ('OR', 'Bu', 'Gr', 'Rd', 'Ye', 'Wh'),
+    ('OR', 'Bu', 'Gr', 'Wh', 'Rd', 'Ye'),
+    ('OR', 'Bu', 'Gr', 'Wh', 'Ye', 'Rd'),
+    ('OR', 'Bu', 'Gr', 'Ye', 'Rd', 'Wh'),
+    ('OR', 'Bu', 'Gr', 'Ye', 'Wh', 'Rd'),
+    ('OR', 'Bu', 'Rd', 'Gr', 'Wh', 'Ye'),
+    ('OR', 'Bu', 'Rd', 'Gr', 'Ye', 'Wh'),
+    ('OR', 'Bu', 'Rd', 'Wh', 'Gr', 'Ye'),
+    ('OR', 'Bu', 'Rd', 'Wh', 'Ye', 'Gr'),
+    ('OR', 'Bu', 'Rd', 'Ye', 'Gr', 'Wh'),
+    ('OR', 'Bu', 'Rd', 'Ye', 'Wh', 'Gr'),
+    ('OR', 'Bu', 'Wh', 'Gr', 'Rd', 'Ye'),
+    ('OR', 'Bu', 'Wh', 'Gr', 'Ye', 'Rd'),
+    ('OR', 'Bu', 'Wh', 'Rd', 'Gr', 'Ye'),
+    ('OR', 'Bu', 'Wh', 'Rd', 'Ye', 'Gr'),
+    ('OR', 'Bu', 'Wh', 'Ye', 'Gr', 'Rd'),
+    ('OR', 'Bu', 'Wh', 'Ye', 'Rd', 'Gr'),
+    ('OR', 'Bu', 'Ye', 'Gr', 'Rd', 'Wh'),
+    ('OR', 'Bu', 'Ye', 'Gr', 'Wh', 'Rd'),
+    ('OR', 'Bu', 'Ye', 'Rd', 'Gr', 'Wh'),
+    ('OR', 'Bu', 'Ye', 'Rd', 'Wh', 'Gr'),
+    ('OR', 'Bu', 'Ye', 'Wh', 'Gr', 'Rd'),
+    ('OR', 'Bu', 'Ye', 'Wh', 'Rd', 'Gr'),
+    ('OR', 'Gr', 'Bu', 'Rd', 'Wh', 'Ye'),
+    ('OR', 'Gr', 'Bu', 'Rd', 'Ye', 'Wh'),
+    ('OR', 'Gr', 'Bu', 'Wh', 'Rd', 'Ye'),
+    ('OR', 'Gr', 'Bu', 'Wh', 'Ye', 'Rd'),
+    ('OR', 'Gr', 'Bu', 'Ye', 'Rd', 'Wh'),
+    ('OR', 'Gr', 'Bu', 'Ye', 'Wh', 'Rd'),
+    ('OR', 'Gr', 'Rd', 'Bu', 'Wh', 'Ye'),
+    ('OR', 'Gr', 'Rd', 'Bu', 'Ye', 'Wh'),
+    ('OR', 'Gr', 'Rd', 'Wh', 'Bu', 'Ye'),
+    ('OR', 'Gr', 'Rd', 'Wh', 'Ye', 'Bu'),
+    ('OR', 'Gr', 'Rd', 'Ye', 'Bu', 'Wh'),
+    ('OR', 'Gr', 'Rd', 'Ye', 'Wh', 'Bu'),
+    ('OR', 'Gr', 'Wh', 'Bu', 'Rd', 'Ye'),
+    ('OR', 'Gr', 'Wh', 'Bu', 'Ye', 'Rd'),
+    ('OR', 'Gr', 'Wh', 'Rd', 'Bu', 'Ye'),
+    ('OR', 'Gr', 'Wh', 'Rd', 'Ye', 'Bu'),
+    ('OR', 'Gr', 'Wh', 'Ye', 'Bu', 'Rd'),
+    ('OR', 'Gr', 'Wh', 'Ye', 'Rd', 'Bu'),
+    ('OR', 'Gr', 'Ye', 'Bu', 'Rd', 'Wh'),
+    ('OR', 'Gr', 'Ye', 'Bu', 'Wh', 'Rd'),
+    ('OR', 'Gr', 'Ye', 'Rd', 'Bu', 'Wh'),
+    ('OR', 'Gr', 'Ye', 'Rd', 'Wh', 'Bu'),
+    ('OR', 'Gr', 'Ye', 'Wh', 'Bu', 'Rd'),
+    ('OR', 'Gr', 'Ye', 'Wh', 'Rd', 'Bu'),
+    ('OR', 'Rd', 'Bu', 'Gr', 'Wh', 'Ye'),
+    ('OR', 'Rd', 'Bu', 'Gr', 'Ye', 'Wh'),
+    ('OR', 'Rd', 'Bu', 'Wh', 'Gr', 'Ye'),
+    ('OR', 'Rd', 'Bu', 'Wh', 'Ye', 'Gr'),
+    ('OR', 'Rd', 'Bu', 'Ye', 'Gr', 'Wh'),
+    ('OR', 'Rd', 'Bu', 'Ye', 'Wh', 'Gr'),
+    ('OR', 'Rd', 'Gr', 'Bu', 'Wh', 'Ye'),
+    ('OR', 'Rd', 'Gr', 'Bu', 'Ye', 'Wh'),
+    ('OR', 'Rd', 'Gr', 'Wh', 'Bu', 'Ye'),
+    ('OR', 'Rd', 'Gr', 'Wh', 'Ye', 'Bu'),
+    ('OR', 'Rd', 'Gr', 'Ye', 'Bu', 'Wh'),
+    ('OR', 'Rd', 'Gr', 'Ye', 'Wh', 'Bu'),
+    ('OR', 'Rd', 'Wh', 'Bu', 'Gr', 'Ye'),
+    ('OR', 'Rd', 'Wh', 'Bu', 'Ye', 'Gr'),
+    ('OR', 'Rd', 'Wh', 'Gr', 'Bu', 'Ye'),
+    ('OR', 'Rd', 'Wh', 'Gr', 'Ye', 'Bu'),
+    ('OR', 'Rd', 'Wh', 'Ye', 'Bu', 'Gr'),
+    ('OR', 'Rd', 'Wh', 'Ye', 'Gr', 'Bu'),
+    ('OR', 'Rd', 'Ye', 'Bu', 'Gr', 'Wh'),
+    ('OR', 'Rd', 'Ye', 'Bu', 'Wh', 'Gr'),
+    ('OR', 'Rd', 'Ye', 'Gr', 'Bu', 'Wh'),
+    ('OR', 'Rd', 'Ye', 'Gr', 'Wh', 'Bu'),
+    ('OR', 'Rd', 'Ye', 'Wh', 'Bu', 'Gr'),
+    ('OR', 'Rd', 'Ye', 'Wh', 'Gr', 'Bu'),
+    ('OR', 'Wh', 'Bu', 'Gr', 'Rd', 'Ye'),
+    ('OR', 'Wh', 'Bu', 'Gr', 'Ye', 'Rd'),
+    ('OR', 'Wh', 'Bu', 'Rd', 'Gr', 'Ye'),
+    ('OR', 'Wh', 'Bu', 'Rd', 'Ye', 'Gr'),
+    ('OR', 'Wh', 'Bu', 'Ye', 'Gr', 'Rd'),
+    ('OR', 'Wh', 'Bu', 'Ye', 'Rd', 'Gr'),
+    ('OR', 'Wh', 'Gr', 'Bu', 'Rd', 'Ye'),
+    ('OR', 'Wh', 'Gr', 'Bu', 'Ye', 'Rd'),
+    ('OR', 'Wh', 'Gr', 'Rd', 'Bu', 'Ye'),
+    ('OR', 'Wh', 'Gr', 'Rd', 'Ye', 'Bu'),
+    ('OR', 'Wh', 'Gr', 'Ye', 'Bu', 'Rd'),
+    ('OR', 'Wh', 'Gr', 'Ye', 'Rd', 'Bu'),
+    ('OR', 'Wh', 'Rd', 'Bu', 'Gr', 'Ye'),
+    ('OR', 'Wh', 'Rd', 'Bu', 'Ye', 'Gr'),
+    ('OR', 'Wh', 'Rd', 'Gr', 'Bu', 'Ye'),
+    ('OR', 'Wh', 'Rd', 'Gr', 'Ye', 'Bu'),
+    ('OR', 'Wh', 'Rd', 'Ye', 'Bu', 'Gr'),
+    ('OR', 'Wh', 'Rd', 'Ye', 'Gr', 'Bu'),
+    ('OR', 'Wh', 'Ye', 'Bu', 'Gr', 'Rd'),
+    ('OR', 'Wh', 'Ye', 'Bu', 'Rd', 'Gr'),
+    ('OR', 'Wh', 'Ye', 'Gr', 'Bu', 'Rd'),
+    ('OR', 'Wh', 'Ye', 'Gr', 'Rd', 'Bu'),
+    ('OR', 'Wh', 'Ye', 'Rd', 'Bu', 'Gr'),
+    ('OR', 'Wh', 'Ye', 'Rd', 'Gr', 'Bu'),
+    ('OR', 'Ye', 'Bu', 'Gr', 'Rd', 'Wh'),
+    ('OR', 'Ye', 'Bu', 'Gr', 'Wh', 'Rd'),
+    ('OR', 'Ye', 'Bu', 'Rd', 'Gr', 'Wh'),
+    ('OR', 'Ye', 'Bu', 'Rd', 'Wh', 'Gr'),
+    ('OR', 'Ye', 'Bu', 'Wh', 'Gr', 'Rd'),
+    ('OR', 'Ye', 'Bu', 'Wh', 'Rd', 'Gr'),
+    ('OR', 'Ye', 'Gr', 'Bu', 'Rd', 'Wh'),
+    ('OR', 'Ye', 'Gr', 'Bu', 'Wh', 'Rd'),
+    ('OR', 'Ye', 'Gr', 'Rd', 'Bu', 'Wh'),
+    ('OR', 'Ye', 'Gr', 'Rd', 'Wh', 'Bu'),
+    ('OR', 'Ye', 'Gr', 'Wh', 'Bu', 'Rd'),
+    ('OR', 'Ye', 'Gr', 'Wh', 'Rd', 'Bu'),
+    ('OR', 'Ye', 'Rd', 'Bu', 'Gr', 'Wh'),
+    ('OR', 'Ye', 'Rd', 'Bu', 'Wh', 'Gr'),
+    ('OR', 'Ye', 'Rd', 'Gr', 'Bu', 'Wh'),
+    ('OR', 'Ye', 'Rd', 'Gr', 'Wh', 'Bu'),
+    ('OR', 'Ye', 'Rd', 'Wh', 'Bu', 'Gr'),
+    ('OR', 'Ye', 'Rd', 'Wh', 'Gr', 'Bu'),
+    ('OR', 'Ye', 'Wh', 'Bu', 'Gr', 'Rd'),
+    ('OR', 'Ye', 'Wh', 'Bu', 'Rd', 'Gr'),
+    ('OR', 'Ye', 'Wh', 'Gr', 'Bu', 'Rd'),
+    ('OR', 'Ye', 'Wh', 'Gr', 'Rd', 'Bu'),
+    ('OR', 'Ye', 'Wh', 'Rd', 'Bu', 'Gr'),
+    ('OR', 'Ye', 'Wh', 'Rd', 'Gr', 'Bu'),
+    ('Rd', 'Bu', 'Gr', 'OR', 'Wh', 'Ye'),
+    ('Rd', 'Bu', 'Gr', 'OR', 'Ye', 'Wh'),
+    ('Rd', 'Bu', 'Gr', 'Wh', 'OR', 'Ye'),
+    ('Rd', 'Bu', 'Gr', 'Wh', 'Ye', 'OR'),
+    ('Rd', 'Bu', 'Gr', 'Ye', 'OR', 'Wh'),
+    ('Rd', 'Bu', 'Gr', 'Ye', 'Wh', 'OR'),
+    ('Rd', 'Bu', 'OR', 'Gr', 'Wh', 'Ye'),
+    ('Rd', 'Bu', 'OR', 'Gr', 'Ye', 'Wh'),
+    ('Rd', 'Bu', 'OR', 'Wh', 'Gr', 'Ye'),
+    ('Rd', 'Bu', 'OR', 'Wh', 'Ye', 'Gr'),
+    ('Rd', 'Bu', 'OR', 'Ye', 'Gr', 'Wh'),
+    ('Rd', 'Bu', 'OR', 'Ye', 'Wh', 'Gr'),
+    ('Rd', 'Bu', 'Wh', 'Gr', 'OR', 'Ye'),
+    ('Rd', 'Bu', 'Wh', 'Gr', 'Ye', 'OR'),
+    ('Rd', 'Bu', 'Wh', 'OR', 'Gr', 'Ye'),
+    ('Rd', 'Bu', 'Wh', 'OR', 'Ye', 'Gr'),
+    ('Rd', 'Bu', 'Wh', 'Ye', 'Gr', 'OR'),
+    ('Rd', 'Bu', 'Wh', 'Ye', 'OR', 'Gr'),
+    ('Rd', 'Bu', 'Ye', 'Gr', 'OR', 'Wh'),
+    ('Rd', 'Bu', 'Ye', 'Gr', 'Wh', 'OR'),
+    ('Rd', 'Bu', 'Ye', 'OR', 'Gr', 'Wh'),
+    ('Rd', 'Bu', 'Ye', 'OR', 'Wh', 'Gr'),
+    ('Rd', 'Bu', 'Ye', 'Wh', 'Gr', 'OR'),
+    ('Rd', 'Bu', 'Ye', 'Wh', 'OR', 'Gr'),
+    ('Rd', 'Gr', 'Bu', 'OR', 'Wh', 'Ye'),
+    ('Rd', 'Gr', 'Bu', 'OR', 'Ye', 'Wh'),
+    ('Rd', 'Gr', 'Bu', 'Wh', 'OR', 'Ye'),
+    ('Rd', 'Gr', 'Bu', 'Wh', 'Ye', 'OR'),
+    ('Rd', 'Gr', 'Bu', 'Ye', 'OR', 'Wh'),
+    ('Rd', 'Gr', 'Bu', 'Ye', 'Wh', 'OR'),
+    ('Rd', 'Gr', 'OR', 'Bu', 'Wh', 'Ye'),
+    ('Rd', 'Gr', 'OR', 'Bu', 'Ye', 'Wh'),
+    ('Rd', 'Gr', 'OR', 'Wh', 'Bu', 'Ye'),
+    ('Rd', 'Gr', 'OR', 'Wh', 'Ye', 'Bu'),
+    ('Rd', 'Gr', 'OR', 'Ye', 'Bu', 'Wh'),
+    ('Rd', 'Gr', 'OR', 'Ye', 'Wh', 'Bu'),
+    ('Rd', 'Gr', 'Wh', 'Bu', 'OR', 'Ye'),
+    ('Rd', 'Gr', 'Wh', 'Bu', 'Ye', 'OR'),
+    ('Rd', 'Gr', 'Wh', 'OR', 'Bu', 'Ye'),
+    ('Rd', 'Gr', 'Wh', 'OR', 'Ye', 'Bu'),
+    ('Rd', 'Gr', 'Wh', 'Ye', 'Bu', 'OR'),
+    ('Rd', 'Gr', 'Wh', 'Ye', 'OR', 'Bu'),
+    ('Rd', 'Gr', 'Ye', 'Bu', 'OR', 'Wh'),
+    ('Rd', 'Gr', 'Ye', 'Bu', 'Wh', 'OR'),
+    ('Rd', 'Gr', 'Ye', 'OR', 'Bu', 'Wh'),
+    ('Rd', 'Gr', 'Ye', 'OR', 'Wh', 'Bu'),
+    ('Rd', 'Gr', 'Ye', 'Wh', 'Bu', 'OR'),
+    ('Rd', 'Gr', 'Ye', 'Wh', 'OR', 'Bu'),
+    ('Rd', 'OR', 'Bu', 'Gr', 'Wh', 'Ye'),
+    ('Rd', 'OR', 'Bu', 'Gr', 'Ye', 'Wh'),
+    ('Rd', 'OR', 'Bu', 'Wh', 'Gr', 'Ye'),
+    ('Rd', 'OR', 'Bu', 'Wh', 'Ye', 'Gr'),
+    ('Rd', 'OR', 'Bu', 'Ye', 'Gr', 'Wh'),
+    ('Rd', 'OR', 'Bu', 'Ye', 'Wh', 'Gr'),
+    ('Rd', 'OR', 'Gr', 'Bu', 'Wh', 'Ye'),
+    ('Rd', 'OR', 'Gr', 'Bu', 'Ye', 'Wh'),
+    ('Rd', 'OR', 'Gr', 'Wh', 'Bu', 'Ye'),
+    ('Rd', 'OR', 'Gr', 'Wh', 'Ye', 'Bu'),
+    ('Rd', 'OR', 'Gr', 'Ye', 'Bu', 'Wh'),
+    ('Rd', 'OR', 'Gr', 'Ye', 'Wh', 'Bu'),
+    ('Rd', 'OR', 'Wh', 'Bu', 'Gr', 'Ye'),
+    ('Rd', 'OR', 'Wh', 'Bu', 'Ye', 'Gr'),
+    ('Rd', 'OR', 'Wh', 'Gr', 'Bu', 'Ye'),
+    ('Rd', 'OR', 'Wh', 'Gr', 'Ye', 'Bu'),
+    ('Rd', 'OR', 'Wh', 'Ye', 'Bu', 'Gr'),
+    ('Rd', 'OR', 'Wh', 'Ye', 'Gr', 'Bu'),
+    ('Rd', 'OR', 'Ye', 'Bu', 'Gr', 'Wh'),
+    ('Rd', 'OR', 'Ye', 'Bu', 'Wh', 'Gr'),
+    ('Rd', 'OR', 'Ye', 'Gr', 'Bu', 'Wh'),
+    ('Rd', 'OR', 'Ye', 'Gr', 'Wh', 'Bu'),
+    ('Rd', 'OR', 'Ye', 'Wh', 'Bu', 'Gr'),
+    ('Rd', 'OR', 'Ye', 'Wh', 'Gr', 'Bu'),
+    ('Rd', 'Wh', 'Bu', 'Gr', 'OR', 'Ye'),
+    ('Rd', 'Wh', 'Bu', 'Gr', 'Ye', 'OR'),
+    ('Rd', 'Wh', 'Bu', 'OR', 'Gr', 'Ye'),
+    ('Rd', 'Wh', 'Bu', 'OR', 'Ye', 'Gr'),
+    ('Rd', 'Wh', 'Bu', 'Ye', 'Gr', 'OR'),
+    ('Rd', 'Wh', 'Bu', 'Ye', 'OR', 'Gr'),
+    ('Rd', 'Wh', 'Gr', 'Bu', 'OR', 'Ye'),
+    ('Rd', 'Wh', 'Gr', 'Bu', 'Ye', 'OR'),
+    ('Rd', 'Wh', 'Gr', 'OR', 'Bu', 'Ye'),
+    ('Rd', 'Wh', 'Gr', 'OR', 'Ye', 'Bu'),
+    ('Rd', 'Wh', 'Gr', 'Ye', 'Bu', 'OR'),
+    ('Rd', 'Wh', 'Gr', 'Ye', 'OR', 'Bu'),
+    ('Rd', 'Wh', 'OR', 'Bu', 'Gr', 'Ye'),
+    ('Rd', 'Wh', 'OR', 'Bu', 'Ye', 'Gr'),
+    ('Rd', 'Wh', 'OR', 'Gr', 'Bu', 'Ye'),
+    ('Rd', 'Wh', 'OR', 'Gr', 'Ye', 'Bu'),
+    ('Rd', 'Wh', 'OR', 'Ye', 'Bu', 'Gr'),
+    ('Rd', 'Wh', 'OR', 'Ye', 'Gr', 'Bu'),
+    ('Rd', 'Wh', 'Ye', 'Bu', 'Gr', 'OR'),
+    ('Rd', 'Wh', 'Ye', 'Bu', 'OR', 'Gr'),
+    ('Rd', 'Wh', 'Ye', 'Gr', 'Bu', 'OR'),
+    ('Rd', 'Wh', 'Ye', 'Gr', 'OR', 'Bu'),
+    ('Rd', 'Wh', 'Ye', 'OR', 'Bu', 'Gr'),
+    ('Rd', 'Wh', 'Ye', 'OR', 'Gr', 'Bu'),
+    ('Rd', 'Ye', 'Bu', 'Gr', 'OR', 'Wh'),
+    ('Rd', 'Ye', 'Bu', 'Gr', 'Wh', 'OR'),
+    ('Rd', 'Ye', 'Bu', 'OR', 'Gr', 'Wh'),
+    ('Rd', 'Ye', 'Bu', 'OR', 'Wh', 'Gr'),
+    ('Rd', 'Ye', 'Bu', 'Wh', 'Gr', 'OR'),
+    ('Rd', 'Ye', 'Bu', 'Wh', 'OR', 'Gr'),
+    ('Rd', 'Ye', 'Gr', 'Bu', 'OR', 'Wh'),
+    ('Rd', 'Ye', 'Gr', 'Bu', 'Wh', 'OR'),
+    ('Rd', 'Ye', 'Gr', 'OR', 'Bu', 'Wh'),
+    ('Rd', 'Ye', 'Gr', 'OR', 'Wh', 'Bu'),
+    ('Rd', 'Ye', 'Gr', 'Wh', 'Bu', 'OR'),
+    ('Rd', 'Ye', 'Gr', 'Wh', 'OR', 'Bu'),
+    ('Rd', 'Ye', 'OR', 'Bu', 'Gr', 'Wh'),
+    ('Rd', 'Ye', 'OR', 'Bu', 'Wh', 'Gr'),
+    ('Rd', 'Ye', 'OR', 'Gr', 'Bu', 'Wh'),
+    ('Rd', 'Ye', 'OR', 'Gr', 'Wh', 'Bu'),
+    ('Rd', 'Ye', 'OR', 'Wh', 'Bu', 'Gr'),
+    ('Rd', 'Ye', 'OR', 'Wh', 'Gr', 'Bu'),
+    ('Rd', 'Ye', 'Wh', 'Bu', 'Gr', 'OR'),
+    ('Rd', 'Ye', 'Wh', 'Bu', 'OR', 'Gr'),
+    ('Rd', 'Ye', 'Wh', 'Gr', 'Bu', 'OR'),
+    ('Rd', 'Ye', 'Wh', 'Gr', 'OR', 'Bu'),
+    ('Rd', 'Ye', 'Wh', 'OR', 'Bu', 'Gr'),
+    ('Rd', 'Ye', 'Wh', 'OR', 'Gr', 'Bu'),
+    ('Wh', 'Bu', 'Gr', 'OR', 'Rd', 'Ye'),
+    ('Wh', 'Bu', 'Gr', 'OR', 'Ye', 'Rd'),
+    ('Wh', 'Bu', 'Gr', 'Rd', 'OR', 'Ye'),
+    ('Wh', 'Bu', 'Gr', 'Rd', 'Ye', 'OR'),
+    ('Wh', 'Bu', 'Gr', 'Ye', 'OR', 'Rd'),
+    ('Wh', 'Bu', 'Gr', 'Ye', 'Rd', 'OR'),
+    ('Wh', 'Bu', 'OR', 'Gr', 'Rd', 'Ye'),
+    ('Wh', 'Bu', 'OR', 'Gr', 'Ye', 'Rd'),
+    ('Wh', 'Bu', 'OR', 'Rd', 'Gr', 'Ye'),
+    ('Wh', 'Bu', 'OR', 'Rd', 'Ye', 'Gr'),
+    ('Wh', 'Bu', 'OR', 'Ye', 'Gr', 'Rd'),
+    ('Wh', 'Bu', 'OR', 'Ye', 'Rd', 'Gr'),
+    ('Wh', 'Bu', 'Rd', 'Gr', 'OR', 'Ye'),
+    ('Wh', 'Bu', 'Rd', 'Gr', 'Ye', 'OR'),
+    ('Wh', 'Bu', 'Rd', 'OR', 'Gr', 'Ye'),
+    ('Wh', 'Bu', 'Rd', 'OR', 'Ye', 'Gr'),
+    ('Wh', 'Bu', 'Rd', 'Ye', 'Gr', 'OR'),
+    ('Wh', 'Bu', 'Rd', 'Ye', 'OR', 'Gr'),
+    ('Wh', 'Bu', 'Ye', 'Gr', 'OR', 'Rd'),
+    ('Wh', 'Bu', 'Ye', 'Gr', 'Rd', 'OR'),
+    ('Wh', 'Bu', 'Ye', 'OR', 'Gr', 'Rd'),
+    ('Wh', 'Bu', 'Ye', 'OR', 'Rd', 'Gr'),
+    ('Wh', 'Bu', 'Ye', 'Rd', 'Gr', 'OR'),
+    ('Wh', 'Bu', 'Ye', 'Rd', 'OR', 'Gr'),
+    ('Wh', 'Gr', 'Bu', 'OR', 'Rd', 'Ye'),
+    ('Wh', 'Gr', 'Bu', 'OR', 'Ye', 'Rd'),
+    ('Wh', 'Gr', 'Bu', 'Rd', 'OR', 'Ye'),
+    ('Wh', 'Gr', 'Bu', 'Rd', 'Ye', 'OR'),
+    ('Wh', 'Gr', 'Bu', 'Ye', 'OR', 'Rd'),
+    ('Wh', 'Gr', 'Bu', 'Ye', 'Rd', 'OR'),
+    ('Wh', 'Gr', 'OR', 'Bu', 'Rd', 'Ye'),
+    ('Wh', 'Gr', 'OR', 'Bu', 'Ye', 'Rd'),
+    ('Wh', 'Gr', 'OR', 'Rd', 'Bu', 'Ye'),
+    ('Wh', 'Gr', 'OR', 'Rd', 'Ye', 'Bu'),
+    ('Wh', 'Gr', 'OR', 'Ye', 'Bu', 'Rd'),
+    ('Wh', 'Gr', 'OR', 'Ye', 'Rd', 'Bu'),
+    ('Wh', 'Gr', 'Rd', 'Bu', 'OR', 'Ye'),
+    ('Wh', 'Gr', 'Rd', 'Bu', 'Ye', 'OR'),
+    ('Wh', 'Gr', 'Rd', 'OR', 'Bu', 'Ye'),
+    ('Wh', 'Gr', 'Rd', 'OR', 'Ye', 'Bu'),
+    ('Wh', 'Gr', 'Rd', 'Ye', 'Bu', 'OR'),
+    ('Wh', 'Gr', 'Rd', 'Ye', 'OR', 'Bu'),
+    ('Wh', 'Gr', 'Ye', 'Bu', 'OR', 'Rd'),
+    ('Wh', 'Gr', 'Ye', 'Bu', 'Rd', 'OR'),
+    ('Wh', 'Gr', 'Ye', 'OR', 'Bu', 'Rd'),
+    ('Wh', 'Gr', 'Ye', 'OR', 'Rd', 'Bu'),
+    ('Wh', 'Gr', 'Ye', 'Rd', 'Bu', 'OR'),
+    ('Wh', 'Gr', 'Ye', 'Rd', 'OR', 'Bu'),
+    ('Wh', 'OR', 'Bu', 'Gr', 'Rd', 'Ye'),
+    ('Wh', 'OR', 'Bu', 'Gr', 'Ye', 'Rd'),
+    ('Wh', 'OR', 'Bu', 'Rd', 'Gr', 'Ye'),
+    ('Wh', 'OR', 'Bu', 'Rd', 'Ye', 'Gr'),
+    ('Wh', 'OR', 'Bu', 'Ye', 'Gr', 'Rd'),
+    ('Wh', 'OR', 'Bu', 'Ye', 'Rd', 'Gr'),
+    ('Wh', 'OR', 'Gr', 'Bu', 'Rd', 'Ye'),
+    ('Wh', 'OR', 'Gr', 'Bu', 'Ye', 'Rd'),
+    ('Wh', 'OR', 'Gr', 'Rd', 'Bu', 'Ye'),
+    ('Wh', 'OR', 'Gr', 'Rd', 'Ye', 'Bu'),
+    ('Wh', 'OR', 'Gr', 'Ye', 'Bu', 'Rd'),
+    ('Wh', 'OR', 'Gr', 'Ye', 'Rd', 'Bu'),
+    ('Wh', 'OR', 'Rd', 'Bu', 'Gr', 'Ye'),
+    ('Wh', 'OR', 'Rd', 'Bu', 'Ye', 'Gr'),
+    ('Wh', 'OR', 'Rd', 'Gr', 'Bu', 'Ye'),
+    ('Wh', 'OR', 'Rd', 'Gr', 'Ye', 'Bu'),
+    ('Wh', 'OR', 'Rd', 'Ye', 'Bu', 'Gr'),
+    ('Wh', 'OR', 'Rd', 'Ye', 'Gr', 'Bu'),
+    ('Wh', 'OR', 'Ye', 'Bu', 'Gr', 'Rd'),
+    ('Wh', 'OR', 'Ye', 'Bu', 'Rd', 'Gr'),
+    ('Wh', 'OR', 'Ye', 'Gr', 'Bu', 'Rd'),
+    ('Wh', 'OR', 'Ye', 'Gr', 'Rd', 'Bu'),
+    ('Wh', 'OR', 'Ye', 'Rd', 'Bu', 'Gr'),
+    ('Wh', 'OR', 'Ye', 'Rd', 'Gr', 'Bu'),
+    ('Wh', 'Rd', 'Bu', 'Gr', 'OR', 'Ye'),
+    ('Wh', 'Rd', 'Bu', 'Gr', 'Ye', 'OR'),
+    ('Wh', 'Rd', 'Bu', 'OR', 'Gr', 'Ye'),
+    ('Wh', 'Rd', 'Bu', 'OR', 'Ye', 'Gr'),
+    ('Wh', 'Rd', 'Bu', 'Ye', 'Gr', 'OR'),
+    ('Wh', 'Rd', 'Bu', 'Ye', 'OR', 'Gr'),
+    ('Wh', 'Rd', 'Gr', 'Bu', 'OR', 'Ye'),
+    ('Wh', 'Rd', 'Gr', 'Bu', 'Ye', 'OR'),
+    ('Wh', 'Rd', 'Gr', 'OR', 'Bu', 'Ye'),
+    ('Wh', 'Rd', 'Gr', 'OR', 'Ye', 'Bu'),
+    ('Wh', 'Rd', 'Gr', 'Ye', 'Bu', 'OR'),
+    ('Wh', 'Rd', 'Gr', 'Ye', 'OR', 'Bu'),
+    ('Wh', 'Rd', 'OR', 'Bu', 'Gr', 'Ye'),
+    ('Wh', 'Rd', 'OR', 'Bu', 'Ye', 'Gr'),
+    ('Wh', 'Rd', 'OR', 'Gr', 'Bu', 'Ye'),
+    ('Wh', 'Rd', 'OR', 'Gr', 'Ye', 'Bu'),
+    ('Wh', 'Rd', 'OR', 'Ye', 'Bu', 'Gr'),
+    ('Wh', 'Rd', 'OR', 'Ye', 'Gr', 'Bu'),
+    ('Wh', 'Rd', 'Ye', 'Bu', 'Gr', 'OR'),
+    ('Wh', 'Rd', 'Ye', 'Bu', 'OR', 'Gr'),
+    ('Wh', 'Rd', 'Ye', 'Gr', 'Bu', 'OR'),
+    ('Wh', 'Rd', 'Ye', 'Gr', 'OR', 'Bu'),
+    ('Wh', 'Rd', 'Ye', 'OR', 'Bu', 'Gr'),
+    ('Wh', 'Rd', 'Ye', 'OR', 'Gr', 'Bu'),
+    ('Wh', 'Ye', 'Bu', 'Gr', 'OR', 'Rd'),
+    ('Wh', 'Ye', 'Bu', 'Gr', 'Rd', 'OR'),
+    ('Wh', 'Ye', 'Bu', 'OR', 'Gr', 'Rd'),
+    ('Wh', 'Ye', 'Bu', 'OR', 'Rd', 'Gr'),
+    ('Wh', 'Ye', 'Bu', 'Rd', 'Gr', 'OR'),
+    ('Wh', 'Ye', 'Bu', 'Rd', 'OR', 'Gr'),
+    ('Wh', 'Ye', 'Gr', 'Bu', 'OR', 'Rd'),
+    ('Wh', 'Ye', 'Gr', 'Bu', 'Rd', 'OR'),
+    ('Wh', 'Ye', 'Gr', 'OR', 'Bu', 'Rd'),
+    ('Wh', 'Ye', 'Gr', 'OR', 'Rd', 'Bu'),
+    ('Wh', 'Ye', 'Gr', 'Rd', 'Bu', 'OR'),
+    ('Wh', 'Ye', 'Gr', 'Rd', 'OR', 'Bu'),
+    ('Wh', 'Ye', 'OR', 'Bu', 'Gr', 'Rd'),
+    ('Wh', 'Ye', 'OR', 'Bu', 'Rd', 'Gr'),
+    ('Wh', 'Ye', 'OR', 'Gr', 'Bu', 'Rd'),
+    ('Wh', 'Ye', 'OR', 'Gr', 'Rd', 'Bu'),
+    ('Wh', 'Ye', 'OR', 'Rd', 'Bu', 'Gr'),
+    ('Wh', 'Ye', 'OR', 'Rd', 'Gr', 'Bu'),
+    ('Wh', 'Ye', 'Rd', 'Bu', 'Gr', 'OR'),
+    ('Wh', 'Ye', 'Rd', 'Bu', 'OR', 'Gr'),
+    ('Wh', 'Ye', 'Rd', 'Gr', 'Bu', 'OR'),
+    ('Wh', 'Ye', 'Rd', 'Gr', 'OR', 'Bu'),
+    ('Wh', 'Ye', 'Rd', 'OR', 'Bu', 'Gr'),
+    ('Wh', 'Ye', 'Rd', 'OR', 'Gr', 'Bu'),
+    ('Ye', 'Bu', 'Gr', 'OR', 'Rd', 'Wh'),
+    ('Ye', 'Bu', 'Gr', 'OR', 'Wh', 'Rd'),
+    ('Ye', 'Bu', 'Gr', 'Rd', 'OR', 'Wh'),
+    ('Ye', 'Bu', 'Gr', 'Rd', 'Wh', 'OR'),
+    ('Ye', 'Bu', 'Gr', 'Wh', 'OR', 'Rd'),
+    ('Ye', 'Bu', 'Gr', 'Wh', 'Rd', 'OR'),
+    ('Ye', 'Bu', 'OR', 'Gr', 'Rd', 'Wh'),
+    ('Ye', 'Bu', 'OR', 'Gr', 'Wh', 'Rd'),
+    ('Ye', 'Bu', 'OR', 'Rd', 'Gr', 'Wh'),
+    ('Ye', 'Bu', 'OR', 'Rd', 'Wh', 'Gr'),
+    ('Ye', 'Bu', 'OR', 'Wh', 'Gr', 'Rd'),
+    ('Ye', 'Bu', 'OR', 'Wh', 'Rd', 'Gr'),
+    ('Ye', 'Bu', 'Rd', 'Gr', 'OR', 'Wh'),
+    ('Ye', 'Bu', 'Rd', 'Gr', 'Wh', 'OR'),
+    ('Ye', 'Bu', 'Rd', 'OR', 'Gr', 'Wh'),
+    ('Ye', 'Bu', 'Rd', 'OR', 'Wh', 'Gr'),
+    ('Ye', 'Bu', 'Rd', 'Wh', 'Gr', 'OR'),
+    ('Ye', 'Bu', 'Rd', 'Wh', 'OR', 'Gr'),
+    ('Ye', 'Bu', 'Wh', 'Gr', 'OR', 'Rd'),
+    ('Ye', 'Bu', 'Wh', 'Gr', 'Rd', 'OR'),
+    ('Ye', 'Bu', 'Wh', 'OR', 'Gr', 'Rd'),
+    ('Ye', 'Bu', 'Wh', 'OR', 'Rd', 'Gr'),
+    ('Ye', 'Bu', 'Wh', 'Rd', 'Gr', 'OR'),
+    ('Ye', 'Bu', 'Wh', 'Rd', 'OR', 'Gr'),
+    ('Ye', 'Gr', 'Bu', 'OR', 'Rd', 'Wh'),
+    ('Ye', 'Gr', 'Bu', 'OR', 'Wh', 'Rd'),
+    ('Ye', 'Gr', 'Bu', 'Rd', 'OR', 'Wh'),
+    ('Ye', 'Gr', 'Bu', 'Rd', 'Wh', 'OR'),
+    ('Ye', 'Gr', 'Bu', 'Wh', 'OR', 'Rd'),
+    ('Ye', 'Gr', 'Bu', 'Wh', 'Rd', 'OR'),
+    ('Ye', 'Gr', 'OR', 'Bu', 'Rd', 'Wh'),
+    ('Ye', 'Gr', 'OR', 'Bu', 'Wh', 'Rd'),
+    ('Ye', 'Gr', 'OR', 'Rd', 'Bu', 'Wh'),
+    ('Ye', 'Gr', 'OR', 'Rd', 'Wh', 'Bu'),
+    ('Ye', 'Gr', 'OR', 'Wh', 'Bu', 'Rd'),
+    ('Ye', 'Gr', 'OR', 'Wh', 'Rd', 'Bu'),
+    ('Ye', 'Gr', 'Rd', 'Bu', 'OR', 'Wh'),
+    ('Ye', 'Gr', 'Rd', 'Bu', 'Wh', 'OR'),
+    ('Ye', 'Gr', 'Rd', 'OR', 'Bu', 'Wh'),
+    ('Ye', 'Gr', 'Rd', 'OR', 'Wh', 'Bu'),
+    ('Ye', 'Gr', 'Rd', 'Wh', 'Bu', 'OR'),
+    ('Ye', 'Gr', 'Rd', 'Wh', 'OR', 'Bu'),
+    ('Ye', 'Gr', 'Wh', 'Bu', 'OR', 'Rd'),
+    ('Ye', 'Gr', 'Wh', 'Bu', 'Rd', 'OR'),
+    ('Ye', 'Gr', 'Wh', 'OR', 'Bu', 'Rd'),
+    ('Ye', 'Gr', 'Wh', 'OR', 'Rd', 'Bu'),
+    ('Ye', 'Gr', 'Wh', 'Rd', 'Bu', 'OR'),
+    ('Ye', 'Gr', 'Wh', 'Rd', 'OR', 'Bu'),
+    ('Ye', 'OR', 'Bu', 'Gr', 'Rd', 'Wh'),
+    ('Ye', 'OR', 'Bu', 'Gr', 'Wh', 'Rd'),
+    ('Ye', 'OR', 'Bu', 'Rd', 'Gr', 'Wh'),
+    ('Ye', 'OR', 'Bu', 'Rd', 'Wh', 'Gr'),
+    ('Ye', 'OR', 'Bu', 'Wh', 'Gr', 'Rd'),
+    ('Ye', 'OR', 'Bu', 'Wh', 'Rd', 'Gr'),
+    ('Ye', 'OR', 'Gr', 'Bu', 'Rd', 'Wh'),
+    ('Ye', 'OR', 'Gr', 'Bu', 'Wh', 'Rd'),
+    ('Ye', 'OR', 'Gr', 'Rd', 'Bu', 'Wh'),
+    ('Ye', 'OR', 'Gr', 'Rd', 'Wh', 'Bu'),
+    ('Ye', 'OR', 'Gr', 'Wh', 'Bu', 'Rd'),
+    ('Ye', 'OR', 'Gr', 'Wh', 'Rd', 'Bu'),
+    ('Ye', 'OR', 'Rd', 'Bu', 'Gr', 'Wh'),
+    ('Ye', 'OR', 'Rd', 'Bu', 'Wh', 'Gr'),
+    ('Ye', 'OR', 'Rd', 'Gr', 'Bu', 'Wh'),
+    ('Ye', 'OR', 'Rd', 'Gr', 'Wh', 'Bu'),
+    ('Ye', 'OR', 'Rd', 'Wh', 'Bu', 'Gr'),
+    ('Ye', 'OR', 'Rd', 'Wh', 'Gr', 'Bu'),
+    ('Ye', 'OR', 'Wh', 'Bu', 'Gr', 'Rd'),
+    ('Ye', 'OR', 'Wh', 'Bu', 'Rd', 'Gr'),
+    ('Ye', 'OR', 'Wh', 'Gr', 'Bu', 'Rd'),
+    ('Ye', 'OR', 'Wh', 'Gr', 'Rd', 'Bu'),
+    ('Ye', 'OR', 'Wh', 'Rd', 'Bu', 'Gr'),
+    ('Ye', 'OR', 'Wh', 'Rd', 'Gr', 'Bu'),
+    ('Ye', 'Rd', 'Bu', 'Gr', 'OR', 'Wh'),
+    ('Ye', 'Rd', 'Bu', 'Gr', 'Wh', 'OR'),
+    ('Ye', 'Rd', 'Bu', 'OR', 'Gr', 'Wh'),
+    ('Ye', 'Rd', 'Bu', 'OR', 'Wh', 'Gr'),
+    ('Ye', 'Rd', 'Bu', 'Wh', 'Gr', 'OR'),
+    ('Ye', 'Rd', 'Bu', 'Wh', 'OR', 'Gr'),
+    ('Ye', 'Rd', 'Gr', 'Bu', 'OR', 'Wh'),
+    ('Ye', 'Rd', 'Gr', 'Bu', 'Wh', 'OR'),
+    ('Ye', 'Rd', 'Gr', 'OR', 'Bu', 'Wh'),
+    ('Ye', 'Rd', 'Gr', 'OR', 'Wh', 'Bu'),
+    ('Ye', 'Rd', 'Gr', 'Wh', 'Bu', 'OR'),
+    ('Ye', 'Rd', 'Gr', 'Wh', 'OR', 'Bu'),
+    ('Ye', 'Rd', 'OR', 'Bu', 'Gr', 'Wh'),
+    ('Ye', 'Rd', 'OR', 'Bu', 'Wh', 'Gr'),
+    ('Ye', 'Rd', 'OR', 'Gr', 'Bu', 'Wh'),
+    ('Ye', 'Rd', 'OR', 'Gr', 'Wh', 'Bu'),
+    ('Ye', 'Rd', 'OR', 'Wh', 'Bu', 'Gr'),
+    ('Ye', 'Rd', 'OR', 'Wh', 'Gr', 'Bu'),
+    ('Ye', 'Rd', 'Wh', 'Bu', 'Gr', 'OR'),
+    ('Ye', 'Rd', 'Wh', 'Bu', 'OR', 'Gr'),
+    ('Ye', 'Rd', 'Wh', 'Gr', 'Bu', 'OR'),
+    ('Ye', 'Rd', 'Wh', 'Gr', 'OR', 'Bu'),
+    ('Ye', 'Rd', 'Wh', 'OR', 'Bu', 'Gr'),
+    ('Ye', 'Rd', 'Wh', 'OR', 'Gr', 'Bu'),
+    ('Ye', 'Wh', 'Bu', 'Gr', 'OR', 'Rd'),
+    ('Ye', 'Wh', 'Bu', 'Gr', 'Rd', 'OR'),
+    ('Ye', 'Wh', 'Bu', 'OR', 'Gr', 'Rd'),
+    ('Ye', 'Wh', 'Bu', 'OR', 'Rd', 'Gr'),
+    ('Ye', 'Wh', 'Bu', 'Rd', 'Gr', 'OR'),
+    ('Ye', 'Wh', 'Bu', 'Rd', 'OR', 'Gr'),
+    ('Ye', 'Wh', 'Gr', 'Bu', 'OR', 'Rd'),
+    ('Ye', 'Wh', 'Gr', 'Bu', 'Rd', 'OR'),
+    ('Ye', 'Wh', 'Gr', 'OR', 'Bu', 'Rd'),
+    ('Ye', 'Wh', 'Gr', 'OR', 'Rd', 'Bu'),
+    ('Ye', 'Wh', 'Gr', 'Rd', 'Bu', 'OR'),
+    ('Ye', 'Wh', 'Gr', 'Rd', 'OR', 'Bu'),
+    ('Ye', 'Wh', 'OR', 'Bu', 'Gr', 'Rd'),
+    ('Ye', 'Wh', 'OR', 'Bu', 'Rd', 'Gr'),
+    ('Ye', 'Wh', 'OR', 'Gr', 'Bu', 'Rd'),
+    ('Ye', 'Wh', 'OR', 'Gr', 'Rd', 'Bu'),
+    ('Ye', 'Wh', 'OR', 'Rd', 'Bu', 'Gr'),
+    ('Ye', 'Wh', 'OR', 'Rd', 'Gr', 'Bu'),
+    ('Ye', 'Wh', 'Rd', 'Bu', 'Gr', 'OR'),
+    ('Ye', 'Wh', 'Rd', 'Bu', 'OR', 'Gr'),
+    ('Ye', 'Wh', 'Rd', 'Gr', 'Bu', 'OR'),
+    ('Ye', 'Wh', 'Rd', 'Gr', 'OR', 'Bu'),
+    ('Ye', 'Wh', 'Rd', 'OR', 'Bu', 'Gr'),
+    ('Ye', 'Wh', 'Rd', 'OR', 'Gr', 'Bu'),
+]
+
 
 edge_color_pair_map = {
 
@@ -440,11 +1170,27 @@ center_groups = {
 
 SIDES_COUNT = 6
 HTML_DIRECTORY = '/tmp/rubiks-color-resolver/'
-HTML_FILENAME = os.path.join(HTML_DIRECTORY, 'index.html')
+HTML_FILENAME = HTML_DIRECTORY + 'index.html'
 
 
 class ListMissingValue(Exception):
     pass
+
+
+def median(l):
+    l.sort()
+    l_len = len(l)
+
+    if l_len < 1:
+        return None
+
+    # Even number of entries
+    if l_len % 2 == 0 :
+        return (l[int((l_len-1)/2)] + l[int((l_len+1)/2)]) / 2.0
+
+    # Odd number of entries
+    else:
+        return l[(l_len-1)/2]
 
 
 def get_euclidean_lab_distance(lab1, lab2):
@@ -557,7 +1303,7 @@ def find_index_for_value(list_foo, target, min_index):
     for (index, value) in enumerate(list_foo):
         if value == target and index >= min_index:
             return index
-    raise ListMissingValue("Did not find %s in list %s" % (target, pformat(list_foo)))
+    raise ListMissingValue("Did not find %s in list %s".format(target, list_foo))
 
 
 def get_swap_count(listA, listB, debug):
@@ -673,9 +1419,9 @@ def get_important_square_indexes(size):
             last_squares.append(index)
 
     last_UBD_squares = (last_squares[0], last_squares[4], last_squares[5])
-    #log.info("first    squares: %s" % pformat(first_squares))
-    #log.info("last     squares: %s" % pformat(last_squares))
-    #log.info("last UBD squares: %s" % pformat(last_UBD_squares))
+    #log.info("first    squares: %s".format(first_squares))
+    #log.info("last     squares: %s".format(last_squares))
+    #log.info("last UBD squares: %s".format(last_UBD_squares))
     return (first_squares, last_squares, last_UBD_squares)
 
 
@@ -887,14 +1633,6 @@ def rgb_list_to_lab(rgbs):
         greens.append(green)
         blues.append(blue)
 
-    '''
-    mean_red = int(mean(reds))
-    mean_green = int(mean(greens))
-    mean_blue = int(mean(blues))
-
-    return rgb2lab((mean_red, mean_green, mean_blue))
-    '''
-
     median_red = int(median(reds))
     median_green = int(median(greens))
     median_blue = int(median(blues))
@@ -1036,7 +1774,7 @@ class Side(object):
         try:
             return self.wing_partner[wing_index]
         except KeyError:
-            log.info("wing_partner\n%s\n" % pformat(self.wing_partner))
+            log.info("wing_partner\n%s\n".format(self.wing_partner))
             raise
 
 
@@ -1063,11 +1801,11 @@ class RubiksColorSolverGeneric(object):
 
         if not os.path.exists(HTML_DIRECTORY):
             os.makedirs(HTML_DIRECTORY)
-            os.chmod(HTML_DIRECTORY, 0o777)
+            # os.chmod(HTML_DIRECTORY, 0o777)
 
         with open(HTML_FILENAME, 'w') as fh:
             pass
-        os.chmod(HTML_FILENAME, 0o777)
+        # os.chmod(HTML_FILENAME, 0o777)
 
         self.sides = {
             'U': Side(self, self.width, 'U'),
@@ -1261,7 +1999,7 @@ div#colormapping {
         # There are six "rows" of colors, which row is the closest to pure white?
         white_lab = rgb2lab(WHITE)
         row_distances = get_row_color_distances(sorted_all_squares, [white_lab] * 6)
-        log.info("find_white_squares row_distances %s" % pformat(row_distances))
+        log.info("find_white_squares row_distances %s".format(row_distances))
         min_distance = 99999
         min_distance_row_index = None
 
@@ -1504,9 +2242,9 @@ div#colormapping {
         median_white_red = median(white_reds)
         median_white_green = median(white_greens)
         median_white_blue = median(white_blues)
-        log.debug("WHITE reds %s,  avg %s, median %s" % (pformat(white_reds), avg_white_red, median_white_red))
-        log.debug("WHITE greens %s,  avg %s, median %s" % (pformat(white_greens), avg_white_green, median_white_green))
-        log.debug("WHITE blues %s,  avg %s, median %s" % (pformat(white_blues), avg_white_blue, median_white_blue))
+        log.debug("WHITE reds %s, avg %s, median %s".format(white_reds, avg_white_red, median_white_red))
+        log.debug("WHITE greens %s, avg %s, median %s".format(white_greens, avg_white_green, median_white_green))
+        log.debug("WHITE blues %s, avg %s, median %s".format(white_blues, avg_white_blue, median_white_blue))
 
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("<h2>Mean white square</h2>\n")
@@ -1596,7 +2334,7 @@ div#colormapping {
                 square = side.squares[side.mid_pos]
                 center_squares.append(square)
             desc = "middle center"
-            #log.info("center_squares: %s" % pformat(center_squares))
+            #log.info("center_squares: %s".format(center_squares))
 
             for permutation in odd_cube_center_color_permutations:
                 distance = 0
@@ -1642,7 +2380,7 @@ div#colormapping {
                 square.side_name = self.color_to_side_name[square.color_name]
 
     def cube_for_kociemba_strict(self):
-        log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
+        log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
         data = []
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
@@ -1669,7 +2407,7 @@ div#colormapping {
             }
         '''
 
-        #log.info("color_to_side_name:\n{}\n".format(pformat(self.color_to_side_name)))
+        #log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
@@ -1854,7 +2592,7 @@ div#colormapping {
                     break
 
         if not valid:
-            log.info("wing_pair_counts:\n{}\n".format(pformat(wing_pair_counts)))
+            log.info("wing_pair_counts:\n{}\n".format(wing_pair_counts))
             log.warning("valid: {}".format(valid))
 
         #assert valid, "Cube is invalid"
@@ -1952,7 +2690,7 @@ div#colormapping {
                     ("Rd", "OR", "OR", "Rd"),
                 )
             else:
-                raise Exception("There should be either 2 or 4 but we have %s" % pformat(target_color_red_or_orange_edges))
+                raise Exception("There should be either 2 or 4 but we have %s".format(target_color_red_or_orange_edges))
 
             min_distance = None
             min_distance_permutation = None
@@ -1978,7 +2716,7 @@ div#colormapping {
                         red_orange = red_orange_permutation[index]
                         high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
                         edge_color_pair = edge_color_pair_map["%s/%s" % (target_color_square.color_name, partner_square.color_name)]
-                        #log.info("high_low_edge_per_color\n%s" % pformat(high_low_edge_per_color))
+                        #log.info("high_low_edge_per_color\n%s".format(high_low_edge_per_color))
 
                         if len(high_low_edge_per_color[edge_color_pair]) != 2:
                             #log.warning("*" * 40)
@@ -1989,11 +2727,11 @@ div#colormapping {
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = red_orange_permutation
-                    log.info("target edge %s, red_orange_permutation %s, distance %s (NEW MIN)" % (target_color, pformat(red_orange_permutation), distance))
+                    log.info("target edge %s, red_orange_permutation %s, distance %s (NEW MIN)".format(target_color, red_orange_permutation, distance))
                 else:
-                    log.info("target edge %s, red_orange_permutation %s, distance %s)" % (target_color, pformat(red_orange_permutation), distance))
+                    log.info("target edge %s, red_orange_permutation %s, distance %s)".format(target_color, red_orange_permutation, distance))
 
-            log.info("min_distance_permutation %s" % pformat(min_distance_permutation))
+            log.info("min_distance_permutation %s".format(min_distance_permutation))
             for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                 if partner_square.color_name != min_distance_permutation[index]:
                     log.warning("change %s edge partner %s from %s to %s" %
@@ -2008,16 +2746,16 @@ div#colormapping {
 
         (green_red_or_orange_edges, blue_red_or_orange_edges,
          white_red_or_orange_edges, yellow_red_or_orange_edges) = self.find_edges_by_color(target_orbit_id)
-        log.info("orbit %s green_red_or_orange_edges %s" % (target_orbit_id, pformat(green_red_or_orange_edges)))
+        log.info("orbit %s green_red_or_orange_edges %s" % (target_orbit_id, green_red_or_orange_edges))
         fix_orange_vs_red_for_color('green', green_red_or_orange_edges)
 
-        log.info("orbit %s blue_red_or_orange_edges %s" % (target_orbit_id, pformat(blue_red_or_orange_edges)))
+        log.info("orbit %s blue_red_or_orange_edges %s" % (target_orbit_id, blue_red_or_orange_edges))
         fix_orange_vs_red_for_color('blue', blue_red_or_orange_edges)
 
-        log.info("orbit %s white_red_or_orange_edges %s" % (target_orbit_id, pformat(white_red_or_orange_edges)))
+        log.info("orbit %s white_red_or_orange_edges %s" % (target_orbit_id, white_red_or_orange_edges))
         fix_orange_vs_red_for_color('white', white_red_or_orange_edges)
 
-        log.info("orbit %s yellow_red_or_orange_edges %s" % (target_orbit_id, pformat(yellow_red_or_orange_edges)))
+        log.info("orbit %s yellow_red_or_orange_edges %s" % (target_orbit_id, yellow_red_or_orange_edges))
         fix_orange_vs_red_for_color('yellow', yellow_red_or_orange_edges)
 
         self.validate_edge_orbit(target_orbit_id)
@@ -2055,7 +2793,7 @@ div#colormapping {
             edge_color_pair = edge_color_pair_map["%s/%s" % (square.color_name, partner.color_name)]
             high_low_per_edge_color[edge_color_pair].add(highlow)
 
-        # log.info("high_low_per_edge_color for orbit %d\n%s" % (target_orbit_id, pformat(high_low_per_edge_color)))
+        # log.info("high_low_per_edge_color for orbit %d\n%s" % (target_orbit_id, high_low_per_edge_color))
         # log.info("")
         return high_low_per_edge_color
 
@@ -2093,7 +2831,7 @@ div#colormapping {
                 sorted_edge_squares)
 
     def assign_green_white_corners(self, green_white_corners):
-        #log.info("Gr/Wh corner tuples %s" % pformat(green_white_corners))
+        #log.info("Gr/Wh corner tuples %s".format(green_white_corners))
         valid_green_orange_white = (
             ['Gr', 'OR', 'Wh'],
             ['Wh', 'Gr', 'OR'],
@@ -2175,7 +2913,7 @@ div#colormapping {
                     log.warning("change Gr/Ye corner partner %s from Rd to OR" % corner3)
 
     def assign_blue_white_corners(self, blue_white_corners):
-        #log.info("Bu/Wh corner tuples %s" % pformat(blue_white_corners))
+        #log.info("Bu/Wh corner tuples %s".format(blue_white_corners))
         valid_blue_white_orange = (
             ['Bu', 'Wh', 'OR'],
             ['OR', 'Bu', 'Wh'],
@@ -2321,7 +3059,7 @@ div#colormapping {
             current_corners.append(corner_str)
 
         if debug:
-            log.info("to_check:\n%s" % pformat(to_check))
+            log.info("to_check:\n%s".format(to_check))
             to_check_str = ''
             for (a, b, c) in to_check:
                 to_check_str += "%4s" % a
@@ -2491,7 +3229,7 @@ div#colormapping {
         # if not, what do we flip so that we do have all of the needed corners?
         for corner in needed_corners:
             if corner not in current_corners:
-                raise Exception("corner %s is missing" % pformat(corner))
+                raise Exception("corner %s is missing".format(corner))
 
     def validate_odd_cube_midge_vs_corner_parity(self):
         """
@@ -2552,10 +3290,10 @@ div#colormapping {
                 elif square.color_name == "Bu" and partner.color_name == "Rd":
                     blue_red_position = partner_position
 
-        log.debug("green_orange_position %s" % pformat(green_orange_position))
-        log.debug("green_red_position %s" % pformat(green_red_position))
-        log.debug("blue_orange_position %s" % pformat(blue_orange_position))
-        log.debug("blue_red_position %s" % pformat(blue_red_position))
+        log.debug("green_orange_position %s".format(green_orange_position))
+        log.debug("green_red_position %s".format(green_red_position))
+        log.debug("blue_orange_position %s".format(blue_orange_position))
+        log.debug("blue_red_position %s".format(blue_red_position))
 
         square_green_orange = self.get_square(green_orange_position)
         square_green_red = self.get_square(green_red_position)
