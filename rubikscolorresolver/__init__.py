@@ -27,7 +27,6 @@ log = logging.getLogger(None)
 
 LAB_DISTANCE_ALGORITHM = 'cie2000'
 # LAB_DISTANCE_ALGORITHM = 'euclidean'
-# LAB_DISTANCE_ALGORITHM = 'both'
 
 cie2000_cache = {}
 
@@ -1307,10 +1306,6 @@ def get_lab_distance(lab1, lab2):
     elif LAB_DISTANCE_ALGORITHM == 'euclidean':
         distance = get_euclidean_lab_distance(lab1, lab2)
 
-    elif LAB_DISTANCE_ALGORITHM == 'both':
-        distance = delta_e_cie2000(lab1, lab2)
-        distance += get_euclidean_lab_distance(lab1, lab2)
-
     else:
         raise Exception("Invalid LAB_DISTANCE_ALGORITHM %s" % LAB_DISTANCE_ALGORITHM)
 
@@ -1406,12 +1401,6 @@ def traveling_salesman(squares, alg):
 
             elif alg == "euclidean":
                 distance = get_euclidean_lab_distance(x_lab, y_lab)
-
-            elif alg == "both":
-                distance_xy = delta_e_cie2000(x_lab, y_lab)
-                distance_yx = delta_e_cie2000(y_lab, x_lab)
-                distance = max(distance_xy, distance_yx)
-                distance += get_euclidean_lab_distance(x_lab, y_lab)
 
             else:
                 raise Exception("Implement algorithm %s" % alg)
