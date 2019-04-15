@@ -1,10 +1,15 @@
 # rubiks-color-resolver
 
-## Install
+## python3 install
 ```
-$ sudo apt-get install python3-pip
-$ sudo pip3 install tsp_solver
 $ sudo python3 -m pip install git+https://github.com/dwalton76/rubiks-color-resolver.git
+```
+
+## micropython install
+
+First [install micropython](https://github.com/micropython/micropython/wiki/Getting-Started) then:
+```
+$ sudo make install
 ```
 
 ## Overview

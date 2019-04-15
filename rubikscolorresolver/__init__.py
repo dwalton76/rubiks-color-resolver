@@ -8,12 +8,12 @@ try:
     from collections import OrderedDict
     from json import dumps as json_dumps
     from json import loads as json_loads
-    use_cie2000_cache = False
+    use_cie2000_cache = True
 except ImportError:
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
-    use_cie2000_cache = True
+    use_cie2000_cache = False
 
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
@@ -1226,7 +1226,7 @@ def delta_e_cie2000(lab1, lab2):
     a2 = lab2.a
     b2 = lab2.b
 
-    if not use_cie2000_cache:
+    if use_cie2000_cache:
         delta_e = cie2000_cache.get((l1, a1, b1, l2, a2, b2))
 
         if delta_e is not None:
@@ -1292,7 +1292,7 @@ def delta_e_cie2000(lab1, lab2):
                    ((delta_hp / (s_h * kh)) ** 2) +
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
 
-    if not use_cie2000_cache:
+    if use_cie2000_cache:
         cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
         cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
 

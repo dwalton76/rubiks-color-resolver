@@ -1,10 +1,8 @@
 #!/usr/bin/env micropython
 
-import sys
-sys.path.append("/home/dwalton/rubiks-cube/rubiks-color-resolver")
-
 from rubikscolorresolver import resolve_colors
 import logging
+import sys
 
 
 logging.basicConfig(level=logging.INFO)
