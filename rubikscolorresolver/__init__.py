@@ -7,9 +7,11 @@ from rubikscolorresolver.tsp_solver_greedy import solve_tsp
 try:
     from collections import OrderedDict
     from json import dumps as json_dumps
+    from json import loads as json_loads
 except ImportError:
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
+    from ujson import loads as json_loads
 
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
@@ -17,7 +19,7 @@ import logging
 import os
 import sys
 
-log = logging.getLogger(__name__)
+log = logging.getLogger(None)
 
 LAB_DISTANCE_ALGORITHM = 'cie2000'
 # LAB_DISTANCE_ALGORITHM = 'euclidean'
@@ -2727,11 +2729,14 @@ div#colormapping {
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = red_orange_permutation
-                    log.info("target edge %s, red_orange_permutation %s, distance %s (NEW MIN)".format(target_color, red_orange_permutation, distance))
+                    log.info("target edge %s, red_orange_permutation %s, distance %s (NEW MIN)" %
+                        (target_color, ",".join(red_orange_permutation), distance))
                 else:
-                    log.info("target edge %s, red_orange_permutation %s, distance %s)".format(target_color, red_orange_permutation, distance))
+                    log.info("target edge %s, red_orange_permutation %s, distance %s)" %
+                        (target_color, ",".join(red_orange_permutation), distance))
 
-            log.info("min_distance_permutation %s".format(min_distance_permutation))
+            log.info("min_distance_permutation %s" % ",".join(min_distance_permutation))
+
             for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                 if partner_square.color_name != min_distance_permutation[index]:
                     log.warning("change %s edge partner %s from %s to %s" %
@@ -3368,3 +3373,69 @@ div#colormapping {
         self.write_cube("Final Cube", True)
         self.print_cube()
         self.www_footer()
+
+
+def resolve_colors(argv):
+    help_string = """usage: rubiks-color-resolver.py [-h] [-j] [--filename FILENAME] [--rgb RGB]
+
+    optional arguments:
+      -h, --help           show this help message and exit
+      -j, --json           Print json results
+      --filename FILENAME  Print json results
+      --rgb RGB            RGB json
+    """
+    filename = None
+    rgb = None
+    use_json = False
+    argv_index = 1
+
+    while argv_index < len(argv):
+
+        if argv[argv_index] == "--help":
+            print(help_string)
+            sys.exit(0)
+
+        elif argv[argv_index] == "--filename":
+            filename = argv[argv_index + 1]
+            argv_index += 2
+
+        elif argv[argv_index] == "--rgb":
+            rgb = argv[argv_index + 1]
+            argv_index += 2
+
+        elif argv[argv_index] == "--json" or argv[argv_index] == "-j":
+            use_json = True
+            argv_index += 1
+
+        else:
+            print(help_string)
+            sys.exit(1)
+
+    if filename:
+        file_as_string = []
+        with open(filename, 'r') as fh:
+            rgb = ''.join(fh.readlines())
+    elif rgb:
+        pass
+    else:
+        print("ERROR: Neither --filename or --rgb was specified")
+        sys.exit(1)
+
+    scan_data_str_keys = json_loads(rgb)
+    scan_data = {}
+
+    for (key, value) in scan_data_str_keys.items():
+        scan_data[int(key)] = value
+
+    square_count = len(list(scan_data.keys()))
+    square_count_per_side = int(square_count/6)
+    width = int(sqrt(square_count_per_side))
+
+    cube = RubiksColorSolverGeneric(width)
+    cube.enter_scan_data(scan_data)
+    cube.crunch_colors()
+
+    if use_json:
+        print(json_dumps(cube.cube_for_json(), indent=4, sort_keys=True))
+    else:
+        print(''.join(cube.cube_for_kociemba_strict()))

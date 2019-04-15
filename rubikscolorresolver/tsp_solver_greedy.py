@@ -8,7 +8,9 @@ from array import array as pyarray
 
 
 def optimize_solution(distances, connections, endpoints):
-    """Tries to optimize solution, found by the greedy algorithm"""
+    """
+    Tries to optimize solution, found by the greedy algorithm
+    """
     N = len(connections)
     path = restore_path( connections, endpoints )
 
@@ -23,11 +25,14 @@ def optimize_solution(distances, connections, endpoints):
 
     d_total = 0.0
     optimizations = 0
+
     for a in range(N-1):
         b = a+1
+
         for c in range( b+2, N-1):
             d = c+1
             delta_d = ds(a,b)+ds(c,d) -( ds(a,c)+ds(b,d))
+
             if delta_d > 0:
                 d_total += delta_d
                 optimizations += 1
@@ -44,8 +49,10 @@ def optimize_solution(distances, connections, endpoints):
 
     return optimizations, d_total
 
+
 def restore_path( connections, endpoints ):
-    """Takes array of connections and returns a path.
+    """
+    Takes array of connections and returns a path.
     Connections is array of lists with 1 or 2 elements.
     These elements are indices of teh vertices, connected to this vertex
     Guarantees that first index < last index
@@ -70,17 +77,22 @@ def restore_path( connections, endpoints ):
         prev_point, cur_point = cur_point, next_point
     return path
 
+
 def _assert_triangular(distances):
-    """Ensure that matrix is left-triangular at least.
+    """
+    Ensure that matrix is left-triangular at least.
     """
     for i, row in enumerate(distances):
         if len(row) < i: raise ValueError( "Distance matrix must be left-triangular at least. Row {row} must have at least {i} items".format(**locals()))
 
 
 def pairs_by_dist(N, distances):
-    """returns list of coordinate pairs (i,j), sorted by distances; such that i < j"""
+    """
+    returns list of coordinate pairs (i,j), sorted by distances; such that i < j
+    """
     #Sort coordinate pairs by distance
     indices = []
+
     for i in range(N):
         for j in range(i):
             indices.append(i*N+j)
@@ -90,7 +102,8 @@ def pairs_by_dist(N, distances):
 
 
 def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=None ):
-    """Given a distance matrix, finds a solution for the TSP problem.
+    """
+    Given a distance matrix, finds a solution for the TSP problem.
     Returns list of vertex indices.
     Guarantees that the first index is lower than the last
 
@@ -111,6 +124,7 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
     #State of the TSP solver algorithm.
     #node_valency = pyarray('i', [2]) * N #Initially, each node has 2 sticky ends
     node_valency = pyarray('i', [2] * N) #Initially, each node has 2 sticky ends
+    print(node_valency)
 
     #node_valency = []
     #node_valency.append('i')
