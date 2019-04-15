@@ -2010,48 +2010,6 @@ div#colormapping {
                     fh.write("<br>")
             fh.write("</div>\n")
 
-    def find_white_squares(self):
-        all_squares = []
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            for square in side.squares.values():
-                all_squares.append(square)
-
-        sorted_all_squares = traveling_salesman(all_squares, LAB_DISTANCE_ALGORITHM)
-        self.write_colors(
-            'finding white colors',
-            sorted_all_squares)
-
-        # There are six "rows" of colors, which row is the closest to pure white?
-        white_lab = rgb2lab(WHITE)
-        row_distances = get_row_color_distances(sorted_all_squares, [white_lab] * 6)
-        log.info("find_white_squares row_distances %s".format(row_distances))
-        min_distance = 99999
-        min_distance_row_index = None
-
-        for (row_index, distance) in enumerate(row_distances):
-            if distance < min_distance:
-                min_distance = distance
-                min_distance_row_index = row_index
-
-        self.white_squares = get_squares_for_row(sorted_all_squares, min_distance_row_index)
-        self.white_squares.sort()
-
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write("<h2>white squares</h2>\n")
-            fh.write("<div class='clear colors'>\n")
-
-            for square in self.white_squares:
-                (red, green, blue) = square.rgb
-                fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                    (red, green, blue,
-                     red, green, blue,
-                     int(square.lab.L), int(square.lab.a), int(square.lab.b),
-                     square.color_name,
-                     square.position))
-
-            fh.write("<br>")
-            fh.write("</div>\n")
-
     def www_footer(self):
         with open(HTML_FILENAME, 'a') as fh:
             fh.write("""
@@ -2190,140 +2148,6 @@ div#colormapping {
             output.append(' '.join(row))
 
         log.info("Cube\n\n%s\n" % '\n'.join(output))
-
-    def contrast_stretch(self):
-        white_reds = []
-        white_greens = []
-        white_blues = []
-        all_squares = []
-
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            side_squares = side.corner_squares + side.center_squares + side.edge_squares
-            for square in side_squares:
-                all_squares.append(square)
-
-        min_input_red = 255
-        min_input_green = 255
-        min_input_blue = 255
-        max_input_red = 0
-        max_input_green = 0
-        max_input_blue = 0
-        darkest_white_red = 255
-        darkest_white_green = 255
-        darkest_white_blue = 255
-
-        for square in all_squares:
-            (red, green, blue) = square.rgb
-
-            if red < min_input_red:
-                min_input_red = red
-
-            if red > max_input_red:
-                max_input_red = red
-
-            if green < min_input_green:
-                min_input_green = green
-
-            if green > max_input_green:
-                max_input_green = green
-
-            if blue < min_input_blue:
-                min_input_blue = blue
-
-            if blue > max_input_blue:
-                max_input_blue = blue
-
-        for square in self.white_squares:
-            (red, green, blue) = square.rgb
-            white_reds.append(red)
-            white_greens.append(green)
-            white_blues.append(blue)
-
-            if red < darkest_white_red:
-                darkest_white_red = red
-
-            if green < darkest_white_green:
-                darkest_white_green = green
-
-            if blue < darkest_white_blue:
-                darkest_white_blue = blue
-
-        log.debug("min_input_red %s, max_input_red %s" % (min_input_red, max_input_red))
-        log.debug("min_input_green %s, max_input_red %s" % (min_input_red, max_input_red))
-        log.debug("min_input_blue %s, max_input_blue %s" % (min_input_blue, max_input_blue))
-        min_output_red = 30
-        min_output_green = 30
-        min_output_blue = 30
-        max_output_red = 255
-        max_output_green = 255
-        max_output_blue = 255
-
-        white_reds.sort()
-        white_greens.sort()
-        white_blues.sort()
-        avg_white_red = int(sum(white_reds) / len(white_reds))
-        avg_white_green = int(sum(white_greens) / len(white_greens))
-        avg_white_blue = int(sum(white_blues) / len(white_blues))
-        median_white_red = median(white_reds)
-        median_white_green = median(white_greens)
-        median_white_blue = median(white_blues)
-        log.debug("WHITE reds %s, avg %s, median %s".format(white_reds, avg_white_red, median_white_red))
-        log.debug("WHITE greens %s, avg %s, median %s".format(white_greens, avg_white_green, median_white_green))
-        log.debug("WHITE blues %s, avg %s, median %s".format(white_blues, avg_white_blue, median_white_blue))
-
-        with open(HTML_FILENAME, 'a') as fh:
-            fh.write("<h2>Mean white square</h2>\n")
-            fh.write("<div class='clear colors'>\n")
-            lab = rgb2lab((avg_white_red, avg_white_green, avg_white_blue))
-
-            fh.write("<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n" %
-                (avg_white_red, avg_white_green, avg_white_blue,
-                 avg_white_red, avg_white_green, avg_white_blue,
-                 int(lab.L), int(lab.a), int(lab.b),
-                 'Wh',
-                 0))
-            fh.write("<br>")
-            fh.write("</div>\n")
-
-        max_input_red = avg_white_red
-        max_input_green = avg_white_green
-        max_input_blue = avg_white_blue
-
-        for square in all_squares:
-            # https://pythontic.com/image-processing/pillow/contrast%20stretching
-            # iO = (iI - minI) * (( (maxO - minO) / (maxI - minI)) + minO)
-            new_red = int((square.red - min_input_red) * (max_output_red / (max_input_red - min_input_red)))
-            new_green = int((square.green - min_input_green) * (max_output_green / (max_input_green - min_input_green)))
-            new_blue = int((square.blue - min_input_blue) * (max_output_blue / (max_input_blue - min_input_blue)))
-            new_red = min(max_output_red, new_red)
-            new_green = min(max_output_green, new_green)
-            new_blue = min(max_output_blue, new_blue)
-            delta_to_add = 0
-
-            if new_red < min_output_red:
-                delta_to_add = max(delta_to_add, min_output_red - new_red)
-
-            if new_green < min_output_green:
-                delta_to_add = max(delta_to_add, min_output_green - new_green)
-
-            if new_blue < min_output_blue:
-                delta_to_add = max(delta_to_add, min_output_blue - new_blue)
-
-            # Add enough so that red, green, and blue are all >= min_output_red, etc
-            if delta_to_add:
-                new_red += delta_to_add
-                new_green += delta_to_add
-                new_blue += delta_to_add
-
-            new_red = min(max_output_red, new_red)
-            new_green = min(max_output_green, new_green)
-            new_blue = min(max_output_blue, new_blue)
-
-            square.rgb = (new_red, new_green, new_blue)
-            square.red = new_red
-            square.green = new_green
-            square.blue = new_blue
-            square.lab = rgb2lab((new_red, new_green, new_blue))
 
     def write_color_box(self):
         with open(HTML_FILENAME, 'a') as fh:
@@ -2541,7 +2365,6 @@ div#colormapping {
                 elif square.color_name == "Bu":
                     blue_corners.append(square.rgb)
 
-        # dwalton
         self.color_box["Wh"] = rgb_list_to_lab(white_corners)
         self.color_box["Ye"] = rgb_list_to_lab(yellow_corners)
         self.color_box["OR"] = rgb_list_to_lab(orange_corners)
@@ -2549,23 +2372,6 @@ div#colormapping {
         self.color_box["Gr"] = rgb_list_to_lab(green_corners)
         self.color_box["Bu"] = rgb_list_to_lab(blue_corners)
         # log.info(f"self.color_box: {self.color_box}")
-
-        '''
-        wh_lab = self.color_box["Wh"]
-        ye_lab = self.color_box["Ye"]
-        or_lab = self.color_box["OR"]
-        rd_lab = self.color_box["Rd"]
-        gr_lab = self.color_box["Gr"]
-        bu_lab = self.color_box["Bu"]
-
-        self.color_box_squares = []
-        self.color_box_squares.append(Square(self, None, 999, wh_lab.red, wh_lab.green, wh_lab.blue))
-        self.color_box_squares.append(Square(self, None, 999, ye_lab.red, ye_lab.green, ye_lab.blue))
-        self.color_box_squares.append(Square(self, None, 999, or_lab.red, or_lab.green, or_lab.blue))
-        self.color_box_squares.append(Square(self, None, 999, rd_lab.red, rd_lab.green, rd_lab.blue))
-        self.color_box_squares.append(Square(self, None, 999, gr_lab.red, gr_lab.green, gr_lab.blue))
-        self.color_box_squares.append(Square(self, None, 999, bu_lab.red, bu_lab.green, bu_lab.blue))
-        '''
 
         self.orange_baseline = self.color_box["OR"]
         self.red_baseline = self.color_box["Rd"]
@@ -3367,15 +3173,6 @@ div#colormapping {
 
     def crunch_colors(self):
         self.write_cube("Initial RGB values", False)
-
-        # Find all of the white squares
-        '''
-        self.find_white_squares()
-
-        # Now that we know what white looks like, contrast stretch the colors
-        self.contrast_stretch()
-        self.write_cube("Contrast Stretched RGB values", False)
-        '''
 
         self.resolve_color_box()
         self.write_color_box()
