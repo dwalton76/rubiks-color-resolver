@@ -8,12 +8,12 @@ try:
     from collections import OrderedDict
     from json import dumps as json_dumps
     from json import loads as json_loads
-    use_micropython = False
+    use_cie2000_cache = False
 except ImportError:
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
-    use_micropython = True
+    use_cie2000_cache = True
 
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
@@ -1210,11 +1210,7 @@ def get_euclidean_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    lab1_tuple = (lab1.L, lab1.a, lab1.b)
-    lab2_tuple = (lab2.L, lab2.a, lab2.b)
-    delta_e = sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
-
-    return delta_e
+    return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
 
 
 def delta_e_cie2000(lab1, lab2):
@@ -1230,7 +1226,7 @@ def delta_e_cie2000(lab1, lab2):
     a2 = lab2.a
     b2 = lab2.b
 
-    if not use_micropython:
+    if not use_cie2000_cache:
         delta_e = cie2000_cache.get((l1, a1, b1, l2, a2, b2))
 
         if delta_e is not None:
@@ -1242,14 +1238,14 @@ def delta_e_cie2000(lab1, lab2):
             return delta_e
 
     avg_lp = (l1 + l2) / 2.0
-    c1 = sqrt(pow(a1, 2) + pow(b1, 2))
-    c2 = sqrt(pow(a2, 2) + pow(b2, 2))
+    c1 = sqrt(a1**2 + b1**2)
+    c2 = sqrt(a2**2 + b2**2)
     avg_c = (c1 + c2) / 2.0
-    g = (1 - sqrt(pow(avg_c, 7) / (pow(avg_c, 7) + pow(25, 7)))) / 2.0
+    g = (1 - sqrt(avg_c**7 / (avg_c**7 + 25**7))) / 2.0
     a1p = a1 * (1 + g)
     a2p = a2 * (1 + g)
-    c1p = sqrt(pow(a1p, 2) + pow(b1, 2))
-    c2p = sqrt(pow(a2p, 2) + pow(b2, 2))
+    c1p = sqrt(a1p**2 + b1**2)
+    c2p = sqrt(a2p**2 + b2**2)
     avg_cp = (c1p + c2p) / 2.0
     h1p = degrees(atan2(b1, a1p))
 
@@ -1280,22 +1276,23 @@ def delta_e_cie2000(lab1, lab2):
     delta_lp = l2 - l1
     delta_cp = c2p - c1p
     delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
-    s_l = 1 + ((0.015 * pow(avg_lp - 50, 2)) / sqrt(20 + pow(avg_lp - 50, 2)))
+    s_l = 1 + ((0.015 * ((avg_lp - 50) ** 2)) / sqrt(20 + ((avg_lp - 50) ** 2)))
     s_c = 1 + 0.045 * avg_cp
     s_h = 1 + 0.015 * avg_cp * t
 
-    delta_ro = 30 * exp(-(pow((avg_hp - 275) / 25.0, 2)))
-    r_c = 2 * sqrt(pow(avg_cp, 7) / (pow(avg_cp, 7) + pow(25, 7)))
+    delta_ro = 30 * exp(-((((avg_hp - 275) / 25.0) ** 2)))
+
+    r_c = 2 * sqrt((avg_cp**7) / ((avg_cp ** 7) + (25 ** 7)))
     r_t = -r_c * sin(2 * radians(delta_ro))
     kl = 1.0
     kc = 1.0
     kh = 1.0
-    delta_e = sqrt(pow(delta_lp / (s_l * kl), 2) +
-                   pow(delta_cp / (s_c * kc), 2) +
-                   pow(delta_hp / (s_h * kh), 2) +
+    delta_e = sqrt(((delta_lp / (s_l * kl)) ** 2) +
+                   ((delta_cp / (s_c * kc)) ** 2) +
+                   ((delta_hp / (s_h * kh)) ** 2) +
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
 
-    if not use_micropython:
+    if not use_cie2000_cache:
         cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
         cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
 
