@@ -17,6 +17,8 @@ except ImportError:
 
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
+import array
+import gc
 import logging
 import os
 import sys
@@ -1184,7 +1186,7 @@ class ListMissingValue(Exception):
 
 
 def median(l):
-    l.sort()
+    l = sorted(l)
     l_len = len(l)
 
     if l_len < 1:
@@ -1420,7 +1422,10 @@ def traveling_salesman(squares, alg):
             matrix[x][y] = distance
             matrix[y][x] = distance
 
+    global cie2000_cache
+    #log.info("cache has %d entries" % len(list(cie2000_cache.keys())))
     cie2000_cache = {}
+    gc.collect()
     path = solve_tsp(matrix)
     return [squares[x] for x in path]
 
@@ -1644,9 +1649,9 @@ def get_squares_for_row(squares, target_row_index):
 
 
 def rgb_list_to_lab(rgbs):
-    reds = []
-    greens = []
-    blues = []
+    reds = array.array('B')
+    greens = array.array('B')
+    blues = array.array('B')
 
     for (red, green, blue) in rgbs:
         reds.append(red)
