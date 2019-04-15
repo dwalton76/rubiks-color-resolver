@@ -8,10 +8,12 @@ try:
     from collections import OrderedDict
     from json import dumps as json_dumps
     from json import loads as json_loads
+    use_micropython = False
 except ImportError:
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
+    use_micropython = True
 
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
@@ -24,6 +26,8 @@ log = logging.getLogger(None)
 LAB_DISTANCE_ALGORITHM = 'cie2000'
 # LAB_DISTANCE_ALGORITHM = 'euclidean'
 # LAB_DISTANCE_ALGORITHM = 'both'
+
+cie2000_cache = {}
 
 WHITE = (255, 255, 255)
 
@@ -1206,7 +1210,9 @@ def get_euclidean_lab_distance(lab1, lab2):
     """
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
-    return sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
+    delta_e = sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
+
+    return delta_e
 
 
 def delta_e_cie2000(lab1, lab2):
@@ -1221,6 +1227,17 @@ def delta_e_cie2000(lab1, lab2):
     l2 = lab2.L
     a2 = lab2.a
     b2 = lab2.b
+
+    if not use_micropython:
+        delta_e = cie2000_cache.get((l1, a1, b1, l2, a2, b2))
+
+        if delta_e is not None:
+            return delta_e
+
+        delta_e = cie2000_cache.get((l2, a2, b2, l1, a1, b1))
+
+        if delta_e is not None:
+            return delta_e
 
     avg_lp = (l1 + l2) / 2.0
     c1 = sqrt(pow(a1, 2) + pow(b1, 2))
@@ -1276,23 +1293,23 @@ def delta_e_cie2000(lab1, lab2):
                    pow(delta_hp / (s_h * kh), 2) +
                    r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
 
+    if not use_micropython:
+        cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
+        cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
+
     return delta_e
 
 
 def get_lab_distance(lab1, lab2):
 
     if LAB_DISTANCE_ALGORITHM == 'cie2000':
-        distance_xy = delta_e_cie2000(lab1, lab2)
-        distance_yx = delta_e_cie2000(lab2, lab1)
-        distance = max(distance_xy, distance_yx)
+        distance = delta_e_cie2000(lab1, lab2)
 
     elif LAB_DISTANCE_ALGORITHM == 'euclidean':
         distance = get_euclidean_lab_distance(lab1, lab2)
 
     elif LAB_DISTANCE_ALGORITHM == 'both':
-        distance_xy = delta_e_cie2000(lab1, lab2)
-        distance_yx = delta_e_cie2000(lab2, lab1)
-        distance = max(distance_xy, distance_yx)
+        distance = delta_e_cie2000(lab1, lab2)
         distance += get_euclidean_lab_distance(lab1, lab2)
 
     else:
@@ -1403,6 +1420,7 @@ def traveling_salesman(squares, alg):
             matrix[x][y] = distance
             matrix[y][x] = distance
 
+    cie2000_cache = {}
     path = solve_tsp(matrix)
     return [squares[x] for x in path]
 

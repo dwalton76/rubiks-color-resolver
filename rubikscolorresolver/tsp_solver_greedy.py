@@ -124,15 +124,7 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
     #State of the TSP solver algorithm.
     #node_valency = pyarray('i', [2]) * N #Initially, each node has 2 sticky ends
     node_valency = pyarray('i', [2] * N) #Initially, each node has 2 sticky ends
-    print(node_valency)
-
-    #node_valency = []
-    #node_valency.append('i')
-    #node_valency.append([2] * N)
-    # print(node_valency)
-
-    # 24
-    # array('i', [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2])
+    #print(node_valency)
 
     if endpoints is not None:
         start, end = endpoints
