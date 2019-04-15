@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env micropython
 
 from rubikscolorresolver import run_test_cases
 import logging
