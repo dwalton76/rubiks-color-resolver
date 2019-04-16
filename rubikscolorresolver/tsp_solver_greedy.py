@@ -18,7 +18,7 @@ def optimize_solution(distances, connections, endpoints):
     Tries to optimize solution, found by the greedy algorithm
     """
     N = len(connections)
-    path = restore_path( connections, endpoints )
+    path = restore_path(connections, endpoints)
 
     def ds(i,j):   # distance between ith and jth points of path
         pi = path[i]
@@ -37,7 +37,7 @@ def optimize_solution(distances, connections, endpoints):
 
         for c in range( b+2, N-1):
             d = c + 1
-            delta_d = ds(a,b)+ds(c,d) -( ds(a,c)+ds(b,d))
+            delta_d = ds(a, b) + ds(c, d) - (ds(a, c) + ds(b, d))
 
             if delta_d > 0:
                 d_total += delta_d
@@ -65,11 +65,11 @@ def restore_path(connections, endpoints):
     """
     if endpoints is None:
         # there are 2 nodes with valency 1 - start and end. Get them.
-        start, end = [idx
-                      for idx, conn in enumerate(connections)
-                      if len(conn)==1 ]
+        (start, end) = [idx
+                        for idx, conn in enumerate(connections)
+                        if len(conn)==1 ]
     else:
-        start, end = endpoints
+        (start, end) = endpoints
 
     path = [start]
     prev_point = None
@@ -83,7 +83,7 @@ def restore_path(connections, endpoints):
 
         next_point = next_points[0]
         path.append(next_point)
-        prev_point, cur_point = cur_point, next_point
+        (prev_point, cur_point) = (cur_point, next_point)
 
     return path
 
@@ -159,12 +159,12 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
 
     def join_segments(sorted_pairs):
         # segments of nodes. Initially, each segment contains only 1 node
-        segments = [ [i] for i in range(N) ]
+        segments = [[i] for i in range(N)]
 
         def possible_edges():
             # Generate sequence of graph edges, that are possible and connect different segments.
             for ij in sorted_pairs:
-                i,j = ij
+                (i, j) = ij
 
                 # if both start and end could have connections and both nodes connect to a different segments
                 if node_valency[i] and node_valency[j] and (segments[i] is not segments[j]):
@@ -181,8 +181,8 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
             seg_j = segments[j]
 
             if len(seg_j) > len(seg_i):
-                seg_i, seg_j = seg_j, seg_i
-                i, j = j, i
+                (seg_i, seg_j) = (seg_j, seg_i)
+                (i, j) = (j, i)
 
             for node_idx in seg_j:
                 segments[node_idx] = seg_i
@@ -191,15 +191,15 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
 
         def edge_connects_endpoint_segments(i,j):
             # return True, if given ede merges 2 segments that have endpoints in them
-            si,sj = segments[i],segments[j]
-            ss,se = segments[start], segments[end]
+            (si, sj) = (segments[i], segments[j])
+            (ss, se) = (segments[start], segments[end])
             return (si is ss) and (sj is se) or (sj is ss) and (si is se)
 
         # Take first N-1 possible edge. they are already sorted by distance
         edges_left = N-1
 
-        for i,j in possible_edges():
-            if endpoints and edges_left!=1 and edge_connects_endpoint_segments(i,j):
+        for (i, j) in possible_edges():
+            if endpoints and edges_left!=1 and edge_connects_endpoint_segments(i, j):
                 continue # don't allow premature path termination
 
             connect_vertices(i,j)
@@ -213,10 +213,10 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
 
     # now call additional optiomization procedure.
     for passn in range(optim_steps):
-        nopt, dtotal = optimize_solution( distances, connections, endpoints )
+        (nopt, dtotal) = optimize_solution(distances, connections, endpoints)
 
         if nopt == 0:
             break
 
     # restore path from the connections map (graph) and return it
-    return restore_path( connections, endpoints=endpoints )
+    return restore_path(connections, endpoints=endpoints)
