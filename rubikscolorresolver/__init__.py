@@ -1199,7 +1199,7 @@ def median(l):
 
     # Odd number of entries
     else:
-        return l[(l_len-1)/2]
+        return l[int((l_len-1)/2)]
 
 
 def get_euclidean_lab_distance(lab1, lab2):
@@ -1297,6 +1297,22 @@ def delta_e_cie2000(lab1, lab2):
         cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
         cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
 
+    # I used this once to build some test cases for TestDeltaCIE2000
+    '''
+    with open("/tmp/foobar.txt", "a") as fh:
+        fh.write("""
+        def test_%d_%d_%d_vs_%d_%d_%d(self):
+            lab1 = rgb2lab((%d, %d, %d))
+            lab2 = rgb2lab((%d, %d, %d))
+            delta_e = delta_e_cie2000(lab1, lab2)
+            self.assertEqual(delta_e, %s)
+""" % ( lab1.red, lab1.green, lab1.blue,
+        lab2.red, lab2.green, lab2.blue,
+        lab1.red, lab1.green, lab1.blue,
+        lab2.red, lab2.green, lab2.blue,
+        delta_e))
+    '''
+
     return delta_e
 
 
@@ -1321,7 +1337,7 @@ def find_index_for_value(list_foo, target, min_index):
     raise ListMissingValue("Did not find %s in list %s".format(target, list_foo))
 
 
-def get_swap_count(listA, listB, debug):
+def get_swap_count(listA, listB, debug=False):
     """
     How many swaps do we have to make in listB for it to match listA
     Example:
@@ -1369,7 +1385,7 @@ def get_swap_count(listA, listB, debug):
     return swaps
 
 
-def traveling_salesman(squares, alg):
+def traveling_salesman(squares):
 
     # build a full matrix of color to color distances
     len_squares = len(squares)
@@ -1393,20 +1409,9 @@ def traveling_salesman(squares, alg):
 
             y_square = squares[y]
             (y_red, y_green, y_blue) = y_square.rgb
-            #y_lab = rgb2lab((y_red, y_green, y_blue))
             y_lab = y_square.lab
 
-            if alg == "cie2000":
-                distance_xy = delta_e_cie2000(x_lab, y_lab)
-                distance_yx = delta_e_cie2000(y_lab, x_lab)
-                distance = max(distance_xy, distance_yx)
-
-            elif alg == "euclidean":
-                distance = get_euclidean_lab_distance(x_lab, y_lab)
-
-            else:
-                raise Exception("Implement algorithm %s" % alg)
-
+            distance = get_lab_distance(x_lab, y_lab)
             matrix[x][y] = distance
             matrix[y][x] = distance
 
@@ -2323,7 +2328,7 @@ div#colormapping {
             for square in side.corner_squares:
                 corner_squares.append(square)
 
-        sorted_corner_squares = traveling_salesman(corner_squares, LAB_DISTANCE_ALGORITHM)
+        sorted_corner_squares = traveling_salesman(corner_squares)
         self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, crayola_colors)
         self.sanity_check_corner_squares()
         self.write_colors('color_box corners', sorted_corner_squares)
@@ -2378,7 +2383,7 @@ div#colormapping {
 
         #corner_squares.extend(self.color_box_squares)
 
-        sorted_corner_squares = traveling_salesman(corner_squares, LAB_DISTANCE_ALGORITHM)
+        sorted_corner_squares = traveling_salesman(corner_squares)
         self.assign_color_names('corners', sorted_corner_squares, even_cube_center_color_permutations, self.color_box)
         self.sanity_check_corner_squares()
         self.write_colors('corners', sorted_corner_squares)
@@ -2646,7 +2651,7 @@ div#colormapping {
                         edge_squares.append(square)
 
             #edge_squares.extend(self.color_box_squares)
-            sorted_edge_squares = traveling_salesman(edge_squares, LAB_DISTANCE_ALGORITHM)
+            sorted_edge_squares = traveling_salesman(edge_squares)
             self.assign_color_names('edge orbit %d' % target_orbit_id, sorted_edge_squares, even_cube_center_color_permutations, self.color_box)
             self.write_colors(
                 'edges - orbit %d' % target_orbit_id,
@@ -2843,7 +2848,7 @@ div#colormapping {
                 permutations = odd_cube_center_color_permutations
                 #permutations = even_cube_center_color_permutations
             else:
-                sorted_center_squares = traveling_salesman(center_squares, LAB_DISTANCE_ALGORITHM)
+                sorted_center_squares = traveling_salesman(center_squares)
                 permutations = even_cube_center_color_permutations
 
             self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
@@ -3247,101 +3252,3 @@ def resolve_colors(argv):
         print(json_dumps(cube.cube_for_json(), indent=4, sort_keys=True))
     else:
         print(''.join(cube.cube_for_kociemba_strict()))
-
-
-def run_test_cases():
-
-    # To add a test case:
-    # - place the cube in the robot, solve it
-    # - in the log output grab the "RGB json" and save that in a file in test-data
-    # - in the log output grab the "Final cube for kociema", this is what you put in the entry in the test_cases tuple
-    test_cases = (
-        ('2x2x2 solved 02',    'test-data/2x2x2-solved-02.txt',    'DDDDLLLLFFFFUUUURRRRBBBB'),
-        ('2x2x2 random 01',    'test-data/2x2x2-random-01.txt',    'LRLURFDFDFBBRRBLUBLUDFDU'),
-        ('2x2x2 random 02',    'test-data/2x2x2-random-02.txt',    'FBRUFUBLBLRDDLDUUDFFRRBL'),
-        ('2x2x2 random 03',    'test-data/2x2x2-random-03.txt',    'RUDRDFLRLFBULBFDUFUDRBBL'),
-        ('2x2x2 random 04',    'test-data/2x2x2-random-04.txt',    'FDFBUBULRLUFBRBFDDDRRLUL'),
-
-        ('3x3x3 solved',       'test-data/3x3x3-solved.txt',       'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'),
-        ('3x3x3 checkerboard', 'test-data/3x3x3-checkerboard.txt', 'UDUDUDUDURLRLRLRLRFBFBFBFBFDUDUDUDUDLRLRLRLRLBFBFBFBFB'),
-        ('3x3x3 cross',        'test-data/3x3x3-cross.txt',        'DUDUUUDUDFRFRRRFRFRFRFFFRFRUDUDDDUDUBLBLLLBLBLBLBBBLBL'),
-        ('3x3x3 tetris',       'test-data/3x3x3-tetris.txt',       'FFBFUBFBBUDDURDUUDRLLRFLRRLBBFBDFBFFUDDULDUUDLRRLBRLLR'),
-        ('3x3x3 superflip',    'test-data/3x3x3-superflip.txt',    'UBULURUFURURFRBRDRFUFLFRFDFDFDLDRDBDLULBLFLDLBUBRBLBDB'),
-        ('3x3x3 random 01',    'test-data/3x3x3-random-01.txt',    'DURUULDBRFDFLRRLFBRLUUFFUFFLRUDDDRRDLBBDLLBBBDFFBBRLUU'),
-        ('3x3x3 random 02',    'test-data/3x3x3-random-02.txt',    'BBRLULRBFDDUURFBULDULRFRUDRFBDFDLUFBUFFRLDRDLFLLRBBDUB'),
-        ('3x3x3 random 03',    'test-data/3x3x3-random-03.txt',    'DFDRULUFDLFLDRBBLRLRFBFLUDURFRRDUUBDFUBBLDLDFBURRBUBLF'),
-        ('3x3x3 random 04',    'test-data/3x3x3-random-04.txt',    'LRBFULUBBDUULRRLBULRRLFDFBBRUDLDDFRFFUBFLBUFDRUDDBDRFL'),
-        ('3x3x3 random 05',    'test-data/3x3x3-random-05.txt',    'BRRDUFDFUBDFFRBDDUBRRRFLLUFUBLRDBBFFULLULBRDFDULLBLRUD'),
-        ('3x3x3 random 07',    'test-data/3x3x3-random-07.txt',    'BUDDUBLDDRURURFBLDULBFFLRDDFRLRDBRDFUFFRLLBFUFRLUBBLBU'),
-        ('3x3x3 random 08',    'test-data/3x3x3-random-08.txt',    'LBBUURDDRDDLBRFRBDLLFRFRBLURFFLDLDBLURFULFBUUUDFDBFBUR'),
-
-        ('4x4x4 solved 01',    'test-data/4x4x4-solved-01.txt',    'DDDDDDDDDDDDDDDDBBBBBBBBBBBBBBBBLLLLLLLLLLLLLLLLUUUUUUUUUUUUUUUUFFFFFFFFFFFFFFFFRRRRRRRRRRRRRRRR'),
-        ('4x4x4 random 01',    'test-data/4x4x4-random-01.txt',    'LUFLUBLBRBLFBFFLBDRFLUURLUUUFDFDRLRURFLBRFLBUDUDRLRRBBBBFFFLLLRBDBUUUDDDUDDBDDDFUULBFRRFLRRBRDDF'),
-        ('4x4x4 random 02',    'test-data/4x4x4-random-02.txt',    'RUFFURLLRBBFFFFBDUUDDRFFRLFFLLDRDDDRLDDBBUUDLRRFDBBUDFFUULRLBRDUUFULBBLFBBRULRLBRLBBRUULRDDLFBDU'),
-        ('4x4x4 random 03',    'test-data/4x4x4-random-03.txt',    'DBDLLLBRLLDRFDUUBBBDDUULFRBBURUURFRRUURBUBFRUBBBFLLLDLFDRFDFDFDFRFFDUULRDDDLLFLLFRUBURFFURBBRLDB'),
-        ('4x4x4 random 04',    'test-data/4x4x4-random-04.txt',    'FLLDDLLBUDBDURRLFRUBURFFURBBRLDBBBBDDUULFRBBURUULDFFLFDDLLFFFDRDRFRRUURBUBFRUBBBRFFDUULRDDDLLFLL'),
-        ('4x4x4 random 05',    'test-data/4x4x4-random-05.txt',    'DDDDDDDDDDDDDDDDFFFFFFFFFFFFFFFFRRRRRLLRRLLRRRRRUUUUUUUUUUUUUUUUBBBBBBBBBBBBBBBBLLLLLRRLLRRLLLLL'),
-        ('4x4x4 random 06',    'test-data/4x4x4-random-06.txt',    'UUUUUUUUUUUUUUUURLLRLLLLLLLLRLLRFFFFFFFFFFFFFFFFDDDDDDDDDDDDDDDDLRRLRRRRRRRRLRRLBBBBBBBBBBBBBBBB'),
-        ('4x4x4 random 07',    'test-data/4x4x4-random-07.txt',    'BFFFBLFLRBRRUUBFLFULDLRLDBFLBBBBBBRULDFFUUURDBUDFRBLFFULLDRDUUFLDDDRRBDBULBFFFRRDDURDDUUDLRLULRR'),
-        ('4x4x4 random 08',    'test-data/4x4x4-random-08.txt',    'UUUUUUDUUUUDUUUURRRRRRRRRRRRRRRRFFFFFFFFFFFFFFFFDDDDDUDDDDDUDDDDLLLLLLLLLLLLLLLLBBBBBBBBBBBBBBBB'),
-
-        ('5x5x5 random 01',    'test-data/5x5x5-random-01.txt',    'RRURRDDUFFDDULLDDLDDDDLDDLLBRBLLBRBRRRUURRDBBUUDBBFFFFFFFFFFRRFBBLLRBBLLRLLDDUFFDDUFFFFDLLLLDURLLDURFRBRRFRBRRUFLDDUURBBUURBBUUFUUUUBUUBUBLLDLFBBDLFBB'),
-        ('5x5x5 random 02',    'test-data/5x5x5-random-02.txt',    'RFFFUDUDURBFULULFDBLRLDUFDBLUBBBDDURLRDRFRUDDBFUFLFURRLDFRRRUBFUUDUFLLBLBBULDDRRUFUUUBUDFFDRFLRBBLRFDLLUUBBRFRFRLLBFRLBRRFRBDLLDDFBLRDLFBBBLBLBDUUFDDD'),
-        ('5x5x5 random 03',    'test-data/5x5x5-random-03.txt',    'FBBBRRUUUUUUUUULUUUFLDDDURURBFURRRFLRRRFURRRFLBDDRDFFFFRFFFFBFFFURFFFLLRRRUFFFFBUDDDRUDDDBBDDDRBLLLBLUBUBDLLLBDLLLRDLLLDRUFRDDLLLULBBBBLBBBRLBBBBUDDDD'),
-        ('6x6x6 random 01',    'test-data/6x6x6-random-01.txt',    'RLLDLBDDDUBBFUDDUBLUDDDFDRDDLRLLLUBBLUDDLUUDRRRFBFRRFLRLBFFRDBBBUDFFLBRRBUFLDDRULRFBUFFBRDFFLRLFRLRRRFLUBLDDULRUBRRLDDLRDDUUUDDUUUULURUDDBDFUURUBLUDRUBDFLFBULFLRFUFBLRRFUFLBUFBRRFFRDFBFDLUBBFLFBBFBBBBRLBRFBLLFUFDBRUL'),
-
-        # This test is from a time when I had a bright light on the left side (you can see this in the RGB values).
-        # We will red/orange for 19/178 backwards but given the lighting situation it is still really good to get
-        # everything right except that one pair of edges.  So adding this as a test case even though the result is incorrect.
-        ('6x6x6 random 02',    'test-data/6x6x6-random-02.txt',    'UDDDDBDFFFFBRFFFFBLFFFFBDFFFFBLRRRRDLRDDRLRUUUUDRUUUUFRUUUUFRUUUUDBFFFFUUUUUUFLRRRRDLRRRRDLRRRRDLRRRRDBFUUFRLLFFLDBBBBBUBBBBBDBBBBBDBBBBBUFBBBBFBBBBBFRDDDDURDDDDURDDDDURDDDDUDUUUUDUFLLFRLLLLLFLLLLLFLLLLLFLLLLLFRLLRLR'),
-        ('6x6x6 random 03',    'test-data/6x6x6-random-03.txt',    'BBRRRRLDUUUULUDURFBFDUDFBFRLRFFFDUDBLDDDLUDDDLURBFFFFUFRRFFRFFFBLRBRDDDDLLBBBDFBLULRFBRRRDLRFBUUFBRBLULFRRURBUDDRDBDULRDBDUUDLBBDDRLLRDDDLFDFUUFRBFUDUURDRURRBBBFLRFBLFURUBLFLDDLLLUFBBBUUBBBBLLFLLLUUFLLRDUFBLUFULBLRFR'),
-        ('6x6x6 random 04',    'test-data/6x6x6-random-04.txt',    'DRBLUFLLDDBUDDUDDDRUDUUUUDUULUBBLLFRDBFLLRBRRBDRBRLRFDUBRLRFLRFLRRLBDBDDRUFFLFBRLLFLUBBBLRFFBFFRLUBBFDFLLULBLDUFUDDUDULRBUUUULDUDDDDDUDDDRUUUDUFRBRUFURFBLUDDFRLRLLLLRLRBDRFLFBFRUFUUFBRFBDBRBBBBLFBRFRFFFFBFBRBFDLRFBRL'),
-        ('6x6x6 random 05',    'test-data/6x6x6-random-05.txt',    'UDFRBLFDFRFLDLUDDFRULFRFBBBLLBRUUBRLDDLUDDUURDRBRUDBBDFFRBUBDDDUFFBBFLFFDBRUDBDFDFDLBBLURBUUUUUDBRUURLBFUURUDLLLURFLDLRRDLBBFUDLFRRDFUFRBRLLLLFRFDBFLFRDBFBFRBRFBDDRLLDBUUFLUDUUFRURFLULRLRBDDLURRDRFFRLFDLLRLBBFBULBBUB'),
-
-        ('7x7x7 random 01',    'test-data/7x7x7-random-01.txt',    'ULUUBBFFFBRULDBLRRUDRFBBUUBBUBLFUBLRUDBDFFDLBRRBUBUDLURURBRDRUBUFRLLFFDLFRRDDBLRBUFBULRRRFDLFUFFBFRFLFFDRURRFULUDLDUFBBRRDFLFLFRLFBBRDRBUUFBFBUDDFBRRFBFRDBRFBLURLLDDDFLUUDDDDLBULFFULDUFFDDRFURRBBLLLRDFDBDBDUDBRFFBLRLLFRLLULBRLFRDBDULULLDLRFLBUDDLLDLRUBLDBUDDFRDBBUFLRDRBULUUUBBFRDLBRFURLDUDUDFU'),
-    )
-
-    #test_cases = (
-    #    ('2x2x2 solved',       'test-data/2x2x2-solved-02.txt',    'DDDDBBBBLLLLUUUUFFFFRRRR'),
-    #)
-
-    results = []
-
-    for (desc, filename, expected) in test_cases:
-        log.warning("Test: %s" % desc)
-        with open(filename, 'r') as fh:
-            scan_data_str_keys = json_load(fh)
-            scan_data = {}
-            square_count = 0
-
-            for (key, value) in scan_data_str_keys.items():
-                scan_data[int(key)] = value
-                square_count += 1
-
-            square_count_per_side = int(square_count/6)
-            width = int(sqrt(square_count_per_side))
-
-            cube = RubiksColorSolverGeneric(width)
-            try:
-                cube.enter_scan_data(scan_data)
-                cube.crunch_colors()
-                output = ''.join(cube.cube_for_kociemba_strict())
-            except Exception as e:
-                print(e)
-                log.exception(str(e))
-                #log.info(json_dumps(scan_data))
-                output = 'Exception'
-                #break
-
-            if output == expected:
-                results.append("\033[92mPASS\033[0m: %s" % desc)
-            else:
-                results.append("\033[91mFAIL\033[0m: %s" % desc)
-                results.append("   expected %s" % expected)
-                results.append("   output   %s" % output)
-                #log.info(json_dumps(scan_data))
-                #break
-
-            gc.collect()
-
-    print("\n".join(results))

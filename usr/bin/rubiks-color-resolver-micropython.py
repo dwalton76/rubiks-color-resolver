@@ -6,6 +6,5 @@ import sys
 
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(None)
 
 resolve_colors(sys.argv)
