@@ -1435,9 +1435,6 @@ def get_important_square_indexes(size):
             last_squares.append(index)
 
     last_UBD_squares = (last_squares[0], last_squares[4], last_squares[5])
-    #log.info("first    squares: %s".format(first_squares))
-    #log.info("last     squares: %s".format(last_squares))
-    #log.info("last UBD squares: %s".format(last_UBD_squares))
     return (first_squares, last_squares, last_UBD_squares)
 
 
@@ -2512,7 +2509,7 @@ div#colormapping {
                     ("Rd", "OR", "OR", "Rd"),
                 )
             else:
-                raise Exception("There should be either 2 or 4 but we have %s".format(target_color_red_or_orange_edges))
+                raise Exception("There should be either 2 or 4 but we have %s" % target_color_red_or_orange_edges)
 
             min_distance = None
             min_distance_permutation = None
