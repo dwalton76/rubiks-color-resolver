@@ -10,12 +10,14 @@ try:
     from json import loads as json_loads
     from json import load as json_load
     use_cie2000_cache = True
+    LAB_DISTANCE_ALGORITHM = 'cie2000'
 except ImportError:
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
     from ujson import load as json_load
     use_cie2000_cache = False
+    LAB_DISTANCE_ALGORITHM = 'euclidean'
 
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
@@ -27,11 +29,7 @@ import sys
 
 log = logging.getLogger(None)
 
-LAB_DISTANCE_ALGORITHM = 'cie2000'
-# LAB_DISTANCE_ALGORITHM = 'euclidean'
-
 cie2000_cache = {}
-
 WHITE = (255, 255, 255)
 
 html_color = {
