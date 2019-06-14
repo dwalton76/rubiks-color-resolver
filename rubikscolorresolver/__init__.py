@@ -17,7 +17,6 @@ try:
     from collections import OrderedDict
     from json import dumps as json_dumps
     from json import loads as json_loads
-    from json import load as json_load
 
     use_cie2000_cache = True
     LAB_DISTANCE_ALGORITHM = "cie2000"
@@ -25,7 +24,6 @@ except ImportError:
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
-    from ujson import load as json_load
 
     use_cie2000_cache = False
     LAB_DISTANCE_ALGORITHM = "euclidean"
@@ -1908,20 +1906,20 @@ class ListMissingValue(Exception):
     pass
 
 
-def median(l):
-    l = sorted(l)
-    l_len = len(l)
+def median(list_foo):
+    list_foo = sorted(list_foo)
+    list_foo_len = len(list_foo)
 
-    if l_len < 1:
+    if list_foo_len < 1:
         return None
 
     # Even number of entries
-    if l_len % 2 == 0:
-        return (l[int((l_len - 1) / 2)] + l[int((l_len + 1) / 2)]) / 2.0
+    if list_foo_len % 2 == 0:
+        return (list_foo[int((list_foo_len - 1) / 2)] + list_foo[int((list_foo_len + 1) / 2)]) / 2.0
 
     # Odd number of entries
     else:
-        return l[int((l_len - 1) / 2)]
+        return list_foo[int((list_foo_len - 1) / 2)]
 
 
 def get_euclidean_lab_distance(lab1, lab2):
@@ -2160,7 +2158,6 @@ def traveling_salesman(squares):
 
 def get_important_square_indexes(size):
     squares_per_side = size * size
-    min_square = 1
     max_square = squares_per_side * 6
     first_squares = []
     last_squares = []
@@ -2548,11 +2545,9 @@ class RubiksColorSolverGeneric(object):
 
         if not os.path.exists(HTML_DIRECTORY):
             os.makedirs(HTML_DIRECTORY)
-            # os.chmod(HTML_DIRECTORY, 0o777)
 
-        with open(HTML_FILENAME, "w") as fh:
+        with open(HTML_FILENAME, "w"):
             pass
-        # os.chmod(HTML_FILENAME, 0o777)
 
         self.sides = {
             "U": Side(self, self.width, "U"),
@@ -2831,7 +2826,6 @@ div#colormapping {
 
         col = 1
         squares_per_side = self.width * self.width
-        min_square = 1
         max_square = squares_per_side * 6
 
         sides = ("upper", "left", "front", "right", "back", "down")
@@ -2851,7 +2845,8 @@ div#colormapping {
                 lab = rgb2lab((red, green, blue))
 
                 fh.write(
-                    "    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n"
+                    "    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), "
+                    "color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n"
                     % (
                         col,
                         red,
@@ -2975,7 +2970,7 @@ div#colormapping {
             ):
                 square = side.squares[side.mid_pos]
                 center_squares.append(square)
-            desc = "middle center"
+            # desc = "middle center"
             # log.info("center_squares: %s".format(center_squares))
 
             for permutation in odd_cube_center_color_permutations:
@@ -3957,7 +3952,6 @@ div#colormapping {
     def get_edge_swap_count(self, orbit, debug=False):
         needed_edges = []
         to_check = []
-        edges_per_side = len(self.sideU.edge_north_pos)
 
         # Upper
         for (edge_index, square_index) in enumerate(self.sideU.edge_north_pos):
@@ -4354,7 +4348,6 @@ def resolve_colors(argv):
             sys.exit(1)
 
     if filename:
-        file_as_string = []
         with open(filename, "r") as fh:
             rgb = "".join(fh.readlines())
     elif rgb:
