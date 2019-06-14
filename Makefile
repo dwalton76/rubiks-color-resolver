@@ -11,7 +11,7 @@ clean:
 	sudo rm -rf build dist rubikscolorresolver.egg-info rubikscolorresolver/*.pyc rubikscolorresolver/__pycache__
 
 test:
-	python3 ./test-unittest.py
-	micropython ./test-unittest.py
-	python3 ./test-cubes.py
-	micropython ./test-cubes.py
+	python3 ./tests/test-unittest.py
+	micropython ./tests/test-unittest.py
+	python3 ./tests/test-cubes.py
+	micropython ./tests/test-cubes.py

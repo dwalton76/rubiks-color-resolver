@@ -188,7 +188,7 @@ results = []
 
 for (desc, filename, expected) in test_cases:
     log.warning("Test: %s" % desc)
-    with open(filename, "r") as fh:
+    with open("tests/" + filename, "r") as fh:
         scan_data_str_keys = json_load(fh)
         scan_data = {}
         square_count = 0
