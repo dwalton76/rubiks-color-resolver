@@ -1,12 +1,17 @@
+import os
+import logging
+import gc
+import array
+from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
+from rubikscolorresolver.tsp_solver_greedy import solve_tsp
+from rubikscolorresolver.cube_666 import highlow_edge_values_666
+from rubikscolorresolver.cube_555 import highlow_edge_values_555
+from rubikscolorresolver.cube_444 import highlow_edge_values_444
 import sys
 
 if sys.version_info < (3, 4):
     raise SystemError("Must be using Python 3.4 or higher")
 
-from rubikscolorresolver.cube_444 import highlow_edge_values_444
-from rubikscolorresolver.cube_555 import highlow_edge_values_555
-from rubikscolorresolver.cube_666 import highlow_edge_values_666
-from rubikscolorresolver.tsp_solver_greedy import solve_tsp
 
 try:
     from collections import OrderedDict
@@ -25,13 +30,6 @@ except ImportError:
     use_cie2000_cache = False
     LAB_DISTANCE_ALGORITHM = "euclidean"
 
-from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
-
-import array
-import gc
-import logging
-import os
-import sys
 
 log = logging.getLogger(None)
 

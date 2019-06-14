@@ -8,7 +8,7 @@ install:
 	python3 setup.py install
 
 clean:
-	sudo rm -rf build dist rubikscolorresolver.egg-info
+	sudo rm -rf build dist rubikscolorresolver.egg-info rubikscolorresolver/*.pyc rubikscolorresolver/__pycache__
 
 test:
 	python3 ./test-unittest.py
