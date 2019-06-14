@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 from collections import defaultdict
-from mpl_toolkits.mplot3d import Axes3D
 from math import sqrt, degrees, atan2, cos, radians, sin, exp
-from random import uniform, shuffle
+from random import uniform
 from tsp_solver.greedy import solve_tsp
 
 import colorsys
@@ -12,7 +11,6 @@ import math
 import matplotlib.pyplot as plt
 import random
 import subprocess
-import sys
 
 lego_colors = []
 
@@ -153,12 +151,12 @@ crayola_colors = {
     #
     "Wh": hashtag_rgb_to_labcolor("#FFFFFF"),
     "Gr": hashtag_rgb_to_labcolor("#14694a"),
-    #'Ye': hashtag_rgb_to_labcolor('#FFFF00'),
+    # 'Ye': hashtag_rgb_to_labcolor('#FFFF00'),
     "Ye": hashtag_rgb_to_labcolor("#f9d62e"),
-    #'OR': hashtag_rgb_to_labcolor('#943509'),
+    # 'OR': hashtag_rgb_to_labcolor('#943509'),
     "OR": hashtag_rgb_to_labcolor("#e09864"),
     "Bu": hashtag_rgb_to_labcolor("#163967"),
-    #'Rd': hashtag_rgb_to_labcolor('#680402')
+    # 'Rd': hashtag_rgb_to_labcolor('#680402')
     "Rd": hashtag_rgb_to_labcolor("#c4281b"),
 }
 
@@ -169,7 +167,7 @@ def step1(r, g, b, repetitions=1):
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
 
     h2 = int(h * repetitions)
-    lum2 = int(lum * repetitions)
+    # lum2 = int(lum * repetitions)
     v2 = int(v * repetitions)
 
     return (h2, lum, v2)
@@ -181,7 +179,7 @@ def step2(r, g, b, repetitions=1):
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
 
     h2 = int(h * repetitions)
-    lum2 = int(lum * repetitions)
+    # lum2 = int(lum * repetitions)
     v2 = int(v * repetitions)
 
     if h2 % 2 == 1:
@@ -200,7 +198,8 @@ def write_colors(title, colors_to_write):
         hls = colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
 
         fh.write(
-            "<span class='square' style='background-color: #%02x%02x%02x;' title='RGB (%d, %d, %d)) Lab (%s, %s, %s), HSV (%s, %s, %s), HLS (%s, %s, %s)'></span>"
+            "<span class='square' style='background-color: #%02x%02x%02x;' "
+            "title='RGB (%d, %d, %d)) Lab (%s, %s, %s), HSV (%s, %s, %s), HLS (%s, %s, %s)'></span>"
             % (
                 red,
                 green,
@@ -625,7 +624,7 @@ def _plot_animated_gif(
     for i in range(len(x_values)):
         filename = "image%03d-%s.png" % (i, color_space)
         print(filename)
-        plt.plot(x_values[i : i + 2], y_values[i : i + 2], z_values[i : i + 2], "ro-")
+        plt.plot(x_values[i: i + 2], y_values[i: i + 2], z_values[i: i + 2], "ro-")
         plt.savefig(filename, dpi=200, bbox_inches="tight")
 
     subprocess.check_output(
@@ -646,7 +645,7 @@ def _plot_show_or_save(
 
     for i in range(len(x_values)):
         ax.scatter(x_values[i], y_values[i], z_values[i], c=colors[i])
-        plt.plot(x_values[i : i + 2], y_values[i : i + 2], z_values[i : i + 2], "ro-")
+        plt.plot(x_values[i: i + 2], y_values[i: i + 2], z_values[i: i + 2], "ro-")
 
     if show:
         plt.show()

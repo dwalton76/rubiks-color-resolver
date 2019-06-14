@@ -6,7 +6,6 @@ from rubikscolorresolver import (
     rgb2lab,
 )
 import logging
-import math
 import unittest
 
 log = logging.getLogger(__name__)

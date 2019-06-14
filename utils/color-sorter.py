@@ -11,7 +11,6 @@ I skipped hilbert, that one was more trouble than it was worth
 from rubikscolorresolver import k_means_colors_dictionary
 from sklearn.cluster import KMeans
 from copy import deepcopy
-from pprint import pprint, pformat
 from scipy.spatial import distance
 import numpy as np
 import colorsys
@@ -64,7 +63,7 @@ div.colors span {
 
 
 def write_colors(fh, algorithm, colors):
-    squares_per_side = int(len(colors) / 6)
+    # squares_per_side = int(len(colors) / 6)
     fh.write("<h2>%s</h2>\n" % algorithm)
     fh.write("<div class='clear colors'>\n")
     for (index, (red, green, blue)) in enumerate(colors):
@@ -109,7 +108,7 @@ def step(r, g, b, repetitions=1):
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
 
     h2 = int(h * repetitions)
-    lum2 = int(lum * repetitions)
+    # lum2 = int(lum * repetitions)
     v2 = int(v * repetitions)
 
     return (h2, lum, v2)
@@ -167,7 +166,7 @@ def NN(A, start):
             B[k][tmp] = np.inf
 
     # The last term adds the weight of the edge connecting the start - and endnote.
-    cost = sum([i for i in costList if i < np.inf]) + A[path[len(path) - 2]][start]
+    # cost = sum([i for i in costList if i < np.inf]) + A[path[len(path) - 2]][start]
 
     # The last element needs to be popped, because it is equal to inf.
     path.pop(n)
