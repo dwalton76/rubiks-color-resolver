@@ -1,4 +1,3 @@
-
 from rubikscolorresolver import (
     delta_e_cie2000,
     get_swap_count,
@@ -15,8 +14,8 @@ log = logging.getLogger(__name__)
 # For color names to RGB values see:
 # https://www.w3schools.com/colors/colors_names.asp
 
-class TestHex2RGB(unittest.TestCase):
 
+class TestHex2RGB(unittest.TestCase):
     def test_white(self):
         (red, green, blue) = hex_to_rgb("#FFFFFF")
         self.assertEqual(red, 255)
@@ -37,7 +36,6 @@ class TestHex2RGB(unittest.TestCase):
 
 
 class TestRGB2Lab(unittest.TestCase):
-
     def test_white(self):
         lab = rgb2lab((255, 255, 255))
         self.assertEqual(lab.L, 100.0)
@@ -76,64 +74,62 @@ class TestRGB2Lab(unittest.TestCase):
 
 
 class TestDeltaCIE2000(unittest.TestCase):
+    def test_246_251_252_vs_246_251_252(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((246, 251, 252))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 0.0)
 
-        def test_246_251_252_vs_246_251_252(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((246, 251, 252))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 0.0)
+    def test_246_251_252_vs_246_252_244(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((246, 252, 244))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 4.542365412787316)
 
-        def test_246_251_252_vs_246_252_244(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((246, 252, 244))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 4.542365412787316)
+    def test_246_251_252_vs_252_239_233(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((252, 239, 233))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 8.426848779294376)
 
-        def test_246_251_252_vs_252_239_233(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((252, 239, 233))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 8.426848779294376)
+    def test_246_251_252_vs_245_251_251(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((245, 251, 251))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 0.7813864942463158)
 
-        def test_246_251_252_vs_245_251_251(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((245, 251, 251))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 0.7813864942463158)
+    def test_246_251_252_vs_44_253_226(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((44, 253, 226))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertAlmostEqual(delta_e, 24.822982091447646, places=14)
 
-        def test_246_251_252_vs_44_253_226(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((44, 253, 226))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertAlmostEqual(delta_e, 24.822982091447646, places=14)
+    def test_246_251_252_vs_19_139_252(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((19, 139, 252))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 37.52845963685855)
 
-        def test_246_251_252_vs_19_139_252(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((19, 139, 252))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 37.52845963685855)
+    def test_246_251_252_vs_216_28_58(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((216, 28, 58))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 47.365942322242205)
 
-        def test_246_251_252_vs_216_28_58(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((216, 28, 58))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 47.365942322242205)
+    def test_246_251_252_vs_245_252_226(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((245, 252, 226))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 11.299071631909156)
 
-        def test_246_251_252_vs_245_252_226(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((245, 252, 226))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 11.299071631909156)
-
-        def test_246_251_252_vs_49_249_220(self):
-            lab1 = rgb2lab((246, 251, 252))
-            lab2 = rgb2lab((49, 249, 220))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, 24.96260521154151)
+    def test_246_251_252_vs_49_249_220(self):
+        lab1 = rgb2lab((246, 251, 252))
+        lab2 = rgb2lab((49, 249, 220))
+        delta_e = delta_e_cie2000(lab1, lab2)
+        self.assertEqual(delta_e, 24.96260521154151)
 
 
 class TestMedian(unittest.TestCase):
-
     def test_empty_list(self):
         m = median([])
         self.assertIsNone(m)
@@ -156,37 +152,29 @@ class TestMedian(unittest.TestCase):
 
 
 class TestSwapCount(unittest.TestCase):
-
     def test_zero(self):
-        swaps = get_swap_count(
-            [1, 2, 3, 0, 4],
-            [1, 2, 3, 0, 4]
-        )
+        swaps = get_swap_count([1, 2, 3, 0, 4], [1, 2, 3, 0, 4])
         self.assertEqual(swaps, 0)
 
     def test_even(self):
         # swap 1 and 3
         # swap 2 and 4
-        swaps = get_swap_count(
-            [1, 2, 3, 0, 4],
-            [3, 4, 1, 0, 2]
-        )
+        swaps = get_swap_count([1, 2, 3, 0, 4], [3, 4, 1, 0, 2])
         self.assertEqual(swaps, 2)
 
     def test_odd(self):
         # swap 2 and 4
-        swaps = get_swap_count(
-            [1, 2, 3, 0, 4],
-            [1, 4, 3, 0, 2]
-        )
+        swaps = get_swap_count([1, 2, 3, 0, 4], [1, 4, 3, 0, 2])
         self.assertEqual(swaps, 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # setup logging
-    logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(filename)16s %(levelname)8s: %(message)s')
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(filename)16s %(levelname)8s: %(message)s",
+    )
     log = logging.getLogger(__name__)
 
     # micropython does not support the verbosity arg but

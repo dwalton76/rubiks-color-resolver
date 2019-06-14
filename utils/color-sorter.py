@@ -39,7 +39,8 @@ def convert_key_strings_to_int(data):
 
 
 def write_header(fh):
-    fh.write("""<!DOCTYPE html>
+    fh.write(
+        """<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -58,11 +59,12 @@ div.colors span {
 <title>Python Color Sorter</title>
 </head>
 <body>
-""")
+"""
+    )
 
 
 def write_colors(fh, algorithm, colors):
-    squares_per_side = int(len(colors)/6)
+    squares_per_side = int(len(colors) / 6)
     fh.write("<h2>%s</h2>\n" % algorithm)
     fh.write("<div class='clear colors'>\n")
     for (index, (red, green, blue)) in enumerate(colors):
@@ -72,21 +74,24 @@ def write_colors(fh, algorithm, colors):
             continue
 
         # to use python coloursys convertion we have to rescale to range 0-1
-        (H, S, V) = colorsys.rgb_to_hsv(float(red/255), float(green/255), float(blue/255))
+        (H, S, V) = colorsys.rgb_to_hsv(
+            float(red / 255), float(green / 255), float(blue / 255)
+        )
 
         # rescale H to 360 degrees and S, V to percent of 100%
         H = int(H * 360)
         S = int(S * 100)
         V = int(V * 100)
         # log.info("%3d: RGB (%3d, %3d, %3d) -> HSV (%3d, %3d, %3d)" % (index+1, red, green, blue, H, S, V))
-        fh.write("<span style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s)'>&nbsp;</span>\n" %
-            (red, green, blue, red, green, blue, H, S, V))
-        #if (index+1) % squares_per_side == 0:
+        fh.write(
+            "<span style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s)'>&nbsp;</span>\n"
+            % (red, green, blue, red, green, blue, H, S, V)
+        )
+        # if (index+1) % squares_per_side == 0:
         #    log.info('')
 
-
     fh.write("</div>\n")
-    log.info('\n\n')
+    log.info("\n\n")
 
 
 def write_footer(fh):
@@ -95,13 +100,13 @@ def write_footer(fh):
 
 
 def lum(r, g, b):
-    return math.sqrt(.241 * r + .691 * g + .068 * b)
+    return math.sqrt(0.241 * r + 0.691 * g + 0.068 * b)
 
 
 def step(r, g, b, repetitions=1):
-    lum = math.sqrt(.241 * r + .691 * g + .068 * b)
+    lum = math.sqrt(0.241 * r + 0.691 * g + 0.068 * b)
 
-    h, s, v = colorsys.rgb_to_hsv(r,g,b)
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
 
     h2 = int(h * repetitions)
     lum2 = int(lum * repetitions)
@@ -135,14 +140,14 @@ def NN(A, start):
     Remark - infinity is entered as np.inf
     """
 
-    start = start-1 #To compensate for the python index starting at 0.
+    start = start - 1  # To compensate for the python index starting at 0.
     n = len(A)
     path = [start]
     costList = []
     tmp = deepcopy(start)
     B = deepcopy(A)
 
-    #This block eliminates the startingnode, by setting it equal to inf.
+    # This block eliminates the startingnode, by setting it equal to inf.
     for h in range(n):
         B[h][start] = np.inf
 
@@ -162,7 +167,7 @@ def NN(A, start):
             B[k][tmp] = np.inf
 
     # The last term adds the weight of the edge connecting the start - and endnote.
-    cost = sum([i for i in costList if i < np.inf]) + A[path[len(path)-2]][start]
+    cost = sum([i for i in costList if i < np.inf]) + A[path[len(path) - 2]][start]
 
     # The last element needs to be popped, because it is equal to inf.
     path.pop(n)
@@ -171,10 +176,10 @@ def NN(A, start):
     path.insert(n, start)
 
     # Prints the path with original indicies.
-    path = [i+1 for i in path]
+    path = [i + 1 for i in path]
 
-    #print "The path is: ", path
-    #print "The cost is: ", cost
+    # print "The path is: ", path
+    # print "The cost is: ", cost
     return path
 
 
@@ -183,9 +188,9 @@ def travelling_salesman(colors):
 
     # Distance matrix
     A = np.zeros([colors_length, colors_length])
-    for x in range(0, colors_length-1):
-        for y in range(0, colors_length-1):
-            A[x,y] = distance.euclidean(colors[x], colors[y])
+    for x in range(0, colors_length - 1):
+        for y in range(0, colors_length - 1):
+            A[x, y] = distance.euclidean(colors[x], colors[y])
 
     # Nearest neighbour algorithm
     path = NN(A, 0)
@@ -198,54 +203,56 @@ def travelling_salesman(colors):
     return colors_nn
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # logging.basicConfig(filename='rubiks.log',
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s %(filename)12s %(levelname)8s: %(message)s')
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(filename)12s %(levelname)8s: %(message)s",
+    )
     log = logging.getLogger(__name__)
 
     filename = sys.argv[1]
 
-    with open(filename, 'r') as fh:
+    with open(filename, "r") as fh:
         data = convert_key_strings_to_int(json.load(fh))
-        #pprint(data)
+        # pprint(data)
 
     colors = sorted(list(data.values()))
 
-    with open('foo.html', 'w') as fh:
+    with open("foo.html", "w") as fh:
         write_header(fh)
-        #for algorithm in ('none', 'rgb', 'hsv', 'hls', 'luminosity', 'step', 'travelling-salesman'):
-        #for algorithm in ('none', 'hsv', 'step', 'kmeans'):
-        #for algorithm in ('none', 'hsv', 'kmeans'):
-        for algorithm in ('kmeans', 'kmeans2'):
+        # for algorithm in ('none', 'rgb', 'hsv', 'hls', 'luminosity', 'step', 'travelling-salesman'):
+        # for algorithm in ('none', 'hsv', 'step', 'kmeans'):
+        # for algorithm in ('none', 'hsv', 'kmeans'):
+        for algorithm in ("kmeans", "kmeans2"):
 
-            if algorithm == 'none':
+            if algorithm == "none":
                 tmp_colors = colors
 
-            elif algorithm == 'rgb':
+            elif algorithm == "rgb":
                 tmp_colors = sorted(colors)
 
-            elif algorithm == 'hsv':
+            elif algorithm == "hsv":
                 tmp_colors = deepcopy(colors)
                 tmp_colors.sort(key=lambda rgb: colorsys.rgb_to_hsv(*rgb))
 
-            elif algorithm == 'hls':
+            elif algorithm == "hls":
                 tmp_colors = deepcopy(colors)
                 tmp_colors.sort(key=lambda rgb: colorsys.rgb_to_hls(*rgb))
 
-            elif algorithm == 'luminosity':
+            elif algorithm == "luminosity":
                 tmp_colors = deepcopy(colors)
                 tmp_colors.sort(key=lambda rgb: lum(*rgb))
 
-            elif algorithm == 'step':
+            elif algorithm == "step":
                 tmp_colors = deepcopy(colors)
                 tmp_colors.sort(key=lambda rgb: step(*rgb, 6))
 
-            elif algorithm == 'travelling-salesman':
+            elif algorithm == "travelling-salesman":
                 tmp_colors = travelling_salesman(deepcopy(colors))
 
-            elif algorithm == 'kmeans':
+            elif algorithm == "kmeans":
                 # http://www.pyimagesearch.com/2014/05/26/opencv-python-k-means-color-clustering/
                 clt = KMeans(n_clusters=6)
                 clt.fit(deepcopy(colors))
@@ -257,10 +264,12 @@ if __name__ == '__main__':
                             tmp_colors.append(colors[index])
                     tmp_colors.append((None, None, None))
 
-            elif algorithm == 'kmeans2':
+            elif algorithm == "kmeans2":
                 tmp_colors = []
-                #for rgb_list in k_means_colors_dictionary(deepcopy(data), (13, 38, 63, 88, 113, 138)):
-                for rgb_list in k_means_colors_dictionary(deepcopy(data), (31, 42, 73, 108, 139, 186)):
+                # for rgb_list in k_means_colors_dictionary(deepcopy(data), (13, 38, 63, 88, 113, 138)):
+                for rgb_list in k_means_colors_dictionary(
+                    deepcopy(data), (31, 42, 73, 108, 139, 186)
+                ):
                     for rgb in rgb_list:
                         tmp_colors.append(rgb)
                     tmp_colors.append((None, None, None))

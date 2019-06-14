@@ -2,6 +2,7 @@
 
 import sys
 
+
 def get_cube_layout(size):
     """
     Example: size is 3, return the following string:
@@ -33,7 +34,7 @@ def get_cube_layout(size):
         digits_size = 2
         digits_format = "%02d "
 
-    indent = ((digits_size * size) + size + 1) * ' '
+    indent = ((digits_size * size) + size + 1) * " "
     rows = size * 3
 
     for row in range(1, rows + 1):
@@ -61,17 +62,18 @@ def get_cube_layout(size):
                     square_index += 1
                 elif col % size == 0:
                     square_index += (size * size) - size + 1
-                    line.append(' ')
+                    line.append(" ")
                 else:
                     square_index += 1
 
             if row % size:
                 square_index = init_square_index + size
 
-        result.append(''.join(line))
+        result.append("".join(line))
 
         if row == size or row == rows - size:
-            result.append('')
-    return '\n'.join(result)
+            result.append("")
+    return "\n".join(result)
+
 
 print(get_cube_layout(int(sys.argv[1])))

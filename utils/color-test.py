@@ -16,6 +16,7 @@ def rgb_to_labcolor(red, green, blue):
     rgb_obj = sRGBColor(red, green, blue)
     return convert_color(rgb_obj, LabColor)
 
+
 # red = (30, 12, 6)
 # blue = (6, 19, 20)
 # white = (60, 100, 70)

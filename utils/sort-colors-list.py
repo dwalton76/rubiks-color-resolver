@@ -16,26 +16,29 @@ import sys
 
 lego_colors = []
 
-with open("/Users/ddwalton/rubiks-cube/rubiks-color-resolver/test-data/6x6x6-random-02.txt", "r") as fh:
+with open(
+    "/Users/ddwalton/rubiks-cube/rubiks-color-resolver/test-data/6x6x6-random-02.txt",
+    "r",
+) as fh:
     lego_colors.extend(list(json.load(fh).values()))
 
 
 # uncomment to use a more random set of colors
-'''
+"""
 colors_length = 10
 random.seed(1234)
 
 for i in range(colors_length):
     lego_colors.append((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
 
-'''
+"""
 
 
 def hex_to_rgb(rgb_string):
     """
     Takes #112233 and returns the RGB values in decimal
     """
-    if rgb_string.startswith('#'):
+    if rgb_string.startswith("#"):
         rgb_string = rgb_string[1:]
 
     red = int(rgb_string[0:2], 16)
@@ -45,7 +48,6 @@ def hex_to_rgb(rgb_string):
 
 
 class LabColor(object):
-
     def __init__(self, L, a, b, red, green, blue):
         self.L = L
         self.a = a
@@ -56,7 +58,7 @@ class LabColor(object):
         self.name = None
 
     def __str__(self):
-        return ("Lab (%s, %s, %s)" % (self.L, self.a, self.b))
+        return "Lab (%s, %s, %s)" % (self.L, self.a, self.b)
 
     def __lt__(self, other):
         return self.name < other.name
@@ -77,12 +79,12 @@ def rgb2lab(inputColor):
         var_R = var_R / 12.92
 
     if var_G > 0.04045:
-        var_G = pow(((var_G + 0.055 ) / 1.055), 2.4)
+        var_G = pow(((var_G + 0.055) / 1.055), 2.4)
     else:
         var_G = var_G / 12.92
 
     if var_B > 0.04045:
-        var_B = pow(((var_B + 0.055 ) / 1.055), 2.4)
+        var_B = pow(((var_B + 0.055) / 1.055), 2.4)
     else:
         var_B = var_B / 12.92
 
@@ -105,24 +107,24 @@ def rgb2lab(inputColor):
     var_Z = Z / reference_Z
 
     if var_X > 0.008856:
-        var_X = pow(var_X, 1/3)
+        var_X = pow(var_X, 1 / 3)
     else:
         var_X = (7.787 * var_X) + (16 / 116)
 
     if var_Y > 0.008856:
-        var_Y = pow(var_Y, 1/3)
+        var_Y = pow(var_Y, 1 / 3)
     else:
         var_Y = (7.787 * var_Y) + (16 / 116)
 
     if var_Z > 0.008856:
-        var_Z = pow(var_Z, 1/3)
+        var_Z = pow(var_Z, 1 / 3)
     else:
         var_Z = (7.787 * var_Z) + (16 / 116)
 
     L = (116 * var_Y) - 16
     a = 500 * (var_X - var_Y)
     b = 200 * (var_Y - var_Z)
-    #log.info("RGB ({}, {}, {}), L {}, a {}, b {}".format(red, green, blue, L, a, b))
+    # log.info("RGB ({}, {}, {}), L {}, a {}, b {}".format(red, green, blue, L, a, b))
 
     return LabColor(L, a, b, red, green, blue)
 
@@ -149,22 +151,22 @@ crayola_colors = {
     #   blue = (22, 57, 103)
     #   red = (104, 4, 2)
     #
-    'Wh': hashtag_rgb_to_labcolor('#FFFFFF'),
-    'Gr': hashtag_rgb_to_labcolor('#14694a'),
+    "Wh": hashtag_rgb_to_labcolor("#FFFFFF"),
+    "Gr": hashtag_rgb_to_labcolor("#14694a"),
     #'Ye': hashtag_rgb_to_labcolor('#FFFF00'),
-    'Ye': hashtag_rgb_to_labcolor('#f9d62e'),
+    "Ye": hashtag_rgb_to_labcolor("#f9d62e"),
     #'OR': hashtag_rgb_to_labcolor('#943509'),
-    'OR': hashtag_rgb_to_labcolor('#e09864'),
-    'Bu': hashtag_rgb_to_labcolor('#163967'),
+    "OR": hashtag_rgb_to_labcolor("#e09864"),
+    "Bu": hashtag_rgb_to_labcolor("#163967"),
     #'Rd': hashtag_rgb_to_labcolor('#680402')
-    'Rd': hashtag_rgb_to_labcolor('#c4281b')
+    "Rd": hashtag_rgb_to_labcolor("#c4281b"),
 }
 
 
-def step1 (r, g, b, repetitions=1):
-    lum = math.sqrt( .241 * r + .691 * g + .068 * b )
+def step1(r, g, b, repetitions=1):
+    lum = math.sqrt(0.241 * r + 0.691 * g + 0.068 * b)
 
-    h, s, v = colorsys.rgb_to_hsv(r,g,b)
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
 
     h2 = int(h * repetitions)
     lum2 = int(lum * repetitions)
@@ -173,10 +175,10 @@ def step1 (r, g, b, repetitions=1):
     return (h2, lum, v2)
 
 
-def step2 (r, g, b, repetitions=1):
-    lum = math.sqrt( .241 * r + .691 * g + .068 * b )
+def step2(r, g, b, repetitions=1):
+    lum = math.sqrt(0.241 * r + 0.691 * g + 0.068 * b)
 
-    h, s, v = colorsys.rgb_to_hsv(r,g,b)
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
 
     h2 = int(h * repetitions)
     lum2 = int(lum * repetitions)
@@ -194,11 +196,25 @@ def write_colors(title, colors_to_write):
     fh.write("<div class='clear colors'>\n")
     for (red, green, blue) in colors_to_write:
         lab = rgb2lab((red, green, blue))
-        hsv = colorsys.rgb_to_hsv(red/255.0, green/255.0, blue/255.0)
-        hls = colorsys.rgb_to_hls(red/255.0, green/255.0, blue/255.0)
+        hsv = colorsys.rgb_to_hsv(red / 255.0, green / 255.0, blue / 255.0)
+        hls = colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
 
-        fh.write("<span class='square' style='background-color: #%02x%02x%02x;' title='RGB (%d, %d, %d)) Lab (%s, %s, %s), HSV (%s, %s, %s), HLS (%s, %s, %s)'></span>" % (
-            red, green, blue, red, green, blue, int(lab.L), int(lab.a), int(lab.b), *hsv, *hls))
+        fh.write(
+            "<span class='square' style='background-color: #%02x%02x%02x;' title='RGB (%d, %d, %d)) Lab (%s, %s, %s), HSV (%s, %s, %s), HLS (%s, %s, %s)'></span>"
+            % (
+                red,
+                green,
+                blue,
+                red,
+                green,
+                blue,
+                int(lab.L),
+                int(lab.a),
+                int(lab.b),
+                *hsv,
+                *hls,
+            )
+        )
 
     fh.write("<br></div>")
 
@@ -241,9 +257,13 @@ def delta_e_cie2000(lab1, lab2):
     else:
         avg_hp = (h1p + h2p) / 2.0
 
-    t = (1 - 0.17 * cos(radians(avg_hp - 30)) +
-         0.24 * cos(radians(2 * avg_hp)) +
-         0.32 * cos(radians(3 * avg_hp + 6)) - 0.2 * cos(radians(4 * avg_hp - 63)))
+    t = (
+        1
+        - 0.17 * cos(radians(avg_hp - 30))
+        + 0.24 * cos(radians(2 * avg_hp))
+        + 0.32 * cos(radians(3 * avg_hp + 6))
+        - 0.2 * cos(radians(4 * avg_hp - 63))
+    )
     delta_hp = h2p - h1p
 
     if abs(delta_hp) > 180:
@@ -265,10 +285,12 @@ def delta_e_cie2000(lab1, lab2):
     kl = 1.0
     kc = 1.0
     kh = 1.0
-    delta_e = sqrt(pow(delta_lp / (s_l * kl), 2) +
-                   pow(delta_cp / (s_c * kc), 2) +
-                   pow(delta_hp / (s_h * kh), 2) +
-                   r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh)))
+    delta_e = sqrt(
+        pow(delta_lp / (s_l * kl), 2)
+        + pow(delta_cp / (s_c * kc), 2)
+        + pow(delta_hp / (s_h * kh), 2)
+        + r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh))
+    )
 
     return delta_e
 
@@ -291,7 +313,7 @@ def get_euclidean_lab_distance(lab1, lab2):
 
 
 def get_euclidean_distance(rgb1):
-    #rgb2 = (255, 255, 255) # sort from light to dark
+    # rgb2 = (255, 255, 255) # sort from light to dark
     rgb2 = (0, 0, 0)  # sort from dark to light
     return math.sqrt(sum([(a - b) ** 2 for a, b in zip(rgb1, rgb2)]))
 
@@ -327,7 +349,9 @@ def get_hsv_distance(hsv_A, hsv_B):
     (vector_B_x, vector_B_y) = get_vector_endpoints(saturation_B, hue_B)
     vector_B_z = value_B
 
-    distance = get_euclidean_distance_two_points((vector_A_x, vector_A_y, vector_A_z), (vector_B_x, vector_B_y, vector_B_z))
+    distance = get_euclidean_distance_two_points(
+        (vector_A_x, vector_A_y, vector_A_z), (vector_B_x, vector_B_y, vector_B_z)
+    )
     return distance
 
 
@@ -353,7 +377,9 @@ def get_hls_distance(hls_A, hls_B):
     (vector_B_x, vector_B_y) = get_vector_endpoints(saturation_B, hue_B)
     vector_B_z = lum_B
 
-    distance = get_euclidean_distance_two_points((vector_A_x, vector_A_y, vector_A_z), (vector_B_x, vector_B_y, vector_B_z))
+    distance = get_euclidean_distance_two_points(
+        (vector_A_x, vector_A_y, vector_A_z), (vector_B_x, vector_B_y, vector_B_z)
+    )
     return distance
 
 
@@ -447,8 +473,8 @@ def generate_k(data_set, k):
     for point in data_set:
         for i in range(dimensions):
             val = point[i]
-            min_key = 'min_%d' % i
-            max_key = 'max_%d' % i
+            min_key = "min_%d" % i
+            max_key = "max_%d" % i
             if min_key not in min_max or val < min_max[min_key]:
                 min_max[min_key] = val
             if max_key not in min_max or val > min_max[max_key]:
@@ -457,8 +483,8 @@ def generate_k(data_set, k):
     for _k in range(k):
         rand_point = []
         for i in range(dimensions):
-            min_val = min_max['min_%d' % i]
-            max_val = min_max['max_%d' % i]
+            min_val = min_max["min_%d" % i]
+            max_val = min_max["max_%d" % i]
 
             rand_point.append(uniform(min_val, max_val))
 
@@ -477,7 +503,7 @@ def k_means(dataset, k):
         assignments = assign_points(dataset, new_centers)
     print("assignements:\n{}\n".format(assignments))
     print("dataset:\n{}\n".format(dataset))
-    #for x in zip(assignments, dataset):
+    # for x in zip(assignments, dataset):
     #    print(x)
     return zip(assignments, dataset)
 
@@ -529,8 +555,8 @@ def traveling_salesman(colors, alg):
         (x_red, x_green, x_blue) = colors[x]
         x_rgb = colors[x]
         x_lab = rgb2lab((x_red, x_green, x_blue))
-        x_hsv = colorsys.rgb_to_hsv(x_red/255.0, x_green/255.0, x_blue/255.0)
-        x_hls = colorsys.rgb_to_hls(x_red/255.0, x_green/255.0, x_blue/255.0)
+        x_hsv = colorsys.rgb_to_hsv(x_red / 255.0, x_green / 255.0, x_blue / 255.0)
+        x_hls = colorsys.rgb_to_hls(x_red / 255.0, x_green / 255.0, x_blue / 255.0)
 
         for y in range(len_colors):
 
@@ -550,11 +576,15 @@ def traveling_salesman(colors, alg):
                 distance = delta_e_cie2000(x_lab, y_lab)
 
             elif alg == "HSV":
-                y_hsv = colorsys.rgb_to_hsv(y_red/255.0, y_green/255.0, y_blue/255.0)
+                y_hsv = colorsys.rgb_to_hsv(
+                    y_red / 255.0, y_green / 255.0, y_blue / 255.0
+                )
                 distance = get_hsv_distance(x_hsv, y_hsv)
 
             elif alg == "HLS":
-                y_hls = colorsys.rgb_to_hls(y_red/255.0, y_green/255.0, y_blue/255.0)
+                y_hls = colorsys.rgb_to_hls(
+                    y_red / 255.0, y_green / 255.0, y_blue / 255.0
+                )
                 distance = get_hls_distance(x_hls, y_hls)
 
             elif alg == "Lab":
@@ -570,18 +600,20 @@ def traveling_salesman(colors, alg):
             matrix[x][y] = distance
             matrix[y][x] = distance
 
-    #path = solve_tsp(matrix, endpoints=(0, -1))
+    # path = solve_tsp(matrix, endpoints=(0, -1))
     path = solve_tsp(matrix)
     return [colors[x] for x in path]
 
 
 def my_rgb_to_hls(red, green, blue):
-    return colorsys.rgb_to_hls(red/255.0, green/255.0, blue/255.0)
+    return colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
 
 
-def _plot_animated_gif(color_space, x_values, y_values, z_values, colors, x_label, y_label, z_label):
+def _plot_animated_gif(
+    color_space, x_values, y_values, z_values, colors, x_label, y_label, z_label
+):
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.set_zlabel(z_label)
@@ -593,36 +625,46 @@ def _plot_animated_gif(color_space, x_values, y_values, z_values, colors, x_labe
     for i in range(len(x_values)):
         filename = "image%03d-%s.png" % (i, color_space)
         print(filename)
-        plt.plot(x_values[i:i+2], y_values[i:i+2], z_values[i:i+2], 'ro-')
-        plt.savefig(filename, dpi=200, bbox_inches='tight')
+        plt.plot(x_values[i : i + 2], y_values[i : i + 2], z_values[i : i + 2], "ro-")
+        plt.savefig(filename, dpi=200, bbox_inches="tight")
 
-    subprocess.check_output("convert -delay 20 -loop 0 image*%s*.png image-final-%s.gif" % (color_space, color_space), shell=True)
+    subprocess.check_output(
+        "convert -delay 20 -loop 0 image*%s*.png image-final-%s.gif"
+        % (color_space, color_space),
+        shell=True,
+    )
 
 
-def _plot_show_or_save(show, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
+def _plot_show_or_save(
+    show, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
+):
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.set_zlabel(z_label)
 
     for i in range(len(x_values)):
         ax.scatter(x_values[i], y_values[i], z_values[i], c=colors[i])
-        plt.plot(x_values[i:i+2], y_values[i:i+2], z_values[i:i+2], 'ro-')
+        plt.plot(x_values[i : i + 2], y_values[i : i + 2], z_values[i : i + 2], "ro-")
 
     if show:
         plt.show()
     else:
         filename = f"image-{desc}.png"
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        plt.savefig(filename, dpi=300, bbox_inches="tight")
 
 
 def _plot_show(desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
-    _plot_show_or_save(True, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label)
+    _plot_show_or_save(
+        True, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
+    )
 
 
 def _plot_save(desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
-    _plot_show_or_save(False, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label)
+    _plot_show_or_save(
+        False, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
+    )
 
 
 def plot(plot_type, color_space, lego_colors):
@@ -643,7 +685,7 @@ def plot(plot_type, color_space, lego_colors):
 
     elif color_space == "HSV":
         for (red, green, blue) in lego_colors:
-            (h, s, v) = colorsys.rgb_to_hsv(red/255.0, green/255.0, blue/255.0)
+            (h, s, v) = colorsys.rgb_to_hsv(red / 255.0, green / 255.0, blue / 255.0)
             h *= 360
             (x, y) = get_vector_endpoints(s, h)
             z = v
@@ -683,12 +725,12 @@ def plot(plot_type, color_space, lego_colors):
         raise Exception(f"Invalid plot_type {plot_type}")
 
 
-
 if __name__ == "__main__":
     random.seed(1234)
 
     with open("foo.html", "w") as fh:
-        fh.write("""
+        fh.write(
+            """
 <!DOCTYPE html>
 <html>
 <head>
@@ -760,40 +802,41 @@ div#anchorsquares {
 <title>Color Sorting</title>
 </head>
 <body>
-""")
+"""
+        )
 
-        #shuffle(lego_colors)
-        #print(lego_colors)
-        #write_colors("Random", lego_colors)
+        # shuffle(lego_colors)
+        # print(lego_colors)
+        # write_colors("Random", lego_colors)
         lego_colors_original = lego_colors[:]
 
-        #lego_colors.sort()
-        #write_colors("RGB", lego_colors)
+        # lego_colors.sort()
+        # write_colors("RGB", lego_colors)
 
         # CLUSTERS = 8
-        #lego_colors = lego_colors_original[:]
-        #lego_colors.sort(key=lambda rgb: step1(*rgb, CLUSTERS))
-        #write_colors("Step1", lego_colors)
+        # lego_colors = lego_colors_original[:]
+        # lego_colors.sort(key=lambda rgb: step1(*rgb, CLUSTERS))
+        # write_colors("Step1", lego_colors)
 
-        #lego_colors = lego_colors_original[:]
-        #lego_colors.sort(key=lambda rgb: step2(*rgb, CLUSTERS))
-        #write_colors("Step2", lego_colors)
+        # lego_colors = lego_colors_original[:]
+        # lego_colors.sort(key=lambda rgb: step2(*rgb, CLUSTERS))
+        # write_colors("Step2", lego_colors)
 
         lego_colors = lego_colors_original[:]
         lego_colors = traveling_salesman(lego_colors, "RGB")
         write_colors("traveling salesman - RGB", lego_colors)
         plot("save", "RGB", lego_colors)
-        #plot("show", "RGB", lego_colors)
-        #plot("animated-gif", "RGB", lego_colors)
+        # plot("show", "RGB", lego_colors)
+        # plot("animated-gif", "RGB", lego_colors)
 
         lego_colors = lego_colors_original[:]
-        lego_colors.sort(key=lambda rgb: colorsys.rgb_to_hsv(*rgb) )
+        lego_colors.sort(key=lambda rgb: colorsys.rgb_to_hsv(*rgb))
         write_colors("HSV", lego_colors)
 
         lego_colors = lego_colors_original[:]
         lego_colors = traveling_salesman(lego_colors, "HSV")
         write_colors("traveling salesman - HSV", lego_colors)
-        #plot("show", "HSV", lego_colors)
+        # plot("show", "HSV", lego_colors)
 
         lego_colors = lego_colors_original[:]
         lego_colors.sort(key=lambda rgb: my_rgb_to_hls(*rgb))
@@ -806,24 +849,26 @@ div#anchorsquares {
         lego_colors = lego_colors_original[:]
         lego_colors = traveling_salesman(lego_colors, "cie2000")
         write_colors("traveling salesman - Lab cie2000", lego_colors)
-        #plot("show", "Lab", lego_colors)
+        # plot("show", "Lab", lego_colors)
 
         lego_colors = lego_colors_original[:]
         lego_colors = traveling_salesman(lego_colors, "Lab")
         write_colors("traveling salesman - Lab", lego_colors)
-        #plot("show", "Lab", lego_colors)
+        # plot("show", "Lab", lego_colors)
 
-        #print("{} lego colors".format(len(lego_colors)))
-        fh.write("""
+        # print("{} lego colors".format(len(lego_colors)))
+        fh.write(
+            """
 <div class='clear'></div>
 
 </body>
 </html>
-""")
+"""
+        )
 
 
 # Was sanity checking get_vector_endpoints
-'''
+"""
 for (length, angle) in (
         (10, 0),
         (10, 45),
@@ -836,4 +881,4 @@ for (length, angle) in (
         (10, 360)):
     (x, y) = get_vector_endpoints(length, angle)
     print(f"vector ({length}, {angle}) endpoint ({x}, {y})")
-'''
+"""
