@@ -1915,7 +1915,10 @@ def median(list_foo):
 
     # Even number of entries
     if list_foo_len % 2 == 0:
-        return (list_foo[int((list_foo_len - 1) / 2)] + list_foo[int((list_foo_len + 1) / 2)]) / 2.0
+        return (
+            list_foo[int((list_foo_len - 1) / 2)]
+            + list_foo[int((list_foo_len + 1) / 2)]
+        ) / 2.0
 
     # Odd number of entries
     else:
