@@ -1,5 +1,5 @@
-import os
-import logging
+#import os
+#import logging
 import gc
 import array
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
@@ -26,7 +26,7 @@ except ImportError:
     LAB_DISTANCE_ALGORITHM = "euclidean"
 
 
-log = logging.getLogger(None)
+# log = logging.getLogger(None)
 
 cie2000_cache = {}
 WHITE = (255, 255, 255)
@@ -1896,7 +1896,8 @@ center_groups = {
 
 SIDES_COUNT = 6
 HTML_DIRECTORY = "/tmp/rubiks-color-resolver/"
-HTML_FILENAME = HTML_DIRECTORY + "index.html"
+#HTML_FILENAME = HTML_DIRECTORY + "index.html"
+HTML_FILENAME = "rubiks-color-resolver.html"
 
 
 class ListMissingValue(Exception):
@@ -2081,18 +2082,18 @@ def get_swap_count(listA, listB, debug=False):
     index = 0
 
     if A_length != B_length:
-        log.info("listA %s" % " ".join(listA))
-        log.info("listB %s" % " ".join(listB))
+        #log.info("listA %s" % " ".join(listA))
+        #log.info("listB %s" % " ".join(listB))
         assert False, "listA (len %d) and listB (len %d) must be the same length" % (
             A_length,
             B_length,
         )
 
-    if debug:
-        log.info("INIT")
-        log.info("listA: %s" % " ".join(listA))
-        log.info("listB: %s" % " ".join(listB))
-        log.info("")
+    #if debug:
+    #    log.info("INIT")
+    #    log.info("listA: %s" % " ".join(listA))
+    #    log.info("listB: %s" % " ".join(listB))
+    #    log.info("")
 
     while listA != listB:
         if listA[index] != listB[index]:
@@ -2105,16 +2106,16 @@ def get_swap_count(listA, listB, debug=False):
             listB[listB_index_with_A_value] = tmp
             swaps += 1
 
-            if debug:
-                log.info("index %d, swaps %d" % (index, swaps))
-                log.info("listA: %s" % " ".join(listA))
-                log.info("listB: %s" % " ".join(listB))
-                log.info("")
+            #if debug:
+            #    log.info("index %d, swaps %d" % (index, swaps))
+            #    log.info("listA: %s" % " ".join(listA))
+            #    log.info("listB: %s" % " ".join(listB))
+            #    log.info("")
         index += 1
 
-    if debug:
-        log.info("swaps: %d" % swaps)
-        log.info("")
+    #if debug:
+    #    log.info("swaps: %d" % swaps)
+    #    log.info("")
     return swaps
 
 
@@ -2149,7 +2150,6 @@ def traveling_salesman(squares):
             matrix[y][x] = distance
 
     global cie2000_cache
-    # log.info("cache has %d entries" % len(list(cie2000_cache.keys())))
     cie2000_cache = {}
     gc.collect()
     path = solve_tsp(matrix)
@@ -2519,7 +2519,7 @@ class Side(object):
         try:
             return self.wing_partner[wing_index]
         except KeyError:
-            log.info("wing_partner\n%s\n".format(self.wing_partner))
+            #log.info("wing_partner\n%s\n".format(self.wing_partner))
             raise
 
 
@@ -2543,8 +2543,8 @@ class RubiksColorSolverGeneric(object):
             self.even = False
             self.odd = True
 
-        if not os.path.exists(HTML_DIRECTORY):
-            os.makedirs(HTML_DIRECTORY)
+        #if not os.path.exists(HTML_DIRECTORY):
+        #    os.makedirs(HTML_DIRECTORY)
 
         with open(HTML_FILENAME, "w"):
             pass
@@ -2918,7 +2918,7 @@ div#colormapping {
         for row in data:
             output.append(" ".join(row))
 
-        log.info("Cube\n\n%s\n" % "\n".join(output))
+        #log.info("Cube\n\n%s\n" % "\n".join(output))
 
     def write_color_box(self):
         with open(HTML_FILENAME, "a") as fh:
@@ -3024,7 +3024,7 @@ div#colormapping {
                 square.side_name = self.color_to_side_name[square.color_name]
 
     def cube_for_kociemba_strict(self):
-        log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
+        #log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
         data = []
         for side in (
             self.sideU,
@@ -3138,8 +3138,8 @@ div#colormapping {
         references Wh, Ye, OR, Rd, Gr, Bu colors for assigning color names to edge
         and center squares.
         """
-        log.debug("\n\n\n\n")
-        log.info("Resolve color_box")
+        #log.debug("\n\n\n\n")
+        #log.info("Resolve color_box")
         corner_squares = []
 
         for side in (
@@ -3210,8 +3210,8 @@ div#colormapping {
         """
         Assign names to the corner squares
         """
-        log.debug("\n\n\n\n")
-        log.info("Resolve corners")
+        #log.debug("\n\n\n\n")
+        #log.info("Resolve corners")
         corner_squares = []
 
         for side in (
@@ -3268,9 +3268,9 @@ div#colormapping {
                     valid = False
                     break
 
-        if not valid:
-            log.info("wing_pair_counts:\n{}\n".format(wing_pair_counts))
-            log.warning("valid: {}".format(valid))
+        #if not valid:
+        #    log.info("wing_pair_counts:\n{}\n".format(wing_pair_counts))
+        #    log.warning("valid: {}".format(valid))
 
         # assert valid, "Cube is invalid"
         return valid
@@ -3449,6 +3449,7 @@ div#colormapping {
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = red_orange_permutation
+                    '''
                     log.info(
                         "target edge %s, red_orange_permutation %s, distance %s (NEW MIN)"
                         % (target_color, ",".join(red_orange_permutation), distance)
@@ -3460,11 +3461,13 @@ div#colormapping {
                     )
 
             log.info("min_distance_permutation %s" % ",".join(min_distance_permutation))
+                    '''
 
             for (index, (target_color_square, partner_square)) in enumerate(
                 target_color_red_or_orange_edges
             ):
                 if partner_square.color_name != min_distance_permutation[index]:
+                    '''
                     log.warning(
                         "change %s edge partner %s from %s to %s"
                         % (
@@ -3474,10 +3477,12 @@ div#colormapping {
                             min_distance_permutation[index],
                         )
                     )
+                    '''
                     partner_square.color_name = min_distance_permutation[index]
                     partner_square.side_name = self.color_to_side_name[
                         partner_square.color_name
                     ]
+                    '''
                 else:
                     log.info(
                         "%s edge partner %s is %s"
@@ -3485,6 +3490,7 @@ div#colormapping {
                     )
 
             log.info("\n\n")
+                    '''
 
         (
             green_red_or_orange_edges,
@@ -3492,28 +3498,28 @@ div#colormapping {
             white_red_or_orange_edges,
             yellow_red_or_orange_edges,
         ) = self.find_edges_by_color(target_orbit_id)
-        log.info(
-            "orbit %s green_red_or_orange_edges %s"
-            % (target_orbit_id, green_red_or_orange_edges)
-        )
+        #log.info(
+        #    "orbit %s green_red_or_orange_edges %s"
+        #    % (target_orbit_id, green_red_or_orange_edges)
+        #)
         fix_orange_vs_red_for_color("green", green_red_or_orange_edges)
 
-        log.info(
-            "orbit %s blue_red_or_orange_edges %s"
-            % (target_orbit_id, blue_red_or_orange_edges)
-        )
+        #log.info(
+        #    "orbit %s blue_red_or_orange_edges %s"
+        #    % (target_orbit_id, blue_red_or_orange_edges)
+        #)
         fix_orange_vs_red_for_color("blue", blue_red_or_orange_edges)
 
-        log.info(
-            "orbit %s white_red_or_orange_edges %s"
-            % (target_orbit_id, white_red_or_orange_edges)
-        )
+        #log.info(
+        #    "orbit %s white_red_or_orange_edges %s"
+        #    % (target_orbit_id, white_red_or_orange_edges)
+        #)
         fix_orange_vs_red_for_color("white", white_red_or_orange_edges)
 
-        log.info(
-            "orbit %s yellow_red_or_orange_edges %s"
-            % (target_orbit_id, yellow_red_or_orange_edges)
-        )
+        #log.info(
+        #    "orbit %s yellow_red_or_orange_edges %s"
+        #    % (target_orbit_id, yellow_red_or_orange_edges)
+        #)
         fix_orange_vs_red_for_color("yellow", yellow_red_or_orange_edges)
 
         self.validate_edge_orbit(target_orbit_id)
@@ -3580,8 +3586,8 @@ div#colormapping {
             return True
 
         for target_orbit_id in range(self.orbits):
-            log.debug("\n\n\n\n")
-            log.info("Resolve edges for orbit %d" % target_orbit_id)
+            #log.debug("\n\n\n\n")
+            #log.info("Resolve edges for orbit %d" % target_orbit_id)
             edge_squares = []
 
             for side in (
@@ -3636,34 +3642,34 @@ div#colormapping {
             ):
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning(
-                        "change Gr/Wh corner partner %s from OR to Rd" % corner1
-                    )
+                    #log.warning(
+                    #    "change Gr/Wh corner partner %s from OR to Rd" % corner1
+                    #)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning(
-                        "change Gr/Wh corner partner %s from Rd to OR" % corner1
-                    )
+                    #log.warning(
+                    #    "change Gr/Wh corner partner %s from Rd to OR" % corner1
+                    #)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning(
-                        "change Gr/Wh corner partner %s from OR to Rd" % corner2
-                    )
+                    #log.warning(
+                    #    "change Gr/Wh corner partner %s from OR to Rd" % corner2
+                    #)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning(
-                        "change Gr/Wh corner partner %s from Rd to OR" % corner2
-                    )
+                    #log.warning(
+                    #    "change Gr/Wh corner partner %s from Rd to OR" % corner2
+                    #)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning(
-                        "change Gr/Wh corner partner %s from OR to Rd" % corner3
-                    )
+                    #log.warning(
+                    #    "change Gr/Wh corner partner %s from OR to Rd" % corner3
+                    #)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning(
-                        "change Gr/Wh corner partner %s from Rd to OR" % corner3
-                    )
+                    #log.warning(
+                    #    "change Gr/Wh corner partner %s from Rd to OR" % corner3
+                    #)
 
     def assign_green_yellow_corners(self, green_yellow_corners):
         valid_green_yellow_orange = (
@@ -3692,34 +3698,34 @@ div#colormapping {
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning(
-                        "change Gr/Ye corner partner %s from OR to Rd" % corner1
-                    )
+                    #log.warning(
+                    #    "change Gr/Ye corner partner %s from OR to Rd" % corner1
+                    #)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning(
-                        "change Gr/Ye corner partner %s from Rd to OR" % corner1
-                    )
+                    #log.warning(
+                    #    "change Gr/Ye corner partner %s from Rd to OR" % corner1
+                    #)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning(
-                        "change Gr/Ye corner partner %s from OR to Rd" % corner2
-                    )
+                    #log.warning(
+                    #    "change Gr/Ye corner partner %s from OR to Rd" % corner2
+                    #)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning(
-                        "change Gr/Ye corner partner %s from Rd to OR" % corner2
-                    )
+                    #log.warning(
+                    #    "change Gr/Ye corner partner %s from Rd to OR" % corner2
+                    #)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning(
-                        "change Gr/Ye corner partner %s from OR to Rd" % corner3
-                    )
+                    #log.warning(
+                    #    "change Gr/Ye corner partner %s from OR to Rd" % corner3
+                    #)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning(
-                        "change Gr/Ye corner partner %s from Rd to OR" % corner3
-                    )
+                    #log.warning(
+                    #    "change Gr/Ye corner partner %s from Rd to OR" % corner3
+                    #)
 
     def assign_blue_white_corners(self, blue_white_corners):
         # log.info("Bu/Wh corner tuples %s".format(blue_white_corners))
@@ -3749,34 +3755,34 @@ div#colormapping {
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning(
-                        "change Bu/Wh corner partner %s from OR to Rd" % corner1
-                    )
+                    #log.warning(
+                    #    "change Bu/Wh corner partner %s from OR to Rd" % corner1
+                    #)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning(
-                        "change Bu/Wh corner partner %s from Rd to OR" % corner1
-                    )
+                    #log.warning(
+                    #    "change Bu/Wh corner partner %s from Rd to OR" % corner1
+                    #)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning(
-                        "change Bu/Wh corner partner %s from OR to Rd" % corner2
-                    )
+                    #log.warning(
+                    #    "change Bu/Wh corner partner %s from OR to Rd" % corner2
+                    #)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning(
-                        "change Bu/Wh corner partner %s from Rd to OR" % corner2
-                    )
+                    #log.warning(
+                    #    "change Bu/Wh corner partner %s from Rd to OR" % corner2
+                    #)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning(
-                        "change Bu/Wh corner partner %s from OR to Rd" % corner3
-                    )
+                    #log.warning(
+                    #    "change Bu/Wh corner partner %s from OR to Rd" % corner3
+                    #)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning(
-                        "change Bu/Wh corner partner %s from Rd to OR" % corner3
-                    )
+                    #log.warning(
+                    #    "change Bu/Wh corner partner %s from Rd to OR" % corner3
+                    #)
 
     def assign_blue_yellow_corners(self, blue_yellow_corners):
         valid_blue_yellow_red = (
@@ -3805,34 +3811,34 @@ div#colormapping {
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
-                    log.warning(
-                        "change Bu/Ye corner partner %s from OR to Rd" % corner1
-                    )
+                    #log.warning(
+                    #    "change Bu/Ye corner partner %s from OR to Rd" % corner1
+                    #)
                 elif corner1.color_name == "Rd":
                     corner1.color_name = "OR"
-                    log.warning(
-                        "change Bu/Ye corner partner %s from Rd to OR" % corner1
-                    )
+                    #log.warning(
+                    #    "change Bu/Ye corner partner %s from Rd to OR" % corner1
+                    #)
                 elif corner2.color_name == "OR":
                     corner2.color_name = "Rd"
-                    log.warning(
-                        "change Bu/Ye corner partner %s from OR to Rd" % corner2
-                    )
+                    #log.warning(
+                    #    "change Bu/Ye corner partner %s from OR to Rd" % corner2
+                    #)
                 elif corner2.color_name == "Rd":
                     corner2.color_name = "OR"
-                    log.warning(
-                        "change Bu/Ye corner partner %s from Rd to OR" % corner2
-                    )
+                    #log.warning(
+                    #    "change Bu/Ye corner partner %s from Rd to OR" % corner2
+                    #)
                 elif corner3.color_name == "OR":
                     corner3.color_name = "Rd"
-                    log.warning(
-                        "change Bu/Ye corner partner %s from OR to Rd" % corner3
-                    )
+                    #log.warning(
+                    #    "change Bu/Ye corner partner %s from OR to Rd" % corner3
+                    #)
                 elif corner3.color_name == "Rd":
                     corner3.color_name = "OR"
-                    log.warning(
-                        "change Bu/Ye corner partner %s from Rd to OR" % corner3
-                    )
+                    #log.warning(
+                    #    "change Bu/Ye corner partner %s from Rd to OR" % corner3
+                    #)
 
     def sanity_check_corner_squares(self):
         (
@@ -3851,8 +3857,8 @@ div#colormapping {
         Use traveling salesman algorithm to sort the squares by color
         """
         for (desc, centers_squares) in center_groups[self.width]:
-            log.debug("\n\n\n\n")
-            log.info("Resolve {}".format(desc))
+            #log.debug("\n\n\n\n")
+            #log.info("Resolve {}".format(desc))
             center_squares = []
 
             for position in centers_squares:
@@ -3930,15 +3936,15 @@ div#colormapping {
             current_corners.append(corner_str)
 
         if debug:
-            log.info("to_check:\n%s".format(to_check))
+            #log.info("to_check:\n%s".format(to_check))
             to_check_str = ""
             for (a, b, c) in to_check:
                 to_check_str += "%4s" % a
 
-            log.info("to_check       :%s" % to_check_str)
-            log.info("needed corners : %s" % " ".join(needed_corners))
-            log.info("currnet corners: %s" % " ".join(current_corners))
-            log.info("")
+            #log.info("to_check       :%s" % to_check_str)
+            #log.info("needed corners : %s" % " ".join(needed_corners))
+            #log.info("currnet corners: %s" % " ".join(current_corners))
+            #log.info("")
 
         return get_swap_count(needed_corners, current_corners, debug)
 
@@ -4030,8 +4036,8 @@ div#colormapping {
             for x in to_check:
                 to_check_str += "%3s" % x
 
-            log.info("to_check     :%s" % to_check_str)
-            log.info("needed edges : %s" % " ".join(needed_edges))
+            #log.info("to_check     :%s" % to_check_str)
+            #log.info("needed edges : %s" % " ".join(needed_edges))
 
         current_edges = []
 
@@ -4056,8 +4062,8 @@ div#colormapping {
 
             current_edges.append(wing_str)
 
-        if debug:
-            log.info("current edges: %s" % " ".join(current_edges))
+        #if debug:
+        #    log.info("current edges: %s" % " ".join(current_edges))
 
         return get_swap_count(needed_edges, current_edges, debug)
 
@@ -4161,15 +4167,16 @@ div#colormapping {
             if edges_even == corners_even:
                 return
 
-            log.warning(
-                "edges_even %s != corners_even %s, swap most ambiguous orange or red edges to create valid parity"
-                % (edges_even, corners_even)
-            )
+            #log.warning(
+            #    "edges_even %s != corners_even %s, swap most ambiguous orange or red edges to create valid parity"
+            #    % (edges_even, corners_even)
+            #)
 
         except ListMissingValue:
-            log.warning(
-                "Either edges or corners are off, swap most ambiguous orange or red edges to create valid parity"
-            )
+            #log.warning(
+            #    "Either edges or corners are off, swap most ambiguous orange or red edges to create valid parity"
+            #)
+            pass
 
         # Reasonable assumptions we can make about why our parity is off:
         # - we have a red vs orange backwards somewhere
@@ -4204,10 +4211,10 @@ div#colormapping {
                 elif square.color_name == "Bu" and partner.color_name == "Rd":
                     blue_red_position = partner_position
 
-        log.debug("green_orange_position %s".format(green_orange_position))
-        log.debug("green_red_position %s".format(green_red_position))
-        log.debug("blue_orange_position %s".format(blue_orange_position))
-        log.debug("blue_red_position %s".format(blue_red_position))
+        #log.debug("green_orange_position %s".format(green_orange_position))
+        #log.debug("green_red_position %s".format(green_red_position))
+        #log.debug("blue_orange_position %s".format(blue_orange_position))
+        #log.debug("blue_red_position %s".format(blue_red_position))
 
         square_green_orange = self.get_square(green_orange_position)
         square_green_red = self.get_square(green_red_position)
@@ -4245,10 +4252,11 @@ div#colormapping {
             square_blue_red.lab, self.orange_baseline
         )
 
-        log.info("distance_swap_green_edge %s" % distance_swap_green_edge)
-        log.info("distance_swap_blue_edge %s" % distance_swap_blue_edge)
+        #log.info("distance_swap_green_edge %s" % distance_swap_green_edge)
+        #log.info("distance_swap_blue_edge %s" % distance_swap_blue_edge)
 
         if distance_swap_green_edge < distance_swap_blue_edge:
+            '''
             log.warning(
                 "edge parity correction: change %s from %s to Rd"
                 % (square_green_orange, square_green_orange.color_name)
@@ -4257,6 +4265,7 @@ div#colormapping {
                 "edge parity correction: change %s from %s to OR"
                 % (square_green_red, square_green_red.color_name)
             )
+            '''
             square_green_orange.color_name = "Rd"
             square_green_red.color_name = "OR"
             square_green_orange.side_name = self.color_to_side_name[
@@ -4266,6 +4275,7 @@ div#colormapping {
                 square_green_red.color_name
             ]
         else:
+            '''
             log.warning(
                 "edge parity correction: change %s from %s to Rd"
                 % (square_blue_orange, square_blue_orange.color_name)
@@ -4274,6 +4284,7 @@ div#colormapping {
                 "edge parity correction: change %s from %s to OR"
                 % (square_blue_red, square_blue_red.color_name)
             )
+            '''
             square_blue_orange.color_name = "Rd"
             square_blue_red.color_name = "OR"
             square_blue_orange.side_name = self.color_to_side_name[
@@ -4374,6 +4385,9 @@ def resolve_colors(argv):
     cube.crunch_colors()
 
     if use_json:
-        print(json_dumps(cube.cube_for_json(), indent=4, sort_keys=True))
+        result = json_dumps(cube.cube_for_json(), indent=4, sort_keys=True)
     else:
-        print("".join(cube.cube_for_kociemba_strict()))
+        result = "".join(cube.cube_for_kociemba_strict())
+
+    print(result)
+    return result
