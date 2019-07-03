@@ -4,9 +4,6 @@ import gc
 import array
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 from rubikscolorresolver.tsp_solver_greedy import solve_tsp
-from rubikscolorresolver.cube_666 import highlow_edge_values_666
-from rubikscolorresolver.cube_555 import highlow_edge_values_555
-from rubikscolorresolver.cube_444 import highlow_edge_values_444
 import sys
 
 if sys.version_info < (3, 4):
@@ -3545,14 +3542,17 @@ div#colormapping {
             partner = self.get_square(partner_index)
 
             if self.width == 6:
+                from rubikscolorresolver.cube_666 import highlow_edge_values_666
                 highlow = highlow_edge_values_666[
                     (square_index, partner_index, square.side_name, partner.side_name)
                 ]
             elif self.width == 5:
+                from rubikscolorresolver.cube_555 import highlow_edge_values_555
                 highlow = highlow_edge_values_555[
                     (square_index, partner_index, square.side_name, partner.side_name)
                 ]
             elif self.width == 4:
+                from rubikscolorresolver.cube_444 import highlow_edge_values_444
                 highlow = highlow_edge_values_444[
                     (square_index, partner_index, square.side_name, partner.side_name)
                 ]
