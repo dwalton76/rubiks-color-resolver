@@ -9,22 +9,25 @@ if sys.version_info < (3, 4):
     raise SystemError("Must be using Python 3.4 or higher")
 
 
-try:
-    from collections import OrderedDict
-    from json import dumps as json_dumps
-    from json import loads as json_loads
+def is_micropython():
+    return sys.implementation.name == "micropython"
 
-    use_cie2000_cache = True
-    LAB_DISTANCE_ALGORITHM = "cie2000"
-except ImportError:
+
+if is_micropython():
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
 
     use_cie2000_cache = False
     LAB_DISTANCE_ALGORITHM = "euclidean"
+else:
+    from collections import OrderedDict
+    from json import dumps as json_dumps
+    from json import loads as json_loads
 
-# log = logging.getLogger(None)
+    use_cie2000_cache = True
+    LAB_DISTANCE_ALGORITHM = "cie2000"
+
 
 cie2000_cache = {}
 
