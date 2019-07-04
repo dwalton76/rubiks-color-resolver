@@ -1,9 +1,8 @@
-#import os
-#import logging
-import gc
+
 import array
+import gc
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
-from rubikscolorresolver.tsp_solver_greedy import solve_tsp
+from rubikscolorresolver.tsp_solver_greedy import solve_tsp  # takes about 7k
 import sys
 
 if sys.version_info < (3, 4):
@@ -25,11 +24,9 @@ except ImportError:
     use_cie2000_cache = False
     LAB_DISTANCE_ALGORITHM = "euclidean"
 
-
 # log = logging.getLogger(None)
 
 cie2000_cache = {}
-WHITE = (255, 255, 255)
 
 html_color = {
     "Gr": {"red": 0, "green": 102, "blue": 0},
@@ -99,1077 +96,15 @@ edge_color_pair_map = {
     "Ye/Rd": "Rd/Ye",
 }
 
-corner_tuples = {
-    2: (
-        (1, 5, 18),
-        (2, 17, 14),
-        (3, 9, 6),
-        (4, 13, 10),
-        (21, 8, 11),
-        (22, 12, 15),
-        (23, 20, 7),
-        (24, 16, 19),
-    ),
-    3: (
-        (1, 10, 39),
-        (3, 37, 30),
-        (7, 19, 12),
-        (9, 28, 21),
-        (46, 18, 25),
-        (48, 27, 34),
-        (52, 45, 16),
-        (54, 36, 43),
-    ),
-    4: (
-        (1, 17, 68),
-        (4, 65, 52),
-        (13, 33, 20),
-        (16, 49, 36),
-        (81, 32, 45),
-        (84, 48, 61),
-        (93, 80, 29),
-        (96, 64, 77),
-    ),
-    5: (
-        (1, 26, 105),
-        (5, 101, 80),
-        (21, 51, 30),
-        (25, 76, 55),
-        (126, 50, 71),
-        (130, 75, 96),
-        (146, 125, 46),
-        (150, 100, 121),
-    ),
-    6: (
-        (1, 37, 150),
-        (6, 145, 114),
-        (31, 73, 42),
-        (36, 109, 78),
-        (181, 72, 103),
-        (186, 108, 139),
-        (211, 180, 67),
-        (216, 144, 175),
-    ),
-    7: (
-        (1, 50, 203),
-        (7, 197, 154),
-        (43, 99, 56),
-        (49, 148, 105),
-        (246, 98, 141),
-        (252, 147, 190),
-        (288, 245, 92),
-        (294, 196, 239),
-    ),
-}
-
-edge_orbit_id = {
-    3: {
-        2: 0,
-        4: 0,
-        6: 0,
-        8: 0,  # Upper
-        11: 0,
-        13: 0,
-        15: 0,
-        17: 0,  # Left
-        20: 0,
-        22: 0,
-        24: 0,
-        26: 0,  # Front
-        29: 0,
-        31: 0,
-        33: 0,
-        35: 0,  # Right
-        38: 0,
-        40: 0,
-        42: 0,
-        44: 0,  # Back
-        47: 0,
-        49: 0,
-        51: 0,
-        53: 0,  # Down
-    },
-    4: {
-        2: 0,
-        3: 0,
-        5: 0,
-        9: 0,
-        8: 0,
-        12: 0,
-        14: 0,
-        15: 0,  # Upper
-        18: 0,
-        19: 0,
-        21: 0,
-        25: 0,
-        24: 0,
-        28: 0,
-        30: 0,
-        31: 0,  # Left
-        34: 0,
-        35: 0,
-        37: 0,
-        41: 0,
-        40: 0,
-        44: 0,
-        46: 0,
-        47: 0,  # Front
-        50: 0,
-        51: 0,
-        53: 0,
-        57: 0,
-        56: 0,
-        60: 0,
-        62: 0,
-        63: 0,  # Right
-        66: 0,
-        67: 0,
-        69: 0,
-        73: 0,
-        72: 0,
-        76: 0,
-        78: 0,
-        79: 0,  # Back
-        82: 0,
-        83: 0,
-        85: 0,
-        89: 0,
-        88: 0,
-        92: 0,
-        94: 0,
-        95: 0,  # Down
-    },
-    5: {
-        2: 0,
-        3: 1,
-        4: 0,
-        6: 0,
-        11: 1,
-        16: 0,
-        10: 0,
-        15: 1,
-        20: 0,
-        22: 0,
-        23: 1,
-        24: 0,  # Upper
-        27: 0,
-        28: 1,
-        29: 0,
-        31: 0,
-        36: 1,
-        41: 0,
-        35: 0,
-        40: 1,
-        45: 0,
-        47: 0,
-        48: 1,
-        49: 0,  # Left
-        52: 0,
-        53: 1,
-        54: 0,
-        56: 0,
-        61: 1,
-        66: 0,
-        60: 0,
-        65: 1,
-        70: 0,
-        72: 0,
-        73: 1,
-        74: 0,  # Front
-        77: 0,
-        78: 1,
-        79: 0,
-        81: 0,
-        86: 1,
-        91: 0,
-        85: 0,
-        90: 1,
-        95: 0,
-        97: 0,
-        98: 1,
-        99: 0,  # Right
-        102: 0,
-        103: 1,
-        104: 0,
-        106: 0,
-        111: 1,
-        116: 0,
-        110: 0,
-        115: 1,
-        120: 0,
-        122: 0,
-        123: 1,
-        124: 0,  # Back
-        127: 0,
-        128: 1,
-        129: 0,
-        131: 0,
-        136: 1,
-        141: 0,
-        135: 0,
-        140: 1,
-        145: 0,
-        147: 0,
-        148: 1,
-        149: 0,  # Down
-    },
-    6: {
-        # orbit 0
-        2: 0,
-        5: 0,
-        7: 0,
-        25: 0,
-        12: 0,
-        30: 0,
-        32: 0,
-        35: 0,  # Upper
-        38: 0,
-        41: 0,
-        43: 0,
-        61: 0,
-        48: 0,
-        66: 0,
-        68: 0,
-        71: 0,  # Left
-        74: 0,
-        77: 0,
-        79: 0,
-        97: 0,
-        84: 0,
-        102: 0,
-        104: 0,
-        107: 0,  # Front
-        110: 0,
-        113: 0,
-        115: 0,
-        133: 0,
-        120: 0,
-        138: 0,
-        140: 0,
-        143: 0,  # Right
-        146: 0,
-        149: 0,
-        151: 0,
-        169: 0,
-        156: 0,
-        174: 0,
-        176: 0,
-        179: 0,  # Back
-        182: 0,
-        185: 0,
-        187: 0,
-        205: 0,
-        192: 0,
-        210: 0,
-        212: 0,
-        215: 0,  # Down
-        # orbit 1
-        3: 1,
-        4: 1,
-        13: 1,
-        19: 1,
-        18: 1,
-        24: 1,
-        33: 1,
-        34: 1,  # Upper
-        39: 1,
-        40: 1,
-        49: 1,
-        55: 1,
-        54: 1,
-        60: 1,
-        69: 1,
-        70: 1,  # Left
-        75: 1,
-        76: 1,
-        85: 1,
-        91: 1,
-        90: 1,
-        96: 1,
-        105: 1,
-        106: 1,  # Front
-        111: 1,
-        112: 1,
-        121: 1,
-        127: 1,
-        126: 1,
-        132: 1,
-        141: 1,
-        142: 1,  # Right
-        147: 1,
-        148: 1,
-        157: 1,
-        163: 1,
-        162: 1,
-        168: 1,
-        177: 1,
-        178: 1,  # Back
-        183: 1,
-        184: 1,
-        193: 1,
-        199: 1,
-        198: 1,
-        204: 1,
-        213: 1,
-        214: 1,  # Down
-    },
-    7: {
-        # orbit 0
-        2: 0,
-        6: 0,
-        8: 0,
-        14: 0,
-        36: 0,
-        42: 0,
-        44: 0,
-        48: 0,  # Upper
-        51: 0,
-        55: 0,
-        57: 0,
-        63: 0,
-        85: 0,
-        91: 0,
-        93: 0,
-        97: 0,  # Left
-        100: 0,
-        104: 0,
-        106: 0,
-        112: 0,
-        134: 0,
-        140: 0,
-        142: 0,
-        146: 0,  # Front
-        149: 0,
-        153: 0,
-        155: 0,
-        161: 0,
-        183: 0,
-        189: 0,
-        191: 0,
-        195: 0,  # Right
-        198: 0,
-        202: 0,
-        204: 0,
-        210: 0,
-        232: 0,
-        238: 0,
-        240: 0,
-        244: 0,  # Back
-        247: 0,
-        251: 0,
-        253: 0,
-        259: 0,
-        281: 0,
-        287: 0,
-        289: 0,
-        293: 0,  # Down
-        # orbit 1
-        3: 1,
-        5: 1,
-        15: 1,
-        21: 1,
-        29: 1,
-        35: 1,
-        45: 1,
-        47: 1,  # Upper
-        52: 1,
-        54: 1,
-        64: 1,
-        70: 1,
-        78: 1,
-        84: 1,
-        94: 1,
-        96: 1,  # Left
-        101: 1,
-        103: 1,
-        113: 1,
-        119: 1,
-        127: 1,
-        133: 1,
-        143: 1,
-        145: 1,  # Front
-        150: 1,
-        152: 1,
-        162: 1,
-        168: 1,
-        176: 1,
-        182: 1,
-        192: 1,
-        194: 1,  # Right
-        199: 1,
-        201: 1,
-        211: 1,
-        217: 1,
-        225: 1,
-        231: 1,
-        241: 1,
-        243: 1,  # Back
-        248: 1,
-        250: 1,
-        260: 1,
-        266: 1,
-        274: 1,
-        280: 1,
-        290: 1,
-        292: 1,  # Down
-        # orbit 2
-        4: 2,
-        22: 2,
-        28: 2,
-        46: 2,  # Upper
-        53: 2,
-        71: 2,
-        77: 2,
-        95: 2,  # Left
-        102: 2,
-        120: 2,
-        126: 2,
-        144: 2,  # Front
-        151: 2,
-        169: 2,
-        175: 2,
-        193: 2,  # Right
-        200: 2,
-        218: 2,
-        224: 2,
-        242: 2,  # Back
-        249: 2,
-        267: 2,
-        273: 2,
-        291: 2,  # Down
-    },
-}
-
-edge_orbit_wing_pairs = {
-    2: (()),
-    3: (
-        # orbit 0
-        (
-            (2, 38),
-            (4, 11),
-            (6, 29),
-            (8, 20),
-            (13, 42),
-            (15, 22),
-            (31, 24),
-            (33, 40),
-            (47, 26),
-            (49, 17),
-            (51, 35),
-            (53, 44),
-        ),
-    ),
-    4: (
-        # orbit 0
-        (
-            (2, 67),
-            (3, 66),
-            (5, 18),
-            (9, 19),
-            (8, 51),
-            (12, 50),
-            (14, 34),
-            (15, 35),
-            (21, 72),
-            (25, 76),
-            (24, 37),
-            (28, 41),
-            (53, 40),
-            (57, 44),
-            (56, 69),
-            (60, 73),
-            (82, 46),
-            (83, 47),
-            (85, 31),
-            (89, 30),
-            (88, 62),
-            (92, 63),
-            (94, 79),
-            (95, 78),
-        ),
-    ),
-    5: (
-        # orbit 0
-        (
-            (2, 104),
-            (4, 102),
-            (6, 27),
-            (16, 29),
-            (10, 79),
-            (20, 77),
-            (22, 52),
-            (24, 54),
-            (31, 110),
-            (41, 120),
-            (35, 56),
-            (45, 66),
-            (81, 60),
-            (91, 70),
-            (85, 106),
-            (95, 116),
-            (72, 127),
-            (74, 129),
-            (131, 49),
-            (141, 47),
-            (135, 97),
-            (145, 99),
-            (147, 124),
-            (149, 122),
-        ),
-        # orbit 1
-        (
-            (3, 103),
-            (11, 28),
-            (15, 78),
-            (23, 53),
-            (36, 115),
-            (40, 61),
-            (86, 65),
-            (90, 111),
-            (128, 73),
-            (136, 48),
-            (140, 98),
-            (148, 123),
-        ),
-    ),
-    6: (
-        # orbit 0
-        (
-            (2, 149),
-            (5, 146),
-            (7, 38),
-            (25, 41),
-            (12, 113),
-            (30, 110),
-            (32, 74),
-            (35, 77),
-            (43, 156),
-            (61, 174),
-            (48, 79),
-            (66, 97),
-            (115, 84),
-            (133, 102),
-            (120, 151),
-            (138, 169),
-            (182, 104),
-            (185, 107),
-            (187, 71),
-            (205, 68),
-            (192, 140),
-            (210, 143),
-            (212, 179),
-            (215, 176),
-        ),
-        # orbit 1
-        (
-            (3, 148),
-            (4, 147),
-            (13, 39),
-            (19, 40),
-            (18, 112),
-            (24, 111),
-            (33, 75),
-            (34, 76),
-            (49, 162),
-            (55, 168),
-            (54, 85),
-            (60, 91),
-            (90, 121),
-            (96, 127),
-            (126, 157),
-            (132, 163),
-            (183, 105),
-            (184, 106),
-            (193, 70),
-            (199, 69),
-            (198, 141),
-            (204, 142),
-            (213, 178),
-            (214, 177),
-        ),
-    ),
-    7: (
-        # orbit 0
-        (
-            (2, 202),
-            (6, 198),
-            (14, 153),
-            (42, 149),
-            (48, 104),
-            (44, 100),
-            (36, 55),
-            (8, 51),  # Upper
-            (63, 106),
-            (91, 134),
-            (85, 238),
-            (57, 210),  # Left
-            (161, 204),
-            (189, 232),
-            (183, 140),
-            (155, 112),  # Right
-            (247, 142),
-            (251, 146),
-            (259, 191),
-            (287, 195),
-            (293, 240),
-            (289, 244),
-            (281, 93),
-            (253, 97),  # Down
-        ),
-        # orbit 1
-        (
-            (3, 201),
-            (5, 199),
-            (21, 152),
-            (35, 150),
-            (47, 103),
-            (45, 101),
-            (29, 54),
-            (15, 52),  # Upper
-            (70, 113),
-            (84, 127),
-            (78, 231),
-            (64, 217),  # Left
-            (168, 211),
-            (182, 225),
-            (176, 133),
-            (162, 119),  # Right
-            (248, 143),
-            (250, 145),
-            (266, 192),
-            (280, 194),
-            (292, 241),
-            (290, 243),
-            (274, 94),
-            (260, 96),  # Down
-        ),
-        # orbit 2
-        (
-            (4, 200),
-            (28, 151),
-            (46, 102),
-            (22, 53),  # Upper
-            (77, 120),
-            (71, 224),  # Left
-            (175, 218),
-            (169, 126),  # Right
-            (249, 144),
-            (273, 193),
-            (291, 242),
-            (267, 95),  # Down
-        ),
-    ),
-}
-
-center_groups = {
-    2: (),
-    3: (("centers", (5, 14, 23, 32, 41, 50)),),
-    4: (
-        (
-            "x-centers",
-            (
-                6,
-                7,
-                10,
-                11,  # Upper
-                22,
-                23,
-                26,
-                27,  # Left
-                38,
-                39,
-                42,
-                43,  # Front
-                54,
-                55,
-                58,
-                59,  # Right
-                70,
-                71,
-                74,
-                75,  # Back
-                86,
-                87,
-                90,
-                91,  # Down
-            ),
-        ),
-    ),
-    5: (
-        ("centers", (13, 38, 63, 88, 113, 138)),
-        (
-            "x-centers",
-            (
-                7,
-                9,
-                13,
-                17,
-                19,  # Upper
-                32,
-                34,
-                38,
-                42,
-                44,  # Left
-                57,
-                59,
-                63,
-                67,
-                69,  # Front
-                82,
-                84,
-                88,
-                92,
-                94,  # Right
-                107,
-                109,
-                113,
-                117,
-                119,  # Back
-                132,
-                134,
-                138,
-                142,
-                144,  # Down
-            ),
-        ),
-        (
-            "t-centers",
-            (
-                8,
-                12,
-                13,
-                14,
-                18,  # Upper
-                33,
-                37,
-                38,
-                39,
-                43,  # Left
-                58,
-                62,
-                63,
-                64,
-                68,  # Front
-                83,
-                87,
-                88,
-                89,
-                93,  # Right
-                108,
-                112,
-                113,
-                114,
-                118,  # Back
-                133,
-                137,
-                138,
-                139,
-                143,  # Down
-            ),
-        ),
-    ),
-    6: (
-        (
-            "inner x-centers",
-            (
-                15,
-                16,
-                21,
-                22,  # Upper
-                51,
-                52,
-                57,
-                58,  # Left
-                87,
-                88,
-                93,
-                94,  # Front
-                123,
-                124,
-                129,
-                130,  # Right
-                159,
-                160,
-                165,
-                166,  # Back
-                195,
-                196,
-                201,
-                202,  # Down
-            ),
-        ),
-        (
-            "outer x-centers",
-            (
-                8,
-                11,
-                26,
-                29,  # Upper
-                44,
-                47,
-                62,
-                65,  # Left
-                80,
-                83,
-                98,
-                101,  # Front
-                116,
-                119,
-                134,
-                137,  # Right
-                152,
-                155,
-                170,
-                173,  # Back
-                188,
-                191,
-                206,
-                209,  # Down
-            ),
-        ),
-        (
-            "left centers (oblique edge)",
-            (
-                9,
-                17,
-                28,
-                20,  # Upper
-                45,
-                53,
-                64,
-                56,  # Left
-                81,
-                89,
-                100,
-                92,  # Front
-                117,
-                125,
-                136,
-                128,  # Right
-                153,
-                161,
-                172,
-                164,  # Back
-                189,
-                197,
-                208,
-                200,  # Down
-            ),
-        ),
-        (
-            "right centers (oblique edges)",
-            (
-                10,
-                23,
-                27,
-                14,  # Upper
-                46,
-                59,
-                63,
-                50,  # Left
-                82,
-                95,
-                99,
-                86,  # Front
-                118,
-                131,
-                135,
-                122,  # Right
-                154,
-                167,
-                171,
-                158,  # Back
-                190,
-                203,
-                207,
-                194,  # Down
-            ),
-        ),
-    ),
-    7: (
-        ("centers", (25, 74, 123, 172, 221, 270)),
-        (
-            "inside-x-centers",
-            (
-                17,
-                19,
-                31,
-                33,  # Upper
-                66,
-                68,
-                80,
-                82,  # Left
-                115,
-                117,
-                129,
-                131,  # Front
-                164,
-                166,
-                178,
-                180,  # Right
-                213,
-                215,
-                227,
-                229,  # Back
-                262,
-                264,
-                276,
-                278,  # Down
-            ),
-        ),
-        (
-            "inside-t-centers",
-            (
-                18,
-                24,
-                26,
-                32,  # Upper
-                67,
-                73,
-                75,
-                81,  # Left
-                116,
-                122,
-                124,
-                130,  # Front
-                165,
-                171,
-                173,
-                179,  # Right
-                214,
-                220,
-                222,
-                228,  # Back
-                263,
-                269,
-                271,
-                277,  # Down
-            ),
-        ),
-        (
-            "outside-x-centers",
-            (
-                9,
-                13,
-                37,
-                41,  # Upper
-                58,
-                62,
-                86,
-                90,  # Left
-                107,
-                111,
-                135,
-                139,  # Front
-                156,
-                160,
-                184,
-                188,  # Right
-                205,
-                209,
-                233,
-                237,  # Back
-                254,
-                258,
-                282,
-                286,  # Down
-            ),
-        ),
-        (
-            "outside-t-centers",
-            (
-                11,
-                23,
-                27,
-                39,  # Upper
-                60,
-                72,
-                76,
-                88,  # Left
-                109,
-                121,
-                125,
-                137,  # Front
-                158,
-                170,
-                174,
-                186,  # Right
-                207,
-                219,
-                223,
-                235,  # Back
-                256,
-                268,
-                272,
-                284,  # Down
-            ),
-        ),
-        (
-            "left-oblique",
-            (
-                10,
-                20,
-                40,
-                30,  # Upper
-                59,
-                69,
-                89,
-                79,  # Left
-                108,
-                118,
-                138,
-                128,  # Front
-                157,
-                167,
-                187,
-                177,  # Right
-                206,
-                216,
-                236,
-                226,  # Back
-                255,
-                265,
-                285,
-                275,  # Down
-            ),
-        ),
-        (
-            "right-oblique",
-            (
-                12,
-                34,
-                38,
-                16,  # Upper
-                61,
-                83,
-                87,
-                65,  # Left
-                110,
-                132,
-                136,
-                114,  # Front
-                159,
-                181,
-                185,
-                163,  # Right
-                208,
-                230,
-                234,
-                212,  # Back
-                257,
-                279,
-                283,
-                261,  # Down
-            ),
-        ),
-    ),
-}
-
 
 SIDES_COUNT = 6
 HTML_DIRECTORY = "/tmp/rubiks-color-resolver/"
 #HTML_FILENAME = HTML_DIRECTORY + "index.html"
 HTML_FILENAME = "rubiks-color-resolver.html"
+
+
+def print_mem_stats(desc):
+    print('{} free: {} allocated: {}'.format(desc, gc.mem_free(), gc.mem_alloc()))
 
 
 class ListMissingValue(Exception):
@@ -1425,7 +360,6 @@ def traveling_salesman(squares):
     for x in range(len_squares):
         x_square = squares[x]
         (x_red, x_green, x_blue) = x_square.rgb
-        # x_lab = rgb2lab((x_red, x_green, x_blue))
         x_lab = x_square.lab
 
         for y in range(len_squares):
@@ -1446,9 +380,11 @@ def traveling_salesman(squares):
             matrix[x][y] = distance
             matrix[y][x] = distance
 
-    global cie2000_cache
-    cie2000_cache = {}
-    gc.collect()
+    if use_cie2000_cache:
+        global cie2000_cache
+        cie2000_cache = {}
+        gc.collect()
+
     path = solve_tsp(matrix)
     return [squares[x] for x in path]
 
@@ -1470,6 +406,7 @@ def get_important_square_indexes(size):
 
 
 class LabColor(object):
+
     def __init__(self, L, a, b, red, green, blue):
         self.L = L
         self.a = a
@@ -1492,30 +429,6 @@ class LabColor(object):
             return self.a < other.a
 
         return self.b < other.b
-
-    def update_rgb(self):
-        """
-        https://github.com/antimatter15/rgb-lab/blob/master/color.js
-        """
-        y = (self.L + 16) / 116
-        x = self.a / 500 + y
-        z = y - self.b / 200
-
-        x = 0.95047 * (x ** 3 if (x ** 3 > 0.008856) else (x - 16 / 116) / 7.787)
-        y = 1.00000 * (y ** 3 if (y ** 3 > 0.008856) else (y - 16 / 116) / 7.787)
-        z = 1.08883 * (z ** 3 if (z ** 3 > 0.008856) else (z - 16 / 116) / 7.787)
-
-        r = x * 3.2406 + y * -1.5372 + z * -0.4986
-        g = x * -0.9689 + y * 1.8758 + z * 0.0415
-        b = x * 0.0557 + y * -0.2040 + z * 1.0570
-
-        r = (1.055 * r ** (1 / 2.4) - 0.055) if (r > 0.0031308) else 12.92 * r
-        g = (1.055 * g ** (1 / 2.4) - 0.055) if (g > 0.0031308) else 12.92 * g
-        b = (1.055 * b ** (1 / 2.4) - 0.055) if (b > 0.0031308) else 12.92 * b
-
-        self.red = int(max(0, min(1, r)) * 255)
-        self.green = int(max(0, min(1, g)) * 255)
-        self.blue = int(max(0, min(1, b)) * 255)
 
 
 def rgb2lab(inputColor):
@@ -1684,14 +597,12 @@ def rgb_list_to_lab(rgbs):
 
 
 class Square(object):
+
     def __init__(self, side, cube, position, red, green, blue):
-        self.cube = cube
+        #self.cube = cube
         self.side = side
         self.position = position
         self.rgb = (red, green, blue)
-        self.red = red
-        self.green = green
-        self.blue = blue
         self.lab = rgb2lab((red, green, blue))
         self.color_name = None
         self.side_name = None  # ULFRBD
@@ -1699,14 +610,12 @@ class Square(object):
     def __str__(self):
         return "%s%d" % (self.side, self.position)
 
-    def __repr__(self):
-        return self.__str__()
-
     def __lt__(self, other):
         return self.position < other.position
 
 
 class Side(object):
+
     def __init__(self, cube, width, name):
         self.cube = cube
         self.name = name  # U, L, etc
@@ -1821,11 +730,11 @@ class Side(object):
 
 
 class RubiksColorSolverGeneric(object):
+
     def __init__(self, width):
         self.width = width
         self.height = width
         self.squares_per_side = self.width * self.width
-        self.scan_data = {}
         self.orbits = int(ceil((self.width - 2) / 2.0))
         self.state = []
         self.orange_baseline = None
@@ -2084,29 +993,21 @@ div#colormapping {
         return side.squares[position]
 
     def enter_scan_data(self, scan_data):
-        self.scan_data = scan_data
 
-        for (position, (red, green, blue)) in sorted(self.scan_data.items()):
+        for (position, (red, green, blue)) in scan_data.items():
             position = int(position)
             side = self.get_side(position)
             side.set_square(position, red, green, blue)
 
         with open(HTML_FILENAME, "a") as fh:
             fh.write("<h1>JSON Input</h1>\n")
-            fh.write("<pre>%s</pre>\n" % json_dumps(self.scan_data))
+            fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
 
     def write_cube(self, desc, use_html_colors):
         # TODO clean this up...should not need the 'cube' var
         cube = ["dummy"]
 
-        for side in (
-            self.sideU,
-            self.sideL,
-            self.sideF,
-            self.sideR,
-            self.sideB,
-            self.sideD,
-        ):
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for position in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[position]
 
@@ -2115,9 +1016,9 @@ div#colormapping {
                     green = html_color[square.color_name]["green"]
                     blue = html_color[square.color_name]["blue"]
                 else:
-                    red = square.red
-                    green = square.green
-                    blue = square.blue
+                    red = square.rgb[0]
+                    green = square.rgb[1]
+                    blue = square.rgb[2]
 
                 cube.append((red, green, blue, square.color_name))
 
@@ -2247,6 +1148,7 @@ div#colormapping {
     def set_state(self):
         self.state = []
 
+        # odd cube
         if self.sideU.mid_pos is not None:
 
             # Assign a color name to each center square. Compute
@@ -2257,14 +1159,7 @@ div#colormapping {
 
             # Build a list of all center squares
             center_squares = []
-            for side in (
-                self.sideU,
-                self.sideL,
-                self.sideF,
-                self.sideR,
-                self.sideB,
-                self.sideD,
-            ):
+            for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
                 square = side.squares[side.mid_pos]
                 center_squares.append(square)
             # desc = "middle center"
@@ -2295,9 +1190,9 @@ div#colormapping {
                 min_distance_permutation[4]: "B",
                 min_distance_permutation[5]: "D",
             }
-
             # log.info("{} FINAL PERMUTATION {}".format(desc, min_distance_permutation))
 
+        # even cube
         else:
             self.color_to_side_name = {
                 "Wh": "U",
@@ -2308,14 +1203,7 @@ div#colormapping {
                 "Ye": "D",
             }
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
                 square.side_name = self.color_to_side_name[square.color_name]
@@ -2323,17 +1211,9 @@ div#colormapping {
     def cube_for_kociemba_strict(self):
         #log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
         data = []
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
-                # data.append(self.color_to_side_name[square.color_name])
                 data.append(square.side_name)
 
         return data
@@ -2347,24 +1227,7 @@ div#colormapping {
         data["sides"] = {}
         data["squares"] = {}
 
-        """
-        for side in self.sides.values():
-            data['sides'][side.name] = {
-                'colorName' : side.color_name,
-                'colorHTML' : html_color[side.color_name]
-            }
-        """
-
-        # log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
-
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
                 color = square.color_name
@@ -2374,9 +1237,7 @@ div#colormapping {
 
         return data
 
-    def assign_color_names(
-        self, desc, squares_lists_all, color_permutations, color_box
-    ):
+    def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
         assert color_permutations
         assert color_box
 
@@ -2390,53 +1251,74 @@ div#colormapping {
         squares_lists = []
         square_list = []
 
+        # squares_lists_all is sorted by color. Split that list into 6 even buckets (squares_lists).
         for square in squares_lists_all:
             square_list.append(square)
 
             if len(square_list) == squares_per_row:
-                squares_lists.append(square_list)
+                squares_lists.append(tuple(square_list))
                 square_list = []
 
+        #print("squares_lists\n    {}\n".format("\n    ".join(map(str, squares_lists))))
         # Assign a color name to each squares in each square_list. Compute
         # which naming scheme results in the least total color distance in
         # terms of the assigned color name vs. the colors in color_box.
-        min_distance = None
+        min_distance = 99999
         min_distance_permutation = None
+        distances_of_square_list_per_color = {}
+
+        for color_name in ("Wh", "Ye", "OR", "Rd", "Gr", "Bu"):
+            color_lab = color_box[color_name]
+            distances_of_square_list_per_color[color_name] = []
+
+            for (index, squares_list) in enumerate(squares_lists):
+                distance = 0
+                for square in squares_list:
+                    distance += get_lab_distance(square.lab, color_lab)
+                distances_of_square_list_per_color[color_name].append(int(distance))
+            distances_of_square_list_per_color[color_name] = tuple(distances_of_square_list_per_color[color_name])
+
+        #for color_name in (Wh, Ye, OR, Rd, Gr, Bu):
+        #    print("distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
 
         if color_permutations == "even_cube_center_color_permutations":
 
-            for permutation in permutations(['Wh', 'Ye', 'OR', 'Rd', 'Gr', 'Bu']):
-                distance = 0
+            #for (permutation_index, permutation) in enumerate(permutations((Wh, Ye, OR, Rd, Gr, Bu))):
+            for permutation in permutations(("Wh", "Ye", "OR", "Rd", "Gr", "Bu")):
+                distance = (
+                    distances_of_square_list_per_color[permutation[0]][0] +
+                    distances_of_square_list_per_color[permutation[1]][1] +
+                    distances_of_square_list_per_color[permutation[2]][2] +
+                    distances_of_square_list_per_color[permutation[3]][3] +
+                    distances_of_square_list_per_color[permutation[4]][4] +
+                    distances_of_square_list_per_color[permutation[5]][5]
+                )
 
-                for (index, squares_list) in enumerate(squares_lists):
-                    color_name = permutation[index]
-                    color_lab = color_box[color_name]
-
-                    for square in squares_list:
-                        distance += get_lab_distance(square.lab, color_lab)
-
-                if min_distance is None or distance < min_distance:
+                if distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = permutation
+                #    print("{} PERMUTATION {} -  {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
                 #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
                 # else:
                 #    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
 
         elif color_permutations == "odd_cube_center_color_permutations":
 
+            #for (permutation_index, permutation) in enumerate(odd_cube_center_color_permutations):
             for permutation in odd_cube_center_color_permutations:
-                distance = 0
+                distance = (
+                    distances_of_square_list_per_color[permutation[0]][0] +
+                    distances_of_square_list_per_color[permutation[1]][1] +
+                    distances_of_square_list_per_color[permutation[2]][2] +
+                    distances_of_square_list_per_color[permutation[3]][3] +
+                    distances_of_square_list_per_color[permutation[4]][4] +
+                    distances_of_square_list_per_color[permutation[5]][5]
+                )
 
-                for (index, squares_list) in enumerate(squares_lists):
-                    color_name = permutation[index]
-                    color_lab = color_box[color_name]
-
-                    for square in squares_list:
-                        distance += get_lab_distance(square.lab, color_lab)
-
-                if min_distance is None or distance < min_distance:
+                if distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = permutation
+                #    print("{} PERMUTATION {} -  {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
                 #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
                 # else:
                 #    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
@@ -2460,14 +1342,7 @@ div#colormapping {
         #log.info("Resolve color_box")
         corner_squares = []
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.corner_squares:
                 corner_squares.append(square)
 
@@ -2491,14 +1366,7 @@ div#colormapping {
         green_corners = []
         blue_corners = []
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.corner_squares:
                 if square.color_name == "Wh":
                     white_corners.append(square.rgb)
@@ -2532,14 +1400,7 @@ div#colormapping {
         #log.info("Resolve corners")
         corner_squares = []
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.corner_squares:
                 corner_squares.append(square)
 
@@ -2556,14 +1417,26 @@ div#colormapping {
         self.write_colors("corners", sorted_corner_squares)
 
     def validate_edge_orbit(self, orbit_id):
+
+        if self.width == 2:
+            from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
+        elif self.width == 3:
+            from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
+        elif self.width == 4:
+            from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs
+        elif self.width == 5:
+            from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs
+        elif self.width == 6:
+            from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs
+        elif self.width == 7:
+            from rubikscolorresolver.cube_777 import edge_orbit_wing_pairs
+
         valid = True
 
         # We need to see which orange/red we can flip that will make the edges valid
         wing_pair_counts = {}
 
-        for (square1_position, square2_position) in edge_orbit_wing_pairs[self.width][
-            orbit_id
-        ]:
+        for (square1_position, square2_position) in edge_orbit_wing_pairs[orbit_id]:
             square1 = self.get_square(square1_position)
             square2 = self.get_square(square2_position)
             wing_pair_string = ", ".join(
@@ -2599,7 +1472,20 @@ div#colormapping {
         blue_white_corners = []
         blue_yellow_corners = []
 
-        for corner_tuple in corner_tuples[self.width]:
+        if self.width == 2:
+            from rubikscolorresolver.cube_222 import corner_tuples
+        elif self.width == 3:
+            from rubikscolorresolver.cube_333 import corner_tuples
+        elif self.width == 4:
+            from rubikscolorresolver.cube_444 import corner_tuples
+        elif self.width == 5:
+            from rubikscolorresolver.cube_555 import corner_tuples
+        elif self.width == 6:
+            from rubikscolorresolver.cube_666 import corner_tuples
+        elif self.width == 7:
+            from rubikscolorresolver.cube_777 import corner_tuples
+
+        for corner_tuple in corner_tuples:
             corner_colors = []
 
             for position in corner_tuple:
@@ -2631,6 +1517,20 @@ div#colormapping {
         )
 
     def find_edges_by_color(self, orbit_id):
+
+        if self.width == 2:
+            from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
+        elif self.width == 3:
+            from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
+        elif self.width == 4:
+            from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs
+        elif self.width == 5:
+            from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs
+        elif self.width == 6:
+            from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs
+        elif self.width == 7:
+            from rubikscolorresolver.cube_777 import edge_orbit_wing_pairs
+
         green_red_orange_color_names = ("Gr", "Rd", "OR")
         blue_red_orange_color_names = ("Bu", "Rd", "OR")
         white_red_orange_color_names = ("Wh", "Rd", "OR")
@@ -2640,9 +1540,7 @@ div#colormapping {
         white_red_or_orange_edges = []
         yellow_red_or_orange_edges = []
 
-        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][
-            orbit_id
-        ]:
+        for (square_index, partner_index) in edge_orbit_wing_pairs[orbit_id]:
             square = self.get_square(square_index)
             partner = self.get_square(partner_index)
 
@@ -2690,6 +1588,7 @@ div#colormapping {
         )
 
     def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
+
         def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
 
             if len(target_color_red_or_orange_edges) == 2:
@@ -2716,9 +1615,7 @@ div#colormapping {
             for red_orange_permutation in red_orange_permutations:
                 distance = 0
 
-                for (index, (target_color_square, partner_square)) in enumerate(
-                    target_color_red_or_orange_edges
-                ):
+                for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                     red_orange = red_orange_permutation[index]
 
                     if red_orange == "OR":
@@ -2733,15 +1630,10 @@ div#colormapping {
                         raise Exception(red_orange)
 
                     partner_square.color_name = red_orange
-                    partner_square.side_name = self.color_to_side_name[
-                        partner_square.color_name
-                    ]
+                    partner_square.side_name = self.color_to_side_name[partner_square.color_name]
 
-                if (
-                    self.width == 4
-                    or self.width == 6
-                    or (self.width == 5 and target_orbit_id == 0)
-                ):
+                if (self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0)):
+
                     for (index, (target_color_square, partner_square)) in enumerate(
                         target_color_red_or_orange_edges
                     ):
@@ -2844,6 +1736,19 @@ div#colormapping {
 
     def get_high_low_per_edge_color(self, target_orbit_id):
 
+        if self.width == 2:
+            from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
+        elif self.width == 3:
+            from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
+        elif self.width == 4:
+            from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs
+        elif self.width == 5:
+            from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs
+        elif self.width == 6:
+            from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs
+        elif self.width == 7:
+            from rubikscolorresolver.cube_777 import edge_orbit_wing_pairs
+
         high_low_per_edge_color = {
             "Gr/Wh": set(),
             "Bu/Wh": set(),
@@ -2859,31 +1764,23 @@ div#colormapping {
             "Rd/Ye": set(),
         }
 
-        for (square_index, partner_index) in edge_orbit_wing_pairs[self.width][
-            target_orbit_id
-        ]:
+        for (square_index, partner_index) in edge_orbit_wing_pairs[target_orbit_id]:
             square = self.get_square(square_index)
             partner = self.get_square(partner_index)
 
             if self.width == 6:
-                from rubikscolorresolver.cube_666 import highlow_edge_values_666
-                highlow = highlow_edge_values_666[
-                    (square_index, partner_index, square.side_name, partner.side_name)
-                ]
+                from rubikscolorresolver.cube_666 import highlow_edge_values
+                highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
             elif self.width == 5:
-                from rubikscolorresolver.cube_555 import highlow_edge_values_555
-                highlow = highlow_edge_values_555[
-                    (square_index, partner_index, square.side_name, partner.side_name)
-                ]
+                from rubikscolorresolver.cube_555 import highlow_edge_values
+                highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
             elif self.width == 4:
-                from rubikscolorresolver.cube_444 import highlow_edge_values_444
-                highlow = highlow_edge_values_444[
-                    (square_index, partner_index, square.side_name, partner.side_name)
-                ]
+                from rubikscolorresolver.cube_444 import highlow_edge_values
+                highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
+            else:
+                raise Exception("Add support for %sx%sx%s" % (self.width, self.width, self.width))
 
-            edge_color_pair = edge_color_pair_map[
-                "%s/%s" % (square.color_name, partner.color_name)
-            ]
+            edge_color_pair = edge_color_pair_map["%s/%s" % (square.color_name, partner.color_name)]
             high_low_per_edge_color[edge_color_pair].add(highlow)
 
         # log.info("high_low_per_edge_color for orbit %d\n%s" % (target_orbit_id, high_low_per_edge_color))
@@ -2902,22 +1799,25 @@ div#colormapping {
         # Nothing to be done for 2x2x2
         if self.width == 2:
             return True
+        elif self.width == 3:
+            from rubikscolorresolver.cube_333 import edge_orbit_id
+        elif self.width == 4:
+            from rubikscolorresolver.cube_444 import edge_orbit_id
+        elif self.width == 5:
+            from rubikscolorresolver.cube_555 import edge_orbit_id
+        elif self.width == 6:
+            from rubikscolorresolver.cube_666 import edge_orbit_id
+        elif self.width == 7:
+            from rubikscolorresolver.cube_777 import edge_orbit_id
 
         for target_orbit_id in range(self.orbits):
             #log.debug("\n\n\n\n")
             #log.info("Resolve edges for orbit %d" % target_orbit_id)
             edge_squares = []
 
-            for side in (
-                self.sideU,
-                self.sideR,
-                self.sideF,
-                self.sideD,
-                self.sideL,
-                self.sideB,
-            ):
+            for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
                 for square in side.edge_squares:
-                    orbit_id = edge_orbit_id[self.width][square.position]
+                    orbit_id = edge_orbit_id[square.position]
                     # log.info("{}: {}, position {}, orbit_id {}".format(self.width, square, square.position, orbit_id))
 
                     if orbit_id == target_orbit_id:
@@ -3174,7 +2074,21 @@ div#colormapping {
         """
         Use traveling salesman algorithm to sort the squares by color
         """
-        for (desc, centers_squares) in center_groups[self.width]:
+
+        if self.width == 2:
+            from rubikscolorresolver.cube_222 import center_groups
+        elif self.width == 3:
+            from rubikscolorresolver.cube_333 import center_groups
+        elif self.width == 4:
+            from rubikscolorresolver.cube_444 import center_groups
+        elif self.width == 5:
+            from rubikscolorresolver.cube_555 import center_groups
+        elif self.width == 6:
+            from rubikscolorresolver.cube_666 import center_groups
+        elif self.width == 7:
+            from rubikscolorresolver.cube_777 import center_groups
+
+        for (desc, centers_squares) in center_groups:
             #log.debug("\n\n\n\n")
             #log.info("Resolve {}".format(desc))
             center_squares = []
@@ -3687,11 +2601,7 @@ def resolve_colors(argv):
         print("ERROR: Neither --filename or --rgb was specified")
         sys.exit(1)
 
-    scan_data_str_keys = json_loads(rgb)
-    scan_data = {}
-
-    for (key, value) in scan_data_str_keys.items():
-        scan_data[int(key)] = value
+    scan_data = eval(rgb)
 
     square_count = len(list(scan_data.keys()))
     square_count_per_side = int(square_count / 6)
