@@ -4,6 +4,7 @@ import gc
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 from rubikscolorresolver.tsp_solver_greedy import solve_tsp  # takes about 7k
 import sys
+import utime
 
 if sys.version_info < (3, 4):
     raise SystemError("Must be using Python 3.4 or higher")
@@ -13,20 +14,164 @@ def is_micropython():
     return sys.implementation.name == "micropython"
 
 
+profile_stats_time = {}
+profile_stats_calls = {}
+
+
+def timed_function(f, *args, **kwargs):
+    myname = str(f).split(' ')[1]
+
+    def new_func(*args, **kwargs):
+        t = utime.ticks_us()
+        result = f(*args, **kwargs)
+
+        if myname not in profile_stats_time:
+            profile_stats_time[myname] = 0
+            profile_stats_calls[myname] = 0
+
+        profile_stats_time[myname] += utime.ticks_diff(utime.ticks_us(), t)
+        profile_stats_calls[myname] += 1
+
+        return result
+
+    return new_func
+
+
 if is_micropython():
     from ucollections import OrderedDict
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
 
     use_cie2000_cache = False
-    LAB_DISTANCE_ALGORITHM = "euclidean"
+
+    @timed_function
+    def get_lab_distance(lab1, lab2):
+        """
+        http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
+
+        In mathematics, the Euclidean distance or Euclidean metric is the "ordinary"
+        (i.e. straight-line) distance between two points in Euclidean space. With this
+        distance, Euclidean space becomes a metric space. The associated norm is called
+        the Euclidean norm.
+        """
+        return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
+
 else:
     from collections import OrderedDict
     from json import dumps as json_dumps
     from json import loads as json_loads
 
     use_cie2000_cache = True
-    LAB_DISTANCE_ALGORITHM = "cie2000"
+
+    @timed_function
+    def get_lab_distance(lab1, lab2):
+        """
+        delta CIE 2000
+
+        Ported from this php implementation
+        https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
+        """
+        l1 = lab1.L
+        a1 = lab1.a
+        b1 = lab1.b
+
+        l2 = lab2.L
+        a2 = lab2.a
+        b2 = lab2.b
+
+        if use_cie2000_cache:
+            delta_e = cie2000_cache.get((l1, a1, b1, l2, a2, b2))
+
+            if delta_e is not None:
+                return delta_e
+
+            delta_e = cie2000_cache.get((l2, a2, b2, l1, a1, b1))
+
+            if delta_e is not None:
+                return delta_e
+
+        avg_lp = (l1 + l2) / 2.0
+        c1 = sqrt(a1 ** 2 + b1 ** 2)
+        c2 = sqrt(a2 ** 2 + b2 ** 2)
+        avg_c = (c1 + c2) / 2.0
+        g = (1 - sqrt(avg_c ** 7 / (avg_c ** 7 + 25 ** 7))) / 2.0
+        a1p = a1 * (1 + g)
+        a2p = a2 * (1 + g)
+        c1p = sqrt(a1p ** 2 + b1 ** 2)
+        c2p = sqrt(a2p ** 2 + b2 ** 2)
+        avg_cp = (c1p + c2p) / 2.0
+        h1p = degrees(atan2(b1, a1p))
+
+        if h1p < 0:
+            h1p += 360
+
+        h2p = degrees(atan2(b2, a2p))
+
+        if h2p < 0:
+            h2p += 360
+
+        if abs(h1p - h2p) > 180:
+            avg_hp = (h1p + h2p + 360) / 2.0
+        else:
+            avg_hp = (h1p + h2p) / 2.0
+
+        t = (
+            1
+            - 0.17 * cos(radians(avg_hp - 30))
+            + 0.24 * cos(radians(2 * avg_hp))
+            + 0.32 * cos(radians(3 * avg_hp + 6))
+            - 0.2 * cos(radians(4 * avg_hp - 63))
+        )
+        delta_hp = h2p - h1p
+
+        if abs(delta_hp) > 180:
+            if h2p <= h1p:
+                delta_hp += 360
+            else:
+                delta_hp -= 360
+
+        delta_lp = l2 - l1
+        delta_cp = c2p - c1p
+        delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
+        s_l = 1 + ((0.015 * ((avg_lp - 50) ** 2)) / sqrt(20 + ((avg_lp - 50) ** 2)))
+        s_c = 1 + 0.045 * avg_cp
+        s_h = 1 + 0.015 * avg_cp * t
+
+        delta_ro = 30 * exp(-((((avg_hp - 275) / 25.0) ** 2)))
+
+        r_c = 2 * sqrt((avg_cp ** 7) / ((avg_cp ** 7) + (25 ** 7)))
+        r_t = -r_c * sin(2 * radians(delta_ro))
+        kl = 1.0
+        kc = 1.0
+        kh = 1.0
+        delta_e = sqrt(
+            ((delta_lp / (s_l * kl)) ** 2)
+            + ((delta_cp / (s_c * kc)) ** 2)
+            + ((delta_hp / (s_h * kh)) ** 2)
+            + r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh))
+        )
+
+        if use_cie2000_cache:
+            cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
+            cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
+
+        # I used this once to build some test cases for TestDeltaCIE2000
+        '''
+        with open("/tmp/foobar.txt", "a") as fh:
+            fh.write("""
+            def test_%d_%d_%d_vs_%d_%d_%d(self):
+                lab1 = rgb2lab((%d, %d, %d))
+                lab2 = rgb2lab((%d, %d, %d))
+                delta_e = delta_e_cie2000(lab1, lab2)
+                self.assertEqual(delta_e, %s)
+    """ % ( lab1.red, lab1.green, lab1.blue,
+            lab2.red, lab2.green, lab2.blue,
+            lab1.red, lab1.green, lab1.blue,
+            lab2.red, lab2.green, lab2.blue,
+            delta_e))
+        '''
+
+        return delta_e
 
 
 cie2000_cache = {}
@@ -139,6 +284,7 @@ def permutations(iterable, r=None):
             return
 
 
+@timed_function
 def median(list_foo):
     list_foo = sorted(list_foo)
     list_foo_len = len(list_foo)
@@ -158,142 +304,7 @@ def median(list_foo):
         return list_foo[int((list_foo_len - 1) / 2)]
 
 
-def get_euclidean_lab_distance(lab1, lab2):
-    """
-    http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
-
-    In mathematics, the Euclidean distance or Euclidean metric is the "ordinary"
-    (i.e. straight-line) distance between two points in Euclidean space. With this
-    distance, Euclidean space becomes a metric space. The associated norm is called
-    the Euclidean norm.
-    """
-    return sqrt(
-        ((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2)
-    )
-
-
-def delta_e_cie2000(lab1, lab2):
-    """
-    Ported from this php implementation
-    https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
-    """
-    l1 = lab1.L
-    a1 = lab1.a
-    b1 = lab1.b
-
-    l2 = lab2.L
-    a2 = lab2.a
-    b2 = lab2.b
-
-    if use_cie2000_cache:
-        delta_e = cie2000_cache.get((l1, a1, b1, l2, a2, b2))
-
-        if delta_e is not None:
-            return delta_e
-
-        delta_e = cie2000_cache.get((l2, a2, b2, l1, a1, b1))
-
-        if delta_e is not None:
-            return delta_e
-
-    avg_lp = (l1 + l2) / 2.0
-    c1 = sqrt(a1 ** 2 + b1 ** 2)
-    c2 = sqrt(a2 ** 2 + b2 ** 2)
-    avg_c = (c1 + c2) / 2.0
-    g = (1 - sqrt(avg_c ** 7 / (avg_c ** 7 + 25 ** 7))) / 2.0
-    a1p = a1 * (1 + g)
-    a2p = a2 * (1 + g)
-    c1p = sqrt(a1p ** 2 + b1 ** 2)
-    c2p = sqrt(a2p ** 2 + b2 ** 2)
-    avg_cp = (c1p + c2p) / 2.0
-    h1p = degrees(atan2(b1, a1p))
-
-    if h1p < 0:
-        h1p += 360
-
-    h2p = degrees(atan2(b2, a2p))
-
-    if h2p < 0:
-        h2p += 360
-
-    if abs(h1p - h2p) > 180:
-        avg_hp = (h1p + h2p + 360) / 2.0
-    else:
-        avg_hp = (h1p + h2p) / 2.0
-
-    t = (
-        1
-        - 0.17 * cos(radians(avg_hp - 30))
-        + 0.24 * cos(radians(2 * avg_hp))
-        + 0.32 * cos(radians(3 * avg_hp + 6))
-        - 0.2 * cos(radians(4 * avg_hp - 63))
-    )
-    delta_hp = h2p - h1p
-
-    if abs(delta_hp) > 180:
-        if h2p <= h1p:
-            delta_hp += 360
-        else:
-            delta_hp -= 360
-
-    delta_lp = l2 - l1
-    delta_cp = c2p - c1p
-    delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
-    s_l = 1 + ((0.015 * ((avg_lp - 50) ** 2)) / sqrt(20 + ((avg_lp - 50) ** 2)))
-    s_c = 1 + 0.045 * avg_cp
-    s_h = 1 + 0.015 * avg_cp * t
-
-    delta_ro = 30 * exp(-((((avg_hp - 275) / 25.0) ** 2)))
-
-    r_c = 2 * sqrt((avg_cp ** 7) / ((avg_cp ** 7) + (25 ** 7)))
-    r_t = -r_c * sin(2 * radians(delta_ro))
-    kl = 1.0
-    kc = 1.0
-    kh = 1.0
-    delta_e = sqrt(
-        ((delta_lp / (s_l * kl)) ** 2)
-        + ((delta_cp / (s_c * kc)) ** 2)
-        + ((delta_hp / (s_h * kh)) ** 2)
-        + r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh))
-    )
-
-    if use_cie2000_cache:
-        cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
-        cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
-
-    # I used this once to build some test cases for TestDeltaCIE2000
-    '''
-    with open("/tmp/foobar.txt", "a") as fh:
-        fh.write("""
-        def test_%d_%d_%d_vs_%d_%d_%d(self):
-            lab1 = rgb2lab((%d, %d, %d))
-            lab2 = rgb2lab((%d, %d, %d))
-            delta_e = delta_e_cie2000(lab1, lab2)
-            self.assertEqual(delta_e, %s)
-""" % ( lab1.red, lab1.green, lab1.blue,
-        lab2.red, lab2.green, lab2.blue,
-        lab1.red, lab1.green, lab1.blue,
-        lab2.red, lab2.green, lab2.blue,
-        delta_e))
-    '''
-
-    return delta_e
-
-
-def get_lab_distance(lab1, lab2):
-
-    if LAB_DISTANCE_ALGORITHM == "cie2000":
-        distance = delta_e_cie2000(lab1, lab2)
-
-    elif LAB_DISTANCE_ALGORITHM == "euclidean":
-        distance = get_euclidean_lab_distance(lab1, lab2)
-
-    else:
-        raise Exception("Invalid LAB_DISTANCE_ALGORITHM %s" % LAB_DISTANCE_ALGORITHM)
-
-    return distance
-
-
+@timed_function
 def find_index_for_value(list_foo, target, min_index):
     for (index, value) in enumerate(list_foo):
         if value == target and index >= min_index:
@@ -301,6 +312,7 @@ def find_index_for_value(list_foo, target, min_index):
     raise ListMissingValue("Did not find %s in list %s".format(target, list_foo))
 
 
+@timed_function
 def get_swap_count(listA, listB, debug=False):
     """
     How many swaps do we have to make in listB for it to match listA
@@ -354,18 +366,21 @@ def get_swap_count(listA, listB, debug=False):
     return swaps
 
 
+@timed_function
 def traveling_salesman(squares):
+    ref_get_lab_distance = get_lab_distance
 
     # build a full matrix of color to color distances
     len_squares = len(squares)
     matrix = [[0 for i in range(len_squares)] for j in range(len_squares)]
+    r_len_squares = range(len_squares)
 
-    for x in range(len_squares):
+    for x in r_len_squares:
         x_square = squares[x]
         (x_red, x_green, x_blue) = x_square.rgb
         x_lab = x_square.lab
 
-        for y in range(len_squares):
+        for y in r_len_squares:
 
             if x == y:
                 matrix[x][y] = 0
@@ -379,7 +394,7 @@ def traveling_salesman(squares):
             (y_red, y_green, y_blue) = y_square.rgb
             y_lab = y_square.lab
 
-            distance = get_lab_distance(x_lab, y_lab)
+            distance = ref_get_lab_distance(x_lab, y_lab)
             matrix[x][y] = distance
             matrix[y][x] = distance
 
@@ -392,6 +407,7 @@ def traveling_salesman(squares):
     return [squares[x] for x in path]
 
 
+@timed_function
 def get_important_square_indexes(size):
     squares_per_side = size * size
     max_square = squares_per_side * 6
@@ -410,6 +426,7 @@ def get_important_square_indexes(size):
 
 class LabColor(object):
 
+    @timed_function
     def __init__(self, L, a, b, red, green, blue):
         self.L = L
         self.a = a
@@ -434,6 +451,7 @@ class LabColor(object):
         return self.b < other.b
 
 
+@timed_function
 def rgb2lab(inputColor):
     (red, green, blue) = inputColor
 
@@ -499,6 +517,7 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
+@timed_function
 def hex_to_rgb(rgb_string):
     """
     Takes #112233 and returns the RGB values in decimal
@@ -512,6 +531,7 @@ def hex_to_rgb(rgb_string):
     return (red, green, blue)
 
 
+@timed_function
 def hashtag_rgb_to_labcolor(rgb_string):
     (red, green, blue) = hex_to_rgb(rgb_string)
     return rgb2lab((red, green, blue))
@@ -538,6 +558,7 @@ crayola_colors = {
 }
 
 
+@timed_function
 def get_row_color_distances(squares, row_baseline_lab):
     """
     'colors' is list if (index, (red, green, blue)) tuples
@@ -545,6 +566,7 @@ def get_row_color_distances(squares, row_baseline_lab):
 
     Return the total distance of the colors in a row vs their baseline
     """
+    ref_get_lab_distance = get_lab_distance
     results = []
     squares_per_row = int(len(squares) / 6)
     count = 0
@@ -554,7 +576,7 @@ def get_row_color_distances(squares, row_baseline_lab):
 
     for square in squares:
         baseline_lab = row_baseline_lab[row_index]
-        distance += get_lab_distance(baseline_lab, square.lab)
+        distance += ref_get_lab_distance(baseline_lab, square.lab)
         count += 1
 
         if count % squares_per_row == 0:
@@ -565,6 +587,7 @@ def get_row_color_distances(squares, row_baseline_lab):
     return results
 
 
+@timed_function
 def get_squares_for_row(squares, target_row_index):
     results = []
     squares_per_row = int(len(squares) / 6)
@@ -582,6 +605,7 @@ def get_squares_for_row(squares, target_row_index):
     return results
 
 
+@timed_function
 def rgb_list_to_lab(rgbs):
     reds = array.array("B")
     greens = array.array("B")
@@ -702,6 +726,7 @@ class Side(object):
     def __repr__(self):
         return self.__str__()
 
+    @timed_function
     def set_square(self, position, red, green, blue):
         self.squares[position] = Square(self, self.cube, position, red, green, blue)
 
@@ -717,6 +742,7 @@ class Side(object):
         else:
             raise Exception("Could not determine egde vs corner vs center")
 
+    @timed_function
     def calculate_wing_partners(self):
         for (pos1, pos2) in self.cube.all_edge_positions:
             if pos1 >= self.min_pos and pos1 <= self.max_pos:
@@ -724,6 +750,7 @@ class Side(object):
             elif pos2 >= self.min_pos and pos2 <= self.max_pos:
                 self.wing_partner[pos2] = pos1
 
+    @timed_function
     def get_wing_partner(self, wing_index):
         try:
             return self.wing_partner[wing_index]
@@ -836,6 +863,7 @@ class RubiksColorSolverGeneric(object):
 
         self.www_header()
 
+    @timed_function
     def www_header(self):
         """
         Write the <head> including css
@@ -939,6 +967,7 @@ div#colormapping {
                 )
             )
 
+    @timed_function
     def write_colors(self, desc, squares):
         with open(HTML_FILENAME, "a") as fh:
             squares_per_row = int(len(squares) / 6)
@@ -972,6 +1001,7 @@ div#colormapping {
                     fh.write("<br>")
             fh.write("</div>\n")
 
+    @timed_function
     def www_footer(self):
         with open(HTML_FILENAME, "a") as fh:
             fh.write(
@@ -981,6 +1011,7 @@ div#colormapping {
 """
             )
 
+    @timed_function
     def get_side(self, position):
         """
         Given a position on the cube return the Side object
@@ -991,13 +1022,16 @@ div#colormapping {
                 return side
         raise Exception("Could not find side for %d" % position)
 
+    @timed_function
     def get_square(self, position):
         side = self.get_side(position)
         return side.squares[position]
 
+    @timed_function
     def enter_scan_data(self, scan_data):
 
         for (position, (red, green, blue)) in scan_data.items():
+            # dwalton I do not think this int() is needed
             position = int(position)
             side = self.get_side(position)
             side.set_square(position, red, green, blue)
@@ -1006,6 +1040,7 @@ div#colormapping {
             fh.write("<h1>JSON Input</h1>\n")
             fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
 
+    @timed_function
     def write_cube(self, desc, use_html_colors):
         # TODO clean this up...should not need the 'cube' var
         cube = ["dummy"]
@@ -1075,6 +1110,7 @@ div#colormapping {
                 if col == self.width + 1:
                     col = 1
 
+    @timed_function
     def print_cube(self):
         data = []
         for x in range(3 * self.height):
@@ -1121,6 +1157,7 @@ div#colormapping {
 
         #log.info("Cube\n\n%s\n" % "\n".join(output))
 
+    @timed_function
     def write_color_box(self):
         with open(HTML_FILENAME, "a") as fh:
             fh.write("<h2>color_box</h2>\n")
@@ -1148,8 +1185,10 @@ div#colormapping {
             fh.write("<br>")
             fh.write("</div>\n")
 
+    @timed_function
     def set_state(self):
         self.state = []
+        ref_get_lab_distance = get_lab_distance
 
         # odd cube
         if self.sideU.mid_pos is not None:
@@ -1174,7 +1213,7 @@ div#colormapping {
                 for (index, center_square) in enumerate(center_squares):
                     color_name = permutation[index]
                     color_obj = crayola_colors[color_name]
-                    distance += get_lab_distance(center_square.lab, color_obj)
+                    distance += ref_get_lab_distance(center_square.lab, color_obj)
 
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
@@ -1211,6 +1250,7 @@ div#colormapping {
                 square = side.squares[x]
                 square.side_name = self.color_to_side_name[square.color_name]
 
+    @timed_function
     def cube_for_kociemba_strict(self):
         #log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
         data = []
@@ -1221,6 +1261,7 @@ div#colormapping {
 
         return data
 
+    @timed_function
     def cube_for_json(self):
         """
         Return a dictionary of the cube data so that we can json dump it
@@ -1240,9 +1281,11 @@ div#colormapping {
 
         return data
 
+    @timed_function
     def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
         assert color_permutations
         assert color_box
+        ref_get_lab_distance = get_lab_distance
 
         # log.info(f"assign_color_names for '{desc}'")
         # log.info(f"squares_lists_all {squares_lists_all}")
@@ -1277,7 +1320,7 @@ div#colormapping {
             for (index, squares_list) in enumerate(squares_lists):
                 distance = 0
                 for square in squares_list:
-                    distance += get_lab_distance(square.lab, color_lab)
+                    distance += ref_get_lab_distance(square.lab, color_lab)
                 distances_of_square_list_per_color[color_name].append(int(distance))
             distances_of_square_list_per_color[color_name] = tuple(distances_of_square_list_per_color[color_name])
 
@@ -1333,6 +1376,7 @@ div#colormapping {
             for square in squares_list:
                 square.color_name = color_name
 
+    @timed_function
     def resolve_color_box(self):
         """
         Assign names to the corner squares, use crayola colors as reference point.
@@ -1395,6 +1439,7 @@ div#colormapping {
         self.orange_baseline = self.color_box["OR"]
         self.red_baseline = self.color_box["Rd"]
 
+    @timed_function
     def resolve_corner_squares(self):
         """
         Assign names to the corner squares
@@ -1419,6 +1464,7 @@ div#colormapping {
         self.sanity_check_corner_squares()
         self.write_colors("corners", sorted_corner_squares)
 
+    @timed_function
     def validate_edge_orbit(self, orbit_id):
 
         if self.width == 2:
@@ -1469,6 +1515,7 @@ div#colormapping {
         # assert valid, "Cube is invalid"
         return valid
 
+    @timed_function
     def find_corners_by_color(self):
         green_white_corners = []
         green_yellow_corners = []
@@ -1519,6 +1566,7 @@ div#colormapping {
             blue_yellow_corners,
         )
 
+    @timed_function
     def find_edges_by_color(self, orbit_id):
 
         if self.width == 2:
@@ -1590,7 +1638,9 @@ div#colormapping {
             yellow_red_or_orange_edges,
         )
 
+    @timed_function
     def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
+        ref_get_lab_distance = get_lab_distance
 
         def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
 
@@ -1622,11 +1672,11 @@ div#colormapping {
                     red_orange = red_orange_permutation[index]
 
                     if red_orange == "OR":
-                        distance += get_lab_distance(
+                        distance += ref_get_lab_distance(
                             partner_square.lab, self.orange_baseline
                         )
                     elif red_orange == "Rd":
-                        distance += get_lab_distance(
+                        distance += ref_get_lab_distance(
                             partner_square.lab, self.red_baseline
                         )
                     else:
@@ -1737,6 +1787,7 @@ div#colormapping {
 
         self.validate_edge_orbit(target_orbit_id)
 
+    @timed_function
     def get_high_low_per_edge_color(self, target_orbit_id):
 
         if self.width == 2:
@@ -1790,10 +1841,12 @@ div#colormapping {
         # log.info("")
         return high_low_per_edge_color
 
+    @timed_function
     def sanity_check_edge_squares(self):
         for orbit_id in range(self.orbits):
             self.sanity_check_edges_red_orange_count_for_orbit(orbit_id)
 
+    @timed_function
     def resolve_edge_squares(self):
         """
         Use traveling salesman algorithm to sort the colors
@@ -1836,6 +1889,7 @@ div#colormapping {
             )
             self.write_colors("edges - orbit %d" % target_orbit_id, sorted_edge_squares)
 
+    @timed_function
     def assign_green_white_corners(self, green_white_corners):
         # log.info("Gr/Wh corner tuples %s".format(green_white_corners))
         valid_green_orange_white = (
@@ -1892,6 +1946,7 @@ div#colormapping {
                     #    "change Gr/Wh corner partner %s from Rd to OR" % corner3
                     #)
 
+    @timed_function
     def assign_green_yellow_corners(self, green_yellow_corners):
         valid_green_yellow_orange = (
             ["Gr", "Ye", "OR"],
@@ -1948,6 +2003,7 @@ div#colormapping {
                     #    "change Gr/Ye corner partner %s from Rd to OR" % corner3
                     #)
 
+    @timed_function
     def assign_blue_white_corners(self, blue_white_corners):
         # log.info("Bu/Wh corner tuples %s".format(blue_white_corners))
         valid_blue_white_orange = (
@@ -2005,6 +2061,7 @@ div#colormapping {
                     #    "change Bu/Wh corner partner %s from Rd to OR" % corner3
                     #)
 
+    @timed_function
     def assign_blue_yellow_corners(self, blue_yellow_corners):
         valid_blue_yellow_red = (
             ["Bu", "Ye", "Rd"],
@@ -2061,6 +2118,7 @@ div#colormapping {
                     #    "change Bu/Ye corner partner %s from Rd to OR" % corner3
                     #)
 
+    @timed_function
     def sanity_check_corner_squares(self):
         (
             green_white_corners,
@@ -2073,6 +2131,7 @@ div#colormapping {
         self.assign_blue_white_corners(blue_white_corners)
         self.assign_blue_yellow_corners(blue_yellow_corners)
 
+    @timed_function
     def resolve_center_squares(self):
         """
         Use traveling salesman algorithm to sort the squares by color
@@ -2112,6 +2171,7 @@ div#colormapping {
             )
             self.write_colors(desc, sorted_center_squares)
 
+    @timed_function
     def get_corner_swap_count(self, debug=False):
 
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
@@ -2182,16 +2242,19 @@ div#colormapping {
 
         return get_swap_count(needed_corners, current_corners, debug)
 
+    @timed_function
     def corner_swaps_even(self, debug=False):
         if self.get_corner_swap_count(debug) % 2 == 0:
             return True
         return False
 
+    @timed_function
     def corner_swaps_odd(self, debug=False):
         if self.get_corner_swap_count(debug) % 2 == 1:
             return True
         return False
 
+    @timed_function
     def get_edge_swap_count(self, orbit, debug=False):
         needed_edges = []
         to_check = []
@@ -2301,16 +2364,19 @@ div#colormapping {
 
         return get_swap_count(needed_edges, current_edges, debug)
 
+    @timed_function
     def edge_swaps_even(self, orbit, debug):
         if self.get_edge_swap_count(orbit, debug) % 2 == 0:
             return True
         return False
 
+    @timed_function
     def edge_swaps_odd(self, orbit, debug):
         if self.get_edge_swap_count(orbit, debug) % 2 == 1:
             return True
         return False
 
+    @timed_function
     def validate_all_corners_found(self):
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
 
@@ -2373,6 +2439,7 @@ div#colormapping {
             if corner not in current_corners:
                 raise Exception("corner %s is missing".format(corner))
 
+    @timed_function
     def validate_odd_cube_midge_vs_corner_parity(self):
         """
         http://www.ryanheise.com/cube/parity.html
@@ -2393,6 +2460,7 @@ div#colormapping {
             return
 
         debug = False
+        ref_get_lab_distance = get_lab_distance
 
         try:
             edges_even = self.edge_swaps_even(None, debug)
@@ -2459,30 +2527,30 @@ div#colormapping {
         # we can swap orange/red for the blue edges. Which will result in the
         # lowest color distance with our orange/red baselines?
         distance_swap_green_edge = 0
-        distance_swap_green_edge += get_lab_distance(
+        distance_swap_green_edge += ref_get_lab_distance(
             square_blue_orange.lab, self.orange_baseline
         )
-        distance_swap_green_edge += get_lab_distance(
+        distance_swap_green_edge += ref_get_lab_distance(
             square_blue_red.lab, self.red_baseline
         )
-        distance_swap_green_edge += get_lab_distance(
+        distance_swap_green_edge += ref_get_lab_distance(
             square_green_orange.lab, self.red_baseline
         )
-        distance_swap_green_edge += get_lab_distance(
+        distance_swap_green_edge += ref_get_lab_distance(
             square_green_red.lab, self.orange_baseline
         )
 
         distance_swap_blue_edge = 0
-        distance_swap_blue_edge += get_lab_distance(
+        distance_swap_blue_edge += ref_get_lab_distance(
             square_green_orange.lab, self.orange_baseline
         )
-        distance_swap_blue_edge += get_lab_distance(
+        distance_swap_blue_edge += ref_get_lab_distance(
             square_green_red.lab, self.red_baseline
         )
-        distance_swap_blue_edge += get_lab_distance(
+        distance_swap_blue_edge += ref_get_lab_distance(
             square_blue_orange.lab, self.red_baseline
         )
-        distance_swap_blue_edge += get_lab_distance(
+        distance_swap_blue_edge += ref_get_lab_distance(
             square_blue_red.lab, self.orange_baseline
         )
 
@@ -2535,6 +2603,7 @@ div#colormapping {
             % (edges_even, corners_even)
         )
 
+    @timed_function
     def crunch_colors(self):
         self.write_cube("Initial RGB values", False)
 
@@ -2558,7 +2627,14 @@ div#colormapping {
         self.print_cube()
         self.www_footer()
 
+    def print_profile_data(self):
+        print("                     function      calls  time(ms)")
+        print("==============================  ========  ========")
+        for function in profile_stats_calls.keys():
+            print("{:>30}  {:>8}  {:>8.2f}".format(function, profile_stats_calls[function], profile_stats_time[function] / 1000))
 
+
+@timed_function
 def resolve_colors(argv):
     help_string = """usage: rubiks-color-resolver.py [-h] [-j] [--filename FILENAME] [--rgb RGB]
 
@@ -2613,6 +2689,7 @@ def resolve_colors(argv):
     cube = RubiksColorSolverGeneric(width)
     cube.enter_scan_data(scan_data)
     cube.crunch_colors()
+    cube.print_profile_data()
 
     if use_json:
         result = json_dumps(cube.cube_for_json(), indent=4, sort_keys=True)
