@@ -4,8 +4,10 @@ https://github.com/dmishin/tsp-solver/blob/master/tsp_solver/greedy.py
 """
 
 from array import array as pyarray
+from rubikscolorresolver.profile import timed_function
 
 
+@timed_function
 def optimize_solution(distances, connections, endpoints):
     """
     Tries to optimize solution, found by the greedy algorithm
@@ -49,6 +51,7 @@ def optimize_solution(distances, connections, endpoints):
     return (optimizations, d_total)
 
 
+@timed_function
 def restore_path(connections, endpoints):
     """
     Takes array of connections and returns a path.
@@ -79,6 +82,7 @@ def restore_path(connections, endpoints):
     return path
 
 
+@timed_function
 def pairs_by_dist(N, distances):
     """
     returns list of coordinate pairs (i,j), sorted by distances; such that i < j
@@ -95,6 +99,7 @@ def pairs_by_dist(N, distances):
     return ((ij // N, ij % N) for ij in indices)
 
 
+@timed_function
 def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=None):
     """
     Given a distance matrix, finds a solution for the TSP problem.
