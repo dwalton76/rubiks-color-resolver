@@ -208,7 +208,8 @@ for (desc, filename, expected) in test_cases:
         except Exception as e:
             print(e)
             log.exception(str(e))
-            output = "Exception"
+            #output = "Exception"
+            output = e
 
         if output == expected:
             results.append("\033[92mPASS\033[0m: %s" % desc)
@@ -217,6 +218,7 @@ for (desc, filename, expected) in test_cases:
             results.append("   expected %s" % expected)
             results.append("   output   %s" % output)
 
+        cube = None
         gc.collect()
 
 print("\n".join(results))

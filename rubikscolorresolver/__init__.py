@@ -2,9 +2,9 @@
 import array
 import gc
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
-from rubikscolorresolver.tsp_solver_greedy import solve_tsp  # takes about 7k
+from rubikscolorresolver.tsp_solver_greedy import solve_tsp
+from rubikscolorresolver.profile import timed_function, profile_stats_time, profile_stats_calls
 import sys
-import utime
 
 if sys.version_info < (3, 4):
     raise SystemError("Must be using Python 3.4 or higher")
@@ -12,29 +12,6 @@ if sys.version_info < (3, 4):
 
 def is_micropython():
     return sys.implementation.name == "micropython"
-
-
-profile_stats_time = {}
-profile_stats_calls = {}
-
-
-def timed_function(f, *args, **kwargs):
-    myname = str(f).split(' ')[1]
-
-    def new_func(*args, **kwargs):
-        t = utime.ticks_us()
-        result = f(*args, **kwargs)
-
-        if myname not in profile_stats_time:
-            profile_stats_time[myname] = 0
-            profile_stats_calls[myname] = 0
-
-        profile_stats_time[myname] += utime.ticks_diff(utime.ticks_us(), t)
-        profile_stats_calls[myname] += 1
-
-        return result
-
-    return new_func
 
 
 if is_micropython():
@@ -635,7 +612,10 @@ class Square(object):
         self.side_name = None  # ULFRBD
 
     def __str__(self):
-        return "%s%d" % (self.side, self.position)
+        return "{}{}-{}".format(self.side, self.position, self.color_name)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __lt__(self, other):
         return self.position < other.position
@@ -721,7 +701,7 @@ class Side(object):
                     self.center_pos.append(x)
 
     def __str__(self):
-        return "side-" + self.name
+        return "side-{}".format(self.name)
 
     def __repr__(self):
         return self.__str__()
@@ -757,6 +737,29 @@ class Side(object):
         except KeyError:
             #log.info("wing_partner\n%s\n".format(self.wing_partner))
             raise
+
+
+def get_most_confident_matches(distances_of_square_list_per_color):
+    deltas = []
+
+    for (color_name, distances) in distances_of_square_list_per_color.items():
+        sorted_distances = sorted(distances)
+        delta = sorted_distances[1] - sorted_distances[0]
+        min_distance_index = distances.index(sorted_distances[0])
+        deltas.append((delta, color_name, min_distance_index))
+        # print("color_name {} delta {}".format(color_name, delta))
+
+    deltas = list(reversed(sorted(deltas)))
+    first_place = deltas[0][1]
+    first_place_index = deltas[0][2]
+
+    second_place = deltas[1][1]
+    second_place_index = deltas[1][2]
+
+    all_others = [deltas[2][1], deltas[3][1], deltas[4][1], deltas[5][1]]
+    print("deltas {}".format(deltas))
+
+    return (first_place, first_place_index, second_place, second_place_index, all_others)
 
 
 class RubiksColorSolverGeneric(object):
@@ -1031,7 +1034,6 @@ div#colormapping {
     def enter_scan_data(self, scan_data):
 
         for (position, (red, green, blue)) in scan_data.items():
-            # dwalton I do not think this int() is needed
             position = int(position)
             side = self.get_side(position)
             side.set_square(position, red, green, blue)
@@ -1157,13 +1159,13 @@ div#colormapping {
 
         #log.info("Cube\n\n%s\n" % "\n".join(output))
 
-    @timed_function
-    def write_color_box(self):
+    def _write_colors(self, desc, box):
         with open(HTML_FILENAME, "a") as fh:
-            fh.write("<h2>color_box</h2>\n")
+            fh.write("<h2>{}</h2>\n".format(desc))
             fh.write("<div class='clear colors'>\n")
+
             for color_name in ("Wh", "Ye", "Gr", "Bu", "OR", "Rd"):
-                lab = self.color_box[color_name]
+                lab = box[color_name]
 
                 fh.write(
                     "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%s</span>\n"
@@ -1181,9 +1183,16 @@ div#colormapping {
                         color_name,
                     )
                 )
-
             fh.write("<br>")
             fh.write("</div>\n")
+
+    @timed_function
+    def write_crayola_colors(self):
+        self._write_colors("crayola box", crayola_colors)
+
+    @timed_function
+    def write_color_box(self):
+        self._write_colors("color_box", self.color_box)
 
     @timed_function
     def set_state(self):
@@ -1283,6 +1292,7 @@ div#colormapping {
 
     @timed_function
     def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
+        # print("assign_color_names '{}' via {}".format(desc, color_permutations))
         assert color_permutations
         assert color_box
         ref_get_lab_distance = get_lab_distance
@@ -1304,8 +1314,8 @@ div#colormapping {
             if len(square_list) == squares_per_row:
                 squares_lists.append(tuple(square_list))
                 square_list = []
-
         #print("squares_lists\n    {}\n".format("\n    ".join(map(str, squares_lists))))
+
         # Assign a color name to each squares in each square_list. Compute
         # which naming scheme results in the least total color distance in
         # terms of the assigned color name vs. the colors in color_box.
@@ -1324,11 +1334,11 @@ div#colormapping {
                 distances_of_square_list_per_color[color_name].append(int(distance))
             distances_of_square_list_per_color[color_name] = tuple(distances_of_square_list_per_color[color_name])
 
-        #for color_name in (Wh, Ye, OR, Rd, Gr, Bu):
+        #for color_name in ("Wh", "Ye", "OR", "Rd", "Gr", "Bu"):
         #    print("distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
+        #print("")
 
         if color_permutations == "even_cube_center_color_permutations":
-
             #for (permutation_index, permutation) in enumerate(permutations((Wh, Ye, OR, Rd, Gr, Bu))):
             for permutation in permutations(("Wh", "Ye", "OR", "Rd", "Gr", "Bu")):
                 distance = (
@@ -1343,10 +1353,57 @@ div#colormapping {
                 if distance < min_distance:
                     min_distance = distance
                     min_distance_permutation = permutation
-                #    print("{} PERMUTATION {} -  {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
+                #    print("{} PERMUTATION {} - {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
                 #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
                 # else:
                 #    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+
+
+            # Experiment that I am leaving in but commented out for now.  Instead of running through
+            # all 6! or 720 permutations this pulled out the two colors that we were most confident about.
+            # This allowed us to oly run through 4! or 24 permutations.  This failed for some test cubes
+            # and this isn't nearly as clean so am not using this for now.
+            '''
+            (first_place, first_place_index, second_place, second_place_index, all_others) = get_most_confident_matches(distances_of_square_list_per_color)
+            print("first_place {}, first_place_index {}, second_place {}, second_place_index {}, all_others {}".format(
+                first_place, first_place_index, second_place, second_place_index, all_others))
+
+            indexes_to_insert = list(sorted(((first_place_index, first_place), (second_place_index, second_place))))
+            indexes_to_remove = list(reversed(sorted((first_place_index, second_place_index))))
+            print("indexes_to_insert {}".format(indexes_to_insert))
+            print("indexes_to_remove {}".format(indexes_to_remove))
+
+            del distances_of_square_list_per_color[first_place]
+            del distances_of_square_list_per_color[second_place]
+
+            for (color_name, distances) in distances_of_square_list_per_color.items():
+                for index in indexes_to_remove:
+                    del distances[index]
+
+            for color_name in all_others:
+                print("distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
+            print("")
+
+            for (permutation_index, permutation) in enumerate(permutations(all_others)):
+                distance = (
+                    distances_of_square_list_per_color[permutation[0]][0] +
+                    distances_of_square_list_per_color[permutation[1]][1] +
+                    distances_of_square_list_per_color[permutation[2]][2] +
+                    distances_of_square_list_per_color[permutation[3]][3]
+                )
+
+                if distance < min_distance:
+                    min_distance = distance
+                    min_distance_permutation = permutation
+                    print("{} PERMUTATION {} - {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
+                #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
+                else:
+                    print("{} PERMUTATION {} - {}, DISTANCE {}".format(desc, permutation_index, permutation, distance))
+                    #log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+
+            for (index, color_name) in indexes_to_insert:
+                min_distance_permutation.insert(index, color_name)
+            '''
 
         elif color_permutations == "odd_cube_center_color_permutations":
 
@@ -1367,6 +1424,7 @@ div#colormapping {
                 #    print("{} PERMUTATION {} -  {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
                 #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
                 # else:
+                #    print("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
                 #    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
 
         # Assign the color name to the Square object
@@ -1381,12 +1439,15 @@ div#colormapping {
         """
         Assign names to the corner squares, use crayola colors as reference point.
 
+        For odd cubes another option here would be to only use the 6 center squares.
+        This ends up being less reliable though because in that scenario we only have
+        one square for each color where if we use the corners we have 4 squares for
+        each color and can take the median to get a more accurate color.
+
         We use these name assignments to build our "color_box" which will be our
         references Wh, Ye, OR, Rd, Gr, Bu colors for assigning color names to edge
         and center squares.
         """
-        #log.debug("\n\n\n\n")
-        #log.info("Resolve color_box")
         corner_squares = []
 
         for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
@@ -1395,7 +1456,7 @@ div#colormapping {
 
         sorted_corner_squares = traveling_salesman(corner_squares)
         self.assign_color_names(
-            "corners",
+            "corners for color_box",
             sorted_corner_squares,
             "even_cube_center_color_permutations",
             crayola_colors,
@@ -2606,6 +2667,7 @@ div#colormapping {
     @timed_function
     def crunch_colors(self):
         self.write_cube("Initial RGB values", False)
+        self.write_crayola_colors()
 
         self.resolve_color_box()
         self.write_color_box()
