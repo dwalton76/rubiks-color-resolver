@@ -3,7 +3,7 @@ import array
 import gc
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 from rubikscolorresolver.tsp_solver_greedy import solve_tsp
-from rubikscolorresolver.profile import timed_function, profile_stats_time, profile_stats_calls
+from rubikscolorresolver.profile import timed_function, print_profile_data
 import sys
 
 if sys.version_info < (3, 4):
@@ -2690,10 +2690,7 @@ div#colormapping {
         self.www_footer()
 
     def print_profile_data(self):
-        print("                     function      calls  time(ms)")
-        print("==============================  ========  ========")
-        for function in profile_stats_calls.keys():
-            print("{:>30}  {:>8}  {:>8.2f}".format(function, profile_stats_calls[function], profile_stats_time[function] / 1000))
+        print_profile_data()
 
 
 @timed_function

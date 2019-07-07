@@ -46,3 +46,15 @@ else:
             return result
 
         return new_func
+
+
+def print_profile_data():
+    print("time(ms)     calls  function")
+    print("========  ========  =======================")
+    lines = []
+    for function in profile_stats_calls.keys():
+        lines.append("{:>8.2f}  {:>8}  {}".format(profile_stats_time[function] / 1000, profile_stats_calls[function], function))
+
+    lines = sorted(lines)
+    print("\n".join(lines))
+
