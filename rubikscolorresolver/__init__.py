@@ -217,8 +217,728 @@ odd_cube_center_color_permutations = (
     ("Bu", "OR", "Wh", "Rd", "Ye", "Gr"),
 )
 
-even_cube_center_color_permutations = list(sorted(permutations(ALL_COLORS)))
-len_even_cube_center_color_permutations = len(even_cube_center_color_permutations)
+#even_cube_center_color_permutations = list(sorted(permutations(ALL_COLORS)))
+even_cube_center_color_permutations = """Bu Gr OR Rd Wh Ye
+Bu Gr OR Rd Ye Wh
+Bu Gr OR Wh Rd Ye
+Bu Gr OR Wh Ye Rd
+Bu Gr OR Ye Rd Wh
+Bu Gr OR Ye Wh Rd
+Bu Gr Rd OR Wh Ye
+Bu Gr Rd OR Ye Wh
+Bu Gr Rd Wh OR Ye
+Bu Gr Rd Wh Ye OR
+Bu Gr Rd Ye OR Wh
+Bu Gr Rd Ye Wh OR
+Bu Gr Wh OR Rd Ye
+Bu Gr Wh OR Ye Rd
+Bu Gr Wh Rd OR Ye
+Bu Gr Wh Rd Ye OR
+Bu Gr Wh Ye OR Rd
+Bu Gr Wh Ye Rd OR
+Bu Gr Ye OR Rd Wh
+Bu Gr Ye OR Wh Rd
+Bu Gr Ye Rd OR Wh
+Bu Gr Ye Rd Wh OR
+Bu Gr Ye Wh OR Rd
+Bu Gr Ye Wh Rd OR
+Bu OR Gr Rd Wh Ye
+Bu OR Gr Rd Ye Wh
+Bu OR Gr Wh Rd Ye
+Bu OR Gr Wh Ye Rd
+Bu OR Gr Ye Rd Wh
+Bu OR Gr Ye Wh Rd
+Bu OR Rd Gr Wh Ye
+Bu OR Rd Gr Ye Wh
+Bu OR Rd Wh Gr Ye
+Bu OR Rd Wh Ye Gr
+Bu OR Rd Ye Gr Wh
+Bu OR Rd Ye Wh Gr
+Bu OR Wh Gr Rd Ye
+Bu OR Wh Gr Ye Rd
+Bu OR Wh Rd Gr Ye
+Bu OR Wh Rd Ye Gr
+Bu OR Wh Ye Gr Rd
+Bu OR Wh Ye Rd Gr
+Bu OR Ye Gr Rd Wh
+Bu OR Ye Gr Wh Rd
+Bu OR Ye Rd Gr Wh
+Bu OR Ye Rd Wh Gr
+Bu OR Ye Wh Gr Rd
+Bu OR Ye Wh Rd Gr
+Bu Rd Gr OR Wh Ye
+Bu Rd Gr OR Ye Wh
+Bu Rd Gr Wh OR Ye
+Bu Rd Gr Wh Ye OR
+Bu Rd Gr Ye OR Wh
+Bu Rd Gr Ye Wh OR
+Bu Rd OR Gr Wh Ye
+Bu Rd OR Gr Ye Wh
+Bu Rd OR Wh Gr Ye
+Bu Rd OR Wh Ye Gr
+Bu Rd OR Ye Gr Wh
+Bu Rd OR Ye Wh Gr
+Bu Rd Wh Gr OR Ye
+Bu Rd Wh Gr Ye OR
+Bu Rd Wh OR Gr Ye
+Bu Rd Wh OR Ye Gr
+Bu Rd Wh Ye Gr OR
+Bu Rd Wh Ye OR Gr
+Bu Rd Ye Gr OR Wh
+Bu Rd Ye Gr Wh OR
+Bu Rd Ye OR Gr Wh
+Bu Rd Ye OR Wh Gr
+Bu Rd Ye Wh Gr OR
+Bu Rd Ye Wh OR Gr
+Bu Wh Gr OR Rd Ye
+Bu Wh Gr OR Ye Rd
+Bu Wh Gr Rd OR Ye
+Bu Wh Gr Rd Ye OR
+Bu Wh Gr Ye OR Rd
+Bu Wh Gr Ye Rd OR
+Bu Wh OR Gr Rd Ye
+Bu Wh OR Gr Ye Rd
+Bu Wh OR Rd Gr Ye
+Bu Wh OR Rd Ye Gr
+Bu Wh OR Ye Gr Rd
+Bu Wh OR Ye Rd Gr
+Bu Wh Rd Gr OR Ye
+Bu Wh Rd Gr Ye OR
+Bu Wh Rd OR Gr Ye
+Bu Wh Rd OR Ye Gr
+Bu Wh Rd Ye Gr OR
+Bu Wh Rd Ye OR Gr
+Bu Wh Ye Gr OR Rd
+Bu Wh Ye Gr Rd OR
+Bu Wh Ye OR Gr Rd
+Bu Wh Ye OR Rd Gr
+Bu Wh Ye Rd Gr OR
+Bu Wh Ye Rd OR Gr
+Bu Ye Gr OR Rd Wh
+Bu Ye Gr OR Wh Rd
+Bu Ye Gr Rd OR Wh
+Bu Ye Gr Rd Wh OR
+Bu Ye Gr Wh OR Rd
+Bu Ye Gr Wh Rd OR
+Bu Ye OR Gr Rd Wh
+Bu Ye OR Gr Wh Rd
+Bu Ye OR Rd Gr Wh
+Bu Ye OR Rd Wh Gr
+Bu Ye OR Wh Gr Rd
+Bu Ye OR Wh Rd Gr
+Bu Ye Rd Gr OR Wh
+Bu Ye Rd Gr Wh OR
+Bu Ye Rd OR Gr Wh
+Bu Ye Rd OR Wh Gr
+Bu Ye Rd Wh Gr OR
+Bu Ye Rd Wh OR Gr
+Bu Ye Wh Gr OR Rd
+Bu Ye Wh Gr Rd OR
+Bu Ye Wh OR Gr Rd
+Bu Ye Wh OR Rd Gr
+Bu Ye Wh Rd Gr OR
+Bu Ye Wh Rd OR Gr
+Gr Bu OR Rd Wh Ye
+Gr Bu OR Rd Ye Wh
+Gr Bu OR Wh Rd Ye
+Gr Bu OR Wh Ye Rd
+Gr Bu OR Ye Rd Wh
+Gr Bu OR Ye Wh Rd
+Gr Bu Rd OR Wh Ye
+Gr Bu Rd OR Ye Wh
+Gr Bu Rd Wh OR Ye
+Gr Bu Rd Wh Ye OR
+Gr Bu Rd Ye OR Wh
+Gr Bu Rd Ye Wh OR
+Gr Bu Wh OR Rd Ye
+Gr Bu Wh OR Ye Rd
+Gr Bu Wh Rd OR Ye
+Gr Bu Wh Rd Ye OR
+Gr Bu Wh Ye OR Rd
+Gr Bu Wh Ye Rd OR
+Gr Bu Ye OR Rd Wh
+Gr Bu Ye OR Wh Rd
+Gr Bu Ye Rd OR Wh
+Gr Bu Ye Rd Wh OR
+Gr Bu Ye Wh OR Rd
+Gr Bu Ye Wh Rd OR
+Gr OR Bu Rd Wh Ye
+Gr OR Bu Rd Ye Wh
+Gr OR Bu Wh Rd Ye
+Gr OR Bu Wh Ye Rd
+Gr OR Bu Ye Rd Wh
+Gr OR Bu Ye Wh Rd
+Gr OR Rd Bu Wh Ye
+Gr OR Rd Bu Ye Wh
+Gr OR Rd Wh Bu Ye
+Gr OR Rd Wh Ye Bu
+Gr OR Rd Ye Bu Wh
+Gr OR Rd Ye Wh Bu
+Gr OR Wh Bu Rd Ye
+Gr OR Wh Bu Ye Rd
+Gr OR Wh Rd Bu Ye
+Gr OR Wh Rd Ye Bu
+Gr OR Wh Ye Bu Rd
+Gr OR Wh Ye Rd Bu
+Gr OR Ye Bu Rd Wh
+Gr OR Ye Bu Wh Rd
+Gr OR Ye Rd Bu Wh
+Gr OR Ye Rd Wh Bu
+Gr OR Ye Wh Bu Rd
+Gr OR Ye Wh Rd Bu
+Gr Rd Bu OR Wh Ye
+Gr Rd Bu OR Ye Wh
+Gr Rd Bu Wh OR Ye
+Gr Rd Bu Wh Ye OR
+Gr Rd Bu Ye OR Wh
+Gr Rd Bu Ye Wh OR
+Gr Rd OR Bu Wh Ye
+Gr Rd OR Bu Ye Wh
+Gr Rd OR Wh Bu Ye
+Gr Rd OR Wh Ye Bu
+Gr Rd OR Ye Bu Wh
+Gr Rd OR Ye Wh Bu
+Gr Rd Wh Bu OR Ye
+Gr Rd Wh Bu Ye OR
+Gr Rd Wh OR Bu Ye
+Gr Rd Wh OR Ye Bu
+Gr Rd Wh Ye Bu OR
+Gr Rd Wh Ye OR Bu
+Gr Rd Ye Bu OR Wh
+Gr Rd Ye Bu Wh OR
+Gr Rd Ye OR Bu Wh
+Gr Rd Ye OR Wh Bu
+Gr Rd Ye Wh Bu OR
+Gr Rd Ye Wh OR Bu
+Gr Wh Bu OR Rd Ye
+Gr Wh Bu OR Ye Rd
+Gr Wh Bu Rd OR Ye
+Gr Wh Bu Rd Ye OR
+Gr Wh Bu Ye OR Rd
+Gr Wh Bu Ye Rd OR
+Gr Wh OR Bu Rd Ye
+Gr Wh OR Bu Ye Rd
+Gr Wh OR Rd Bu Ye
+Gr Wh OR Rd Ye Bu
+Gr Wh OR Ye Bu Rd
+Gr Wh OR Ye Rd Bu
+Gr Wh Rd Bu OR Ye
+Gr Wh Rd Bu Ye OR
+Gr Wh Rd OR Bu Ye
+Gr Wh Rd OR Ye Bu
+Gr Wh Rd Ye Bu OR
+Gr Wh Rd Ye OR Bu
+Gr Wh Ye Bu OR Rd
+Gr Wh Ye Bu Rd OR
+Gr Wh Ye OR Bu Rd
+Gr Wh Ye OR Rd Bu
+Gr Wh Ye Rd Bu OR
+Gr Wh Ye Rd OR Bu
+Gr Ye Bu OR Rd Wh
+Gr Ye Bu OR Wh Rd
+Gr Ye Bu Rd OR Wh
+Gr Ye Bu Rd Wh OR
+Gr Ye Bu Wh OR Rd
+Gr Ye Bu Wh Rd OR
+Gr Ye OR Bu Rd Wh
+Gr Ye OR Bu Wh Rd
+Gr Ye OR Rd Bu Wh
+Gr Ye OR Rd Wh Bu
+Gr Ye OR Wh Bu Rd
+Gr Ye OR Wh Rd Bu
+Gr Ye Rd Bu OR Wh
+Gr Ye Rd Bu Wh OR
+Gr Ye Rd OR Bu Wh
+Gr Ye Rd OR Wh Bu
+Gr Ye Rd Wh Bu OR
+Gr Ye Rd Wh OR Bu
+Gr Ye Wh Bu OR Rd
+Gr Ye Wh Bu Rd OR
+Gr Ye Wh OR Bu Rd
+Gr Ye Wh OR Rd Bu
+Gr Ye Wh Rd Bu OR
+Gr Ye Wh Rd OR Bu
+OR Bu Gr Rd Wh Ye
+OR Bu Gr Rd Ye Wh
+OR Bu Gr Wh Rd Ye
+OR Bu Gr Wh Ye Rd
+OR Bu Gr Ye Rd Wh
+OR Bu Gr Ye Wh Rd
+OR Bu Rd Gr Wh Ye
+OR Bu Rd Gr Ye Wh
+OR Bu Rd Wh Gr Ye
+OR Bu Rd Wh Ye Gr
+OR Bu Rd Ye Gr Wh
+OR Bu Rd Ye Wh Gr
+OR Bu Wh Gr Rd Ye
+OR Bu Wh Gr Ye Rd
+OR Bu Wh Rd Gr Ye
+OR Bu Wh Rd Ye Gr
+OR Bu Wh Ye Gr Rd
+OR Bu Wh Ye Rd Gr
+OR Bu Ye Gr Rd Wh
+OR Bu Ye Gr Wh Rd
+OR Bu Ye Rd Gr Wh
+OR Bu Ye Rd Wh Gr
+OR Bu Ye Wh Gr Rd
+OR Bu Ye Wh Rd Gr
+OR Gr Bu Rd Wh Ye
+OR Gr Bu Rd Ye Wh
+OR Gr Bu Wh Rd Ye
+OR Gr Bu Wh Ye Rd
+OR Gr Bu Ye Rd Wh
+OR Gr Bu Ye Wh Rd
+OR Gr Rd Bu Wh Ye
+OR Gr Rd Bu Ye Wh
+OR Gr Rd Wh Bu Ye
+OR Gr Rd Wh Ye Bu
+OR Gr Rd Ye Bu Wh
+OR Gr Rd Ye Wh Bu
+OR Gr Wh Bu Rd Ye
+OR Gr Wh Bu Ye Rd
+OR Gr Wh Rd Bu Ye
+OR Gr Wh Rd Ye Bu
+OR Gr Wh Ye Bu Rd
+OR Gr Wh Ye Rd Bu
+OR Gr Ye Bu Rd Wh
+OR Gr Ye Bu Wh Rd
+OR Gr Ye Rd Bu Wh
+OR Gr Ye Rd Wh Bu
+OR Gr Ye Wh Bu Rd
+OR Gr Ye Wh Rd Bu
+OR Rd Bu Gr Wh Ye
+OR Rd Bu Gr Ye Wh
+OR Rd Bu Wh Gr Ye
+OR Rd Bu Wh Ye Gr
+OR Rd Bu Ye Gr Wh
+OR Rd Bu Ye Wh Gr
+OR Rd Gr Bu Wh Ye
+OR Rd Gr Bu Ye Wh
+OR Rd Gr Wh Bu Ye
+OR Rd Gr Wh Ye Bu
+OR Rd Gr Ye Bu Wh
+OR Rd Gr Ye Wh Bu
+OR Rd Wh Bu Gr Ye
+OR Rd Wh Bu Ye Gr
+OR Rd Wh Gr Bu Ye
+OR Rd Wh Gr Ye Bu
+OR Rd Wh Ye Bu Gr
+OR Rd Wh Ye Gr Bu
+OR Rd Ye Bu Gr Wh
+OR Rd Ye Bu Wh Gr
+OR Rd Ye Gr Bu Wh
+OR Rd Ye Gr Wh Bu
+OR Rd Ye Wh Bu Gr
+OR Rd Ye Wh Gr Bu
+OR Wh Bu Gr Rd Ye
+OR Wh Bu Gr Ye Rd
+OR Wh Bu Rd Gr Ye
+OR Wh Bu Rd Ye Gr
+OR Wh Bu Ye Gr Rd
+OR Wh Bu Ye Rd Gr
+OR Wh Gr Bu Rd Ye
+OR Wh Gr Bu Ye Rd
+OR Wh Gr Rd Bu Ye
+OR Wh Gr Rd Ye Bu
+OR Wh Gr Ye Bu Rd
+OR Wh Gr Ye Rd Bu
+OR Wh Rd Bu Gr Ye
+OR Wh Rd Bu Ye Gr
+OR Wh Rd Gr Bu Ye
+OR Wh Rd Gr Ye Bu
+OR Wh Rd Ye Bu Gr
+OR Wh Rd Ye Gr Bu
+OR Wh Ye Bu Gr Rd
+OR Wh Ye Bu Rd Gr
+OR Wh Ye Gr Bu Rd
+OR Wh Ye Gr Rd Bu
+OR Wh Ye Rd Bu Gr
+OR Wh Ye Rd Gr Bu
+OR Ye Bu Gr Rd Wh
+OR Ye Bu Gr Wh Rd
+OR Ye Bu Rd Gr Wh
+OR Ye Bu Rd Wh Gr
+OR Ye Bu Wh Gr Rd
+OR Ye Bu Wh Rd Gr
+OR Ye Gr Bu Rd Wh
+OR Ye Gr Bu Wh Rd
+OR Ye Gr Rd Bu Wh
+OR Ye Gr Rd Wh Bu
+OR Ye Gr Wh Bu Rd
+OR Ye Gr Wh Rd Bu
+OR Ye Rd Bu Gr Wh
+OR Ye Rd Bu Wh Gr
+OR Ye Rd Gr Bu Wh
+OR Ye Rd Gr Wh Bu
+OR Ye Rd Wh Bu Gr
+OR Ye Rd Wh Gr Bu
+OR Ye Wh Bu Gr Rd
+OR Ye Wh Bu Rd Gr
+OR Ye Wh Gr Bu Rd
+OR Ye Wh Gr Rd Bu
+OR Ye Wh Rd Bu Gr
+OR Ye Wh Rd Gr Bu
+Rd Bu Gr OR Wh Ye
+Rd Bu Gr OR Ye Wh
+Rd Bu Gr Wh OR Ye
+Rd Bu Gr Wh Ye OR
+Rd Bu Gr Ye OR Wh
+Rd Bu Gr Ye Wh OR
+Rd Bu OR Gr Wh Ye
+Rd Bu OR Gr Ye Wh
+Rd Bu OR Wh Gr Ye
+Rd Bu OR Wh Ye Gr
+Rd Bu OR Ye Gr Wh
+Rd Bu OR Ye Wh Gr
+Rd Bu Wh Gr OR Ye
+Rd Bu Wh Gr Ye OR
+Rd Bu Wh OR Gr Ye
+Rd Bu Wh OR Ye Gr
+Rd Bu Wh Ye Gr OR
+Rd Bu Wh Ye OR Gr
+Rd Bu Ye Gr OR Wh
+Rd Bu Ye Gr Wh OR
+Rd Bu Ye OR Gr Wh
+Rd Bu Ye OR Wh Gr
+Rd Bu Ye Wh Gr OR
+Rd Bu Ye Wh OR Gr
+Rd Gr Bu OR Wh Ye
+Rd Gr Bu OR Ye Wh
+Rd Gr Bu Wh OR Ye
+Rd Gr Bu Wh Ye OR
+Rd Gr Bu Ye OR Wh
+Rd Gr Bu Ye Wh OR
+Rd Gr OR Bu Wh Ye
+Rd Gr OR Bu Ye Wh
+Rd Gr OR Wh Bu Ye
+Rd Gr OR Wh Ye Bu
+Rd Gr OR Ye Bu Wh
+Rd Gr OR Ye Wh Bu
+Rd Gr Wh Bu OR Ye
+Rd Gr Wh Bu Ye OR
+Rd Gr Wh OR Bu Ye
+Rd Gr Wh OR Ye Bu
+Rd Gr Wh Ye Bu OR
+Rd Gr Wh Ye OR Bu
+Rd Gr Ye Bu OR Wh
+Rd Gr Ye Bu Wh OR
+Rd Gr Ye OR Bu Wh
+Rd Gr Ye OR Wh Bu
+Rd Gr Ye Wh Bu OR
+Rd Gr Ye Wh OR Bu
+Rd OR Bu Gr Wh Ye
+Rd OR Bu Gr Ye Wh
+Rd OR Bu Wh Gr Ye
+Rd OR Bu Wh Ye Gr
+Rd OR Bu Ye Gr Wh
+Rd OR Bu Ye Wh Gr
+Rd OR Gr Bu Wh Ye
+Rd OR Gr Bu Ye Wh
+Rd OR Gr Wh Bu Ye
+Rd OR Gr Wh Ye Bu
+Rd OR Gr Ye Bu Wh
+Rd OR Gr Ye Wh Bu
+Rd OR Wh Bu Gr Ye
+Rd OR Wh Bu Ye Gr
+Rd OR Wh Gr Bu Ye
+Rd OR Wh Gr Ye Bu
+Rd OR Wh Ye Bu Gr
+Rd OR Wh Ye Gr Bu
+Rd OR Ye Bu Gr Wh
+Rd OR Ye Bu Wh Gr
+Rd OR Ye Gr Bu Wh
+Rd OR Ye Gr Wh Bu
+Rd OR Ye Wh Bu Gr
+Rd OR Ye Wh Gr Bu
+Rd Wh Bu Gr OR Ye
+Rd Wh Bu Gr Ye OR
+Rd Wh Bu OR Gr Ye
+Rd Wh Bu OR Ye Gr
+Rd Wh Bu Ye Gr OR
+Rd Wh Bu Ye OR Gr
+Rd Wh Gr Bu OR Ye
+Rd Wh Gr Bu Ye OR
+Rd Wh Gr OR Bu Ye
+Rd Wh Gr OR Ye Bu
+Rd Wh Gr Ye Bu OR
+Rd Wh Gr Ye OR Bu
+Rd Wh OR Bu Gr Ye
+Rd Wh OR Bu Ye Gr
+Rd Wh OR Gr Bu Ye
+Rd Wh OR Gr Ye Bu
+Rd Wh OR Ye Bu Gr
+Rd Wh OR Ye Gr Bu
+Rd Wh Ye Bu Gr OR
+Rd Wh Ye Bu OR Gr
+Rd Wh Ye Gr Bu OR
+Rd Wh Ye Gr OR Bu
+Rd Wh Ye OR Bu Gr
+Rd Wh Ye OR Gr Bu
+Rd Ye Bu Gr OR Wh
+Rd Ye Bu Gr Wh OR
+Rd Ye Bu OR Gr Wh
+Rd Ye Bu OR Wh Gr
+Rd Ye Bu Wh Gr OR
+Rd Ye Bu Wh OR Gr
+Rd Ye Gr Bu OR Wh
+Rd Ye Gr Bu Wh OR
+Rd Ye Gr OR Bu Wh
+Rd Ye Gr OR Wh Bu
+Rd Ye Gr Wh Bu OR
+Rd Ye Gr Wh OR Bu
+Rd Ye OR Bu Gr Wh
+Rd Ye OR Bu Wh Gr
+Rd Ye OR Gr Bu Wh
+Rd Ye OR Gr Wh Bu
+Rd Ye OR Wh Bu Gr
+Rd Ye OR Wh Gr Bu
+Rd Ye Wh Bu Gr OR
+Rd Ye Wh Bu OR Gr
+Rd Ye Wh Gr Bu OR
+Rd Ye Wh Gr OR Bu
+Rd Ye Wh OR Bu Gr
+Rd Ye Wh OR Gr Bu
+Wh Bu Gr OR Rd Ye
+Wh Bu Gr OR Ye Rd
+Wh Bu Gr Rd OR Ye
+Wh Bu Gr Rd Ye OR
+Wh Bu Gr Ye OR Rd
+Wh Bu Gr Ye Rd OR
+Wh Bu OR Gr Rd Ye
+Wh Bu OR Gr Ye Rd
+Wh Bu OR Rd Gr Ye
+Wh Bu OR Rd Ye Gr
+Wh Bu OR Ye Gr Rd
+Wh Bu OR Ye Rd Gr
+Wh Bu Rd Gr OR Ye
+Wh Bu Rd Gr Ye OR
+Wh Bu Rd OR Gr Ye
+Wh Bu Rd OR Ye Gr
+Wh Bu Rd Ye Gr OR
+Wh Bu Rd Ye OR Gr
+Wh Bu Ye Gr OR Rd
+Wh Bu Ye Gr Rd OR
+Wh Bu Ye OR Gr Rd
+Wh Bu Ye OR Rd Gr
+Wh Bu Ye Rd Gr OR
+Wh Bu Ye Rd OR Gr
+Wh Gr Bu OR Rd Ye
+Wh Gr Bu OR Ye Rd
+Wh Gr Bu Rd OR Ye
+Wh Gr Bu Rd Ye OR
+Wh Gr Bu Ye OR Rd
+Wh Gr Bu Ye Rd OR
+Wh Gr OR Bu Rd Ye
+Wh Gr OR Bu Ye Rd
+Wh Gr OR Rd Bu Ye
+Wh Gr OR Rd Ye Bu
+Wh Gr OR Ye Bu Rd
+Wh Gr OR Ye Rd Bu
+Wh Gr Rd Bu OR Ye
+Wh Gr Rd Bu Ye OR
+Wh Gr Rd OR Bu Ye
+Wh Gr Rd OR Ye Bu
+Wh Gr Rd Ye Bu OR
+Wh Gr Rd Ye OR Bu
+Wh Gr Ye Bu OR Rd
+Wh Gr Ye Bu Rd OR
+Wh Gr Ye OR Bu Rd
+Wh Gr Ye OR Rd Bu
+Wh Gr Ye Rd Bu OR
+Wh Gr Ye Rd OR Bu
+Wh OR Bu Gr Rd Ye
+Wh OR Bu Gr Ye Rd
+Wh OR Bu Rd Gr Ye
+Wh OR Bu Rd Ye Gr
+Wh OR Bu Ye Gr Rd
+Wh OR Bu Ye Rd Gr
+Wh OR Gr Bu Rd Ye
+Wh OR Gr Bu Ye Rd
+Wh OR Gr Rd Bu Ye
+Wh OR Gr Rd Ye Bu
+Wh OR Gr Ye Bu Rd
+Wh OR Gr Ye Rd Bu
+Wh OR Rd Bu Gr Ye
+Wh OR Rd Bu Ye Gr
+Wh OR Rd Gr Bu Ye
+Wh OR Rd Gr Ye Bu
+Wh OR Rd Ye Bu Gr
+Wh OR Rd Ye Gr Bu
+Wh OR Ye Bu Gr Rd
+Wh OR Ye Bu Rd Gr
+Wh OR Ye Gr Bu Rd
+Wh OR Ye Gr Rd Bu
+Wh OR Ye Rd Bu Gr
+Wh OR Ye Rd Gr Bu
+Wh Rd Bu Gr OR Ye
+Wh Rd Bu Gr Ye OR
+Wh Rd Bu OR Gr Ye
+Wh Rd Bu OR Ye Gr
+Wh Rd Bu Ye Gr OR
+Wh Rd Bu Ye OR Gr
+Wh Rd Gr Bu OR Ye
+Wh Rd Gr Bu Ye OR
+Wh Rd Gr OR Bu Ye
+Wh Rd Gr OR Ye Bu
+Wh Rd Gr Ye Bu OR
+Wh Rd Gr Ye OR Bu
+Wh Rd OR Bu Gr Ye
+Wh Rd OR Bu Ye Gr
+Wh Rd OR Gr Bu Ye
+Wh Rd OR Gr Ye Bu
+Wh Rd OR Ye Bu Gr
+Wh Rd OR Ye Gr Bu
+Wh Rd Ye Bu Gr OR
+Wh Rd Ye Bu OR Gr
+Wh Rd Ye Gr Bu OR
+Wh Rd Ye Gr OR Bu
+Wh Rd Ye OR Bu Gr
+Wh Rd Ye OR Gr Bu
+Wh Ye Bu Gr OR Rd
+Wh Ye Bu Gr Rd OR
+Wh Ye Bu OR Gr Rd
+Wh Ye Bu OR Rd Gr
+Wh Ye Bu Rd Gr OR
+Wh Ye Bu Rd OR Gr
+Wh Ye Gr Bu OR Rd
+Wh Ye Gr Bu Rd OR
+Wh Ye Gr OR Bu Rd
+Wh Ye Gr OR Rd Bu
+Wh Ye Gr Rd Bu OR
+Wh Ye Gr Rd OR Bu
+Wh Ye OR Bu Gr Rd
+Wh Ye OR Bu Rd Gr
+Wh Ye OR Gr Bu Rd
+Wh Ye OR Gr Rd Bu
+Wh Ye OR Rd Bu Gr
+Wh Ye OR Rd Gr Bu
+Wh Ye Rd Bu Gr OR
+Wh Ye Rd Bu OR Gr
+Wh Ye Rd Gr Bu OR
+Wh Ye Rd Gr OR Bu
+Wh Ye Rd OR Bu Gr
+Wh Ye Rd OR Gr Bu
+Ye Bu Gr OR Rd Wh
+Ye Bu Gr OR Wh Rd
+Ye Bu Gr Rd OR Wh
+Ye Bu Gr Rd Wh OR
+Ye Bu Gr Wh OR Rd
+Ye Bu Gr Wh Rd OR
+Ye Bu OR Gr Rd Wh
+Ye Bu OR Gr Wh Rd
+Ye Bu OR Rd Gr Wh
+Ye Bu OR Rd Wh Gr
+Ye Bu OR Wh Gr Rd
+Ye Bu OR Wh Rd Gr
+Ye Bu Rd Gr OR Wh
+Ye Bu Rd Gr Wh OR
+Ye Bu Rd OR Gr Wh
+Ye Bu Rd OR Wh Gr
+Ye Bu Rd Wh Gr OR
+Ye Bu Rd Wh OR Gr
+Ye Bu Wh Gr OR Rd
+Ye Bu Wh Gr Rd OR
+Ye Bu Wh OR Gr Rd
+Ye Bu Wh OR Rd Gr
+Ye Bu Wh Rd Gr OR
+Ye Bu Wh Rd OR Gr
+Ye Gr Bu OR Rd Wh
+Ye Gr Bu OR Wh Rd
+Ye Gr Bu Rd OR Wh
+Ye Gr Bu Rd Wh OR
+Ye Gr Bu Wh OR Rd
+Ye Gr Bu Wh Rd OR
+Ye Gr OR Bu Rd Wh
+Ye Gr OR Bu Wh Rd
+Ye Gr OR Rd Bu Wh
+Ye Gr OR Rd Wh Bu
+Ye Gr OR Wh Bu Rd
+Ye Gr OR Wh Rd Bu
+Ye Gr Rd Bu OR Wh
+Ye Gr Rd Bu Wh OR
+Ye Gr Rd OR Bu Wh
+Ye Gr Rd OR Wh Bu
+Ye Gr Rd Wh Bu OR
+Ye Gr Rd Wh OR Bu
+Ye Gr Wh Bu OR Rd
+Ye Gr Wh Bu Rd OR
+Ye Gr Wh OR Bu Rd
+Ye Gr Wh OR Rd Bu
+Ye Gr Wh Rd Bu OR
+Ye Gr Wh Rd OR Bu
+Ye OR Bu Gr Rd Wh
+Ye OR Bu Gr Wh Rd
+Ye OR Bu Rd Gr Wh
+Ye OR Bu Rd Wh Gr
+Ye OR Bu Wh Gr Rd
+Ye OR Bu Wh Rd Gr
+Ye OR Gr Bu Rd Wh
+Ye OR Gr Bu Wh Rd
+Ye OR Gr Rd Bu Wh
+Ye OR Gr Rd Wh Bu
+Ye OR Gr Wh Bu Rd
+Ye OR Gr Wh Rd Bu
+Ye OR Rd Bu Gr Wh
+Ye OR Rd Bu Wh Gr
+Ye OR Rd Gr Bu Wh
+Ye OR Rd Gr Wh Bu
+Ye OR Rd Wh Bu Gr
+Ye OR Rd Wh Gr Bu
+Ye OR Wh Bu Gr Rd
+Ye OR Wh Bu Rd Gr
+Ye OR Wh Gr Bu Rd
+Ye OR Wh Gr Rd Bu
+Ye OR Wh Rd Bu Gr
+Ye OR Wh Rd Gr Bu
+Ye Rd Bu Gr OR Wh
+Ye Rd Bu Gr Wh OR
+Ye Rd Bu OR Gr Wh
+Ye Rd Bu OR Wh Gr
+Ye Rd Bu Wh Gr OR
+Ye Rd Bu Wh OR Gr
+Ye Rd Gr Bu OR Wh
+Ye Rd Gr Bu Wh OR
+Ye Rd Gr OR Bu Wh
+Ye Rd Gr OR Wh Bu
+Ye Rd Gr Wh Bu OR
+Ye Rd Gr Wh OR Bu
+Ye Rd OR Bu Gr Wh
+Ye Rd OR Bu Wh Gr
+Ye Rd OR Gr Bu Wh
+Ye Rd OR Gr Wh Bu
+Ye Rd OR Wh Bu Gr
+Ye Rd OR Wh Gr Bu
+Ye Rd Wh Bu Gr OR
+Ye Rd Wh Bu OR Gr
+Ye Rd Wh Gr Bu OR
+Ye Rd Wh Gr OR Bu
+Ye Rd Wh OR Bu Gr
+Ye Rd Wh OR Gr Bu
+Ye Wh Bu Gr OR Rd
+Ye Wh Bu Gr Rd OR
+Ye Wh Bu OR Gr Rd
+Ye Wh Bu OR Rd Gr
+Ye Wh Bu Rd Gr OR
+Ye Wh Bu Rd OR Gr
+Ye Wh Gr Bu OR Rd
+Ye Wh Gr Bu Rd OR
+Ye Wh Gr OR Bu Rd
+Ye Wh Gr OR Rd Bu
+Ye Wh Gr Rd Bu OR
+Ye Wh Gr Rd OR Bu
+Ye Wh OR Bu Gr Rd
+Ye Wh OR Bu Rd Gr
+Ye Wh OR Gr Bu Rd
+Ye Wh OR Gr Rd Bu
+Ye Wh OR Rd Bu Gr
+Ye Wh OR Rd Gr Bu
+Ye Wh Rd Bu Gr OR
+Ye Wh Rd Bu OR Gr
+Ye Wh Rd Gr Bu OR
+Ye Wh Rd Gr OR Bu
+Ye Wh Rd OR Bu Gr
+Ye Wh Rd OR Gr Bu"""
+len_even_cube_center_color_permutations = 720
 
 
 edge_color_pair_map = {
@@ -1272,8 +1992,15 @@ div#colormapping {
         which naming scheme results in the least total color distance in
         terms of the assigned color name vs. the colors in color_box.
         """
+        ref_even_cube_center_color_permutations = even_cube_center_color_permutations
         # print("\n\n\n")
         # print("assign_color_names '{}' via {}".format(desc, color_permutations))
+
+        def get_even_cube_center_color_permutation(permutation_index):
+            LINE_LENGTH = 18
+            start = permutation_index * LINE_LENGTH
+            end = start + LINE_LENGTH
+            return ref_even_cube_center_color_permutations[start:end].split()
 
         ref_get_lab_distance = get_lab_distance
         ref_ALL_COLORS = ALL_COLORS
@@ -1292,7 +2019,7 @@ div#colormapping {
 
         # TODO If we are using even_cube_center_color_permutations, move the
         # squares_list row that is closest to Bu to the front. This will allow
-        # use to skip many more entries later.
+        # us to skip many more entries later.
 
         # Compute the distance for each color in the color_box vs each squares_list
         # in squares_lists. Store this in distances_of_square_list_per_color
@@ -1317,17 +2044,14 @@ div#colormapping {
         min_distance_permutation = None
 
         if color_permutations == "even_cube_center_color_permutations":
-            p = even_cube_center_color_permutations
             permutation_len = len_even_cube_center_color_permutations
             permutation_index = 0
+            # total = 0
+            # skip_total = 0
             r = range(6)
 
-            perms_to_skip = []
-            total = 0
-            skip_total = 0
-
             while permutation_index < permutation_len:
-                permutation = p[permutation_index]
+                permutation = get_even_cube_center_color_permutation(permutation_index)
                 distance = 0
                 skip_by = 0
 
@@ -1352,7 +2076,7 @@ div#colormapping {
 
                 if skip_by:
                     permutation_index += skip_by
-                    skip_total += skip_by
+                    # skip_total += skip_by
                     continue
 
                 if distance < min_distance:
@@ -1363,7 +2087,8 @@ div#colormapping {
                 #else:
                 #    print("{} PERMUTATION {} - {}, DISTANCE {} vs min {}".format(desc, permutation_index, permutation, distance, min_distance))
                 #    #log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
-                total += 1
+
+                # total += 1
                 permutation_index += 1
 
             # print("total {}".format(total))
@@ -1873,7 +2598,7 @@ div#colormapping {
 
         # Nothing to be done for 2x2x2
         if self.width == 2:
-            return True
+            return
         elif self.width == 3:
             from rubikscolorresolver.cube_333 import edge_orbit_id
         elif self.width == 4:
@@ -2157,7 +2882,7 @@ div#colormapping {
         """
 
         if self.width == 2:
-            from rubikscolorresolver.cube_222 import center_groups
+            return
         elif self.width == 3:
             from rubikscolorresolver.cube_333 import center_groups
         elif self.width == 4:
