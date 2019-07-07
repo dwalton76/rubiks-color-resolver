@@ -153,6 +153,8 @@ else:
 
 cie2000_cache = {}
 
+ALL_COLORS = ("Wh", "Ye", "OR", "Rd", "Gr", "Bu")
+
 html_color = {
     "Gr": {"red": 0, "green": 102, "blue": 0},
     "Bu": {"red": 0, "green": 0, "blue": 153},
@@ -161,6 +163,32 @@ html_color = {
     "Wh": {"red": 255, "green": 255, "blue": 255},
     "Ye": {"red": 255, "green": 204, "blue": 0},
 }
+
+
+def permutations(iterable, r=None):
+    """
+    From https://github.com/python/cpython/blob/master/Modules/itertoolsmodule.c
+    """
+    pool = tuple(iterable)
+    n = len(pool)
+    r = n if r is None else r
+    indices = list(range(n))
+    cycles = list(range(n-r+1, n+1))[::-1]
+    yield tuple(pool[i] for i in indices[:r])
+    while n:
+        for i in reversed(list(range(r))):
+            cycles[i] -= 1
+            if cycles[i] == 0:
+                indices[i:] = indices[i+1:] + indices[i:i+1]
+                cycles[i] = n - i
+            else:
+                j = cycles[i]
+                indices[i], indices[-j] = indices[-j], indices[i]
+                yield tuple(pool[i] for i in indices[:r])
+                break
+        else:
+            return
+
 
 odd_cube_center_color_permutations = (
     ("Wh", "OR", "Gr", "Rd", "Bu", "Ye"),
@@ -188,6 +216,9 @@ odd_cube_center_color_permutations = (
     ("Bu", "Rd", "Ye", "OR", "Wh", "Gr"),
     ("Bu", "OR", "Wh", "Rd", "Ye", "Gr"),
 )
+
+even_cube_center_color_permutations = list(sorted(permutations(ALL_COLORS)))
+len_even_cube_center_color_permutations = len(even_cube_center_color_permutations)
 
 
 edge_color_pair_map = {
@@ -234,31 +265,6 @@ def print_mem_stats(desc):
 
 class ListMissingValue(Exception):
     pass
-
-
-def permutations(iterable, r=None):
-    """
-    From https://github.com/python/cpython/blob/master/Modules/itertoolsmodule.c
-    """
-    pool = tuple(iterable)
-    n = len(pool)
-    r = n if r is None else r
-    indices = list(range(n))
-    cycles = list(range(n-r+1, n+1))[::-1]
-    yield tuple(pool[i] for i in indices[:r])
-    while n:
-        for i in reversed(list(range(r))):
-            cycles[i] -= 1
-            if cycles[i] == 0:
-                indices[i:] = indices[i+1:] + indices[i:i+1]
-                cycles[i] = n - i
-            else:
-                j = cycles[i]
-                indices[i], indices[-j] = indices[-j], indices[i]
-                yield tuple(pool[i] for i in indices[:r])
-                break
-        else:
-            return
 
 
 @timed_function
@@ -344,7 +350,7 @@ def get_swap_count(listA, listB, debug=False):
 
 
 @timed_function
-def traveling_salesman(squares):
+def traveling_salesman(squares, endpoints=None):
     ref_get_lab_distance = get_lab_distance
 
     # build a full matrix of color to color distances
@@ -356,17 +362,9 @@ def traveling_salesman(squares):
         x_square = squares[x]
         (x_red, x_green, x_blue) = x_square.rgb
         x_lab = x_square.lab
+        matrix[x][x] = 0
 
-        for y in r_len_squares:
-
-            if x == y:
-                matrix[x][y] = 0
-                matrix[y][x] = 0
-                continue
-
-            if matrix[x][y] or matrix[y][x]:
-                continue
-
+        for y in range(x+1, len_squares):
             y_square = squares[y]
             (y_red, y_green, y_blue) = y_square.rgb
             y_lab = y_square.lab
@@ -380,7 +378,7 @@ def traveling_salesman(squares):
         cie2000_cache = {}
         gc.collect()
 
-    path = solve_tsp(matrix, optim_steps=1)
+    path = solve_tsp(matrix, optim_steps=1, endpoints=endpoints)
     return [squares[x] for x in path]
 
 
@@ -737,29 +735,6 @@ class Side(object):
         except KeyError:
             #log.info("wing_partner\n%s\n".format(self.wing_partner))
             raise
-
-
-def get_most_confident_matches(distances_of_square_list_per_color):
-    deltas = []
-
-    for (color_name, distances) in distances_of_square_list_per_color.items():
-        sorted_distances = sorted(distances)
-        delta = sorted_distances[1] - sorted_distances[0]
-        min_distance_index = distances.index(sorted_distances[0])
-        deltas.append((delta, color_name, min_distance_index))
-        # print("color_name {} delta {}".format(color_name, delta))
-
-    deltas = list(reversed(sorted(deltas)))
-    first_place = deltas[0][1]
-    first_place_index = deltas[0][2]
-
-    second_place = deltas[1][1]
-    second_place_index = deltas[1][2]
-
-    all_others = [deltas[2][1], deltas[3][1], deltas[4][1], deltas[5][1]]
-    print("deltas {}".format(deltas))
-
-    return (first_place, first_place_index, second_place, second_place_index, all_others)
 
 
 class RubiksColorSolverGeneric(object):
@@ -1292,38 +1267,38 @@ div#colormapping {
 
     @timed_function
     def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
+        """
+        Assign a color name to each square in each squares_list. Compute
+        which naming scheme results in the least total color distance in
+        terms of the assigned color name vs. the colors in color_box.
+        """
+        # print("\n\n\n")
         # print("assign_color_names '{}' via {}".format(desc, color_permutations))
-        assert color_permutations
-        assert color_box
+
         ref_get_lab_distance = get_lab_distance
+        ref_ALL_COLORS = ALL_COLORS
 
-        # log.info(f"assign_color_names for '{desc}'")
-        # log.info(f"squares_lists_all {squares_lists_all}")
-        # log.info(f"color_permutations {color_permutations}")
-        # log.info(f"color_box {color_box}")
-
-        # split squares_lists_all up into 6 evenly sized lists
+        # squares_lists_all is sorted by color. Split that list into 6 even buckets (squares_lists).
         squares_per_row = int(len(squares_lists_all) / 6)
         squares_lists = []
         square_list = []
 
-        # squares_lists_all is sorted by color. Split that list into 6 even buckets (squares_lists).
         for square in squares_lists_all:
             square_list.append(square)
 
             if len(square_list) == squares_per_row:
                 squares_lists.append(tuple(square_list))
                 square_list = []
-        #print("squares_lists\n    {}\n".format("\n    ".join(map(str, squares_lists))))
 
-        # Assign a color name to each squares in each square_list. Compute
-        # which naming scheme results in the least total color distance in
-        # terms of the assigned color name vs. the colors in color_box.
-        min_distance = 99999
-        min_distance_permutation = None
+        # TODO If we are using even_cube_center_color_permutations, move the
+        # squares_list row that is closest to Bu to the front. This will allow
+        # use to skip many more entries later.
+
+        # Compute the distance for each color in the color_box vs each squares_list
+        # in squares_lists. Store this in distances_of_square_list_per_color
         distances_of_square_list_per_color = {}
 
-        for color_name in ("Wh", "Ye", "OR", "Rd", "Gr", "Bu"):
+        for color_name in ref_ALL_COLORS:
             color_lab = color_box[color_name]
             distances_of_square_list_per_color[color_name] = []
 
@@ -1334,81 +1309,72 @@ div#colormapping {
                 distances_of_square_list_per_color[color_name].append(int(distance))
             distances_of_square_list_per_color[color_name] = tuple(distances_of_square_list_per_color[color_name])
 
-        #for color_name in ("Wh", "Ye", "OR", "Rd", "Gr", "Bu"):
-        #    print("distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
-        #print("")
+        # for color_name in ref_ALL_COLORS:
+        #     print("distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
+        # print("")
+
+        min_distance = 99999
+        min_distance_permutation = None
 
         if color_permutations == "even_cube_center_color_permutations":
-            #for (permutation_index, permutation) in enumerate(permutations((Wh, Ye, OR, Rd, Gr, Bu))):
-            for permutation in permutations(("Wh", "Ye", "OR", "Rd", "Gr", "Bu")):
-                distance = (
-                    distances_of_square_list_per_color[permutation[0]][0] +
-                    distances_of_square_list_per_color[permutation[1]][1] +
-                    distances_of_square_list_per_color[permutation[2]][2] +
-                    distances_of_square_list_per_color[permutation[3]][3] +
-                    distances_of_square_list_per_color[permutation[4]][4] +
-                    distances_of_square_list_per_color[permutation[5]][5]
-                )
+            p = even_cube_center_color_permutations
+            permutation_len = len_even_cube_center_color_permutations
+            permutation_index = 0
+            r = range(6)
+
+            perms_to_skip = []
+            total = 0
+            skip_total = 0
+
+            while permutation_index < permutation_len:
+                permutation = p[permutation_index]
+                distance = 0
+                skip_by = 0
+
+                for x in r:
+                    distance += distances_of_square_list_per_color[permutation[x]][x]
+
+                    if distance > min_distance:
+
+                        if x == 0:
+                            skip_by = 120
+                        elif x == 1:
+                            skip_by = 24
+                        elif x == 2:
+                            skip_by = 6
+                        elif x == 3:
+                            skip_by = 2
+
+                        #if skip_by:
+                        #    print("{} PERMUTATION {} - {}, x {} distance {:,} > min {}, skip_by {}".format(
+                        #        desc, permutation_index, permutation, x, distance, min_distance, skip_by))
+                        break
+
+                if skip_by:
+                    permutation_index += skip_by
+                    skip_total += skip_by
+                    continue
 
                 if distance < min_distance:
+                    #print("{} PERMUTATION {} - {}, DISTANCE {:,} vs min {} (NEW MIN)".format(desc, permutation_index, permutation, distance, min_distance))
+                    #log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
                     min_distance = distance
                     min_distance_permutation = permutation
-                #    print("{} PERMUTATION {} - {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
-                #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
-                # else:
-                #    log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+                #else:
+                #    print("{} PERMUTATION {} - {}, DISTANCE {} vs min {}".format(desc, permutation_index, permutation, distance, min_distance))
+                #    #log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
+                total += 1
+                permutation_index += 1
 
-
-            # Experiment that I am leaving in but commented out for now.  Instead of running through
-            # all 6! or 720 permutations this pulled out the two colors that we were most confident about.
-            # This allowed us to oly run through 4! or 24 permutations.  This failed for some test cubes
-            # and this isn't nearly as clean so am not using this for now.
-            '''
-            (first_place, first_place_index, second_place, second_place_index, all_others) = get_most_confident_matches(distances_of_square_list_per_color)
-            print("first_place {}, first_place_index {}, second_place {}, second_place_index {}, all_others {}".format(
-                first_place, first_place_index, second_place, second_place_index, all_others))
-
-            indexes_to_insert = list(sorted(((first_place_index, first_place), (second_place_index, second_place))))
-            indexes_to_remove = list(reversed(sorted((first_place_index, second_place_index))))
-            print("indexes_to_insert {}".format(indexes_to_insert))
-            print("indexes_to_remove {}".format(indexes_to_remove))
-
-            del distances_of_square_list_per_color[first_place]
-            del distances_of_square_list_per_color[second_place]
-
-            for (color_name, distances) in distances_of_square_list_per_color.items():
-                for index in indexes_to_remove:
-                    del distances[index]
-
-            for color_name in all_others:
-                print("distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
-            print("")
-
-            for (permutation_index, permutation) in enumerate(permutations(all_others)):
-                distance = (
-                    distances_of_square_list_per_color[permutation[0]][0] +
-                    distances_of_square_list_per_color[permutation[1]][1] +
-                    distances_of_square_list_per_color[permutation[2]][2] +
-                    distances_of_square_list_per_color[permutation[3]][3]
-                )
-
-                if distance < min_distance:
-                    min_distance = distance
-                    min_distance_permutation = permutation
-                    print("{} PERMUTATION {} - {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation_index, permutation, int(distance)))
-                #    log.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
-                else:
-                    print("{} PERMUTATION {} - {}, DISTANCE {}".format(desc, permutation_index, permutation, distance))
-                    #log.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
-
-            for (index, color_name) in indexes_to_insert:
-                min_distance_permutation.insert(index, color_name)
-            '''
+            # print("total {}".format(total))
+            # print("skip total {}".format(skip_total))
+            # print("")
 
         elif color_permutations == "odd_cube_center_color_permutations":
+            p = odd_cube_center_color_permutations
 
             #for (permutation_index, permutation) in enumerate(odd_cube_center_color_permutations):
-            for permutation in odd_cube_center_color_permutations:
+            for permutation in p:
                 distance = (
                     distances_of_square_list_per_color[permutation[0]][0] +
                     distances_of_square_list_per_color[permutation[1]][1] +
@@ -1932,8 +1898,8 @@ div#colormapping {
                     if orbit_id == target_orbit_id:
                         edge_squares.append(square)
 
-            # edge_squares.extend(self.color_box_squares)
             sorted_edge_squares = traveling_salesman(edge_squares)
+
             self.assign_color_names(
                 "edge orbit %d" % target_orbit_id,
                 sorted_edge_squares,
@@ -2219,9 +2185,7 @@ div#colormapping {
                 sorted_center_squares = traveling_salesman(center_squares)
                 permutations = "even_cube_center_color_permutations"
 
-            self.assign_color_names(
-                desc, sorted_center_squares, permutations, self.color_box
-            )
+            self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
             self.write_colors(desc, sorted_center_squares)
 
     @timed_function
