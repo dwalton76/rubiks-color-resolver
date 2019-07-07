@@ -380,7 +380,7 @@ def traveling_salesman(squares):
         cie2000_cache = {}
         gc.collect()
 
-    path = solve_tsp(matrix)
+    path = solve_tsp(matrix, optim_steps=1)
     return [squares[x] for x in path]
 
 
@@ -1435,6 +1435,16 @@ div#colormapping {
                 square.color_name = color_name
 
     @timed_function
+    def set_sorted_corner_squares(self):
+        corner_squares = []
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.corner_squares:
+                corner_squares.append(square)
+
+        self.sorted_corner_squares = traveling_salesman(corner_squares)
+
+    @timed_function
     def resolve_color_box(self):
         """
         Assign names to the corner squares, use crayola colors as reference point.
@@ -1448,21 +1458,14 @@ div#colormapping {
         references Wh, Ye, OR, Rd, Gr, Bu colors for assigning color names to edge
         and center squares.
         """
-        corner_squares = []
-
-        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
-            for square in side.corner_squares:
-                corner_squares.append(square)
-
-        sorted_corner_squares = traveling_salesman(corner_squares)
         self.assign_color_names(
             "corners for color_box",
-            sorted_corner_squares,
+            self.sorted_corner_squares,
             "even_cube_center_color_permutations",
             crayola_colors,
         )
         self.sanity_check_corner_squares()
-        self.write_colors("color_box corners", sorted_corner_squares)
+        self.write_colors("color_box corners", self.sorted_corner_squares)
 
         # Build a color_box dictionary from the centers
         self.color_box = {}
@@ -1505,25 +1508,14 @@ div#colormapping {
         """
         Assign names to the corner squares
         """
-        #log.debug("\n\n\n\n")
-        #log.info("Resolve corners")
-        corner_squares = []
-
-        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
-            for square in side.corner_squares:
-                corner_squares.append(square)
-
-        # corner_squares.extend(self.color_box_squares)
-
-        sorted_corner_squares = traveling_salesman(corner_squares)
         self.assign_color_names(
             "corners",
-            sorted_corner_squares,
+            self.sorted_corner_squares,
             "even_cube_center_color_permutations",
             self.color_box,
         )
         self.sanity_check_corner_squares()
-        self.write_colors("corners", sorted_corner_squares)
+        self.write_colors("corners", self.sorted_corner_squares)
 
     @timed_function
     def validate_edge_orbit(self, orbit_id):
@@ -2498,7 +2490,7 @@ div#colormapping {
         # if not, what do we flip so that we do have all of the needed corners?
         for corner in needed_corners:
             if corner not in current_corners:
-                raise Exception("corner %s is missing".format(corner))
+                raise Exception("corner {} is missing".format(corner))
 
     @timed_function
     def validate_odd_cube_midge_vs_corner_parity(self):
@@ -2669,6 +2661,7 @@ div#colormapping {
         self.write_cube("Initial RGB values", False)
         self.write_crayola_colors()
 
+        self.set_sorted_corner_squares()
         self.resolve_color_box()
         self.write_color_box()
 
