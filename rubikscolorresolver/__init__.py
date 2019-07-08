@@ -153,7 +153,7 @@ else:
 
 cie2000_cache = {}
 
-ALL_COLORS = ("Wh", "Ye", "OR", "Rd", "Gr", "Bu")
+ALL_COLORS = ("Bu", "Gr", "OR", "Rd", "Wh", "Ye")
 
 html_color = {
     "Gr": {"red": 0, "green": 102, "blue": 0},
@@ -2007,10 +2007,6 @@ div#colormapping {
                 squares_lists.append(tuple(square_list))
                 square_list = []
 
-        # TODO If we are using even_cube_center_color_permutations, move the
-        # squares_list row that is closest to Bu to the front. This will allow
-        # us to skip many more entries later.
-
         # Compute the distance for each color in the color_box vs each squares_list
         # in squares_lists. Store this in distances_of_square_list_per_color
         distances_of_square_list_per_color = {}
@@ -2024,16 +2020,49 @@ div#colormapping {
                 for square in squares_list:
                     distance += ref_get_lab_distance(square.lab, color_lab)
                 distances_of_square_list_per_color[color_name].append(int(distance))
-            distances_of_square_list_per_color[color_name] = tuple(distances_of_square_list_per_color[color_name])
-
-        # for color_name in ref_ALL_COLORS:
-        #     print("distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
-        # print("")
+            distances_of_square_list_per_color[color_name] = distances_of_square_list_per_color[color_name]
 
         min_distance = 99999
         min_distance_permutation = None
 
         if color_permutations == "even_cube_center_color_permutations":
+
+            # before sorting
+            '''
+            print("\n".join(map(str, squares_lists)))
+            for color_name in ref_ALL_COLORS:
+                print("pre  distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
+            print("")
+            '''
+
+            # Move the squares_list row that is closest to Bu to the front, then Gr, OR, Rd, Wh, Ye.
+            # This will allow us to skip many more entries later.
+            for (insert_index, color_name) in enumerate(ref_ALL_COLORS):
+                min_color_name_distance = 9999
+                min_color_name_distance_index = None
+
+                for (index, distance) in enumerate(distances_of_square_list_per_color[color_name]):
+                    if distance < min_color_name_distance:
+                        min_color_name_distance = distance
+                        min_color_name_distance_index = index
+
+                tmp_square_list = squares_lists[min_color_name_distance_index]
+                squares_lists.pop(min_color_name_distance_index)
+                squares_lists.insert(insert_index, tmp_square_list)
+
+                for color_name in ref_ALL_COLORS:
+                    blue_distance = distances_of_square_list_per_color[color_name][min_color_name_distance_index]
+                    distances_of_square_list_per_color[color_name].pop(min_color_name_distance_index)
+                    distances_of_square_list_per_color[color_name].insert(insert_index, blue_distance)
+
+            # after sorting
+            '''
+            print("\n".join(map(str, squares_lists)))
+            for color_name in ref_ALL_COLORS:
+                print("post distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))
+            print("")
+            '''
+
             permutation_len = len_even_cube_center_color_permutations
             permutation_index = 0
             # total = 0
@@ -2081,9 +2110,9 @@ div#colormapping {
                 # total += 1
                 permutation_index += 1
 
-            # print("total {}".format(total))
-            # print("skip total {}".format(skip_total))
-            # print("")
+            #print("total {}".format(total))
+            #print("skip total {}".format(skip_total))
+            #print("")
 
         elif color_permutations == "odd_cube_center_color_permutations":
             p = odd_cube_center_color_permutations
@@ -3367,7 +3396,6 @@ div#colormapping {
         self.sanity_check_edge_squares()
         self.validate_all_corners_found()
         self.validate_odd_cube_midge_vs_corner_parity()
-        self.print_cube()
 
         if self.write_debug_file:
             self.write_cube("Final Cube", True)
@@ -3433,6 +3461,7 @@ def resolve_colors(argv):
     cube.enter_scan_data(scan_data)
     cube.crunch_colors()
     cube.print_profile_data()
+    cube.print_cube()
 
     if use_json:
         result = json_dumps(cube.cube_for_json(), indent=4, sort_keys=True)
