@@ -1562,9 +1562,6 @@ class RubiksColorSolverGeneric(object):
 
         self.calculate_pos2side()
 
-        if self.write_debug_file:
-            self.www_header()
-
     @timed_function
     def calculate_pos2side(self):
         for side in self.sides.values():
@@ -1731,9 +1728,12 @@ div#colormapping {
             side = self.pos2side[position]
             side.set_square(position, red, green, blue)
 
-        with open(HTML_FILENAME, "a") as fh:
-            fh.write("<h1>JSON Input</h1>\n")
-            fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
+        if self.write_debug_file:
+            self.www_header()
+
+            with open(HTML_FILENAME, "a") as fh:
+                fh.write("<h1>JSON Input</h1>\n")
+                fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
 
         self.calculate_pos2square()
 
@@ -2306,25 +2306,21 @@ div#colormapping {
             corner_colors = []
 
             for position in corner_tuple:
-                square = self.pos2square[position]
-                # log.info("square %s is %s" % (square, square.color_name))
-                corner_colors.append(square.color_name)
+                #square = self.pos2square[position]
+                #corner_colors.add(square.color_name)
+                corner_colors.append(self.pos2square[position].color_name)
 
-            if "Gr" in corner_colors and "Wh" in corner_colors:
-                # log.info("%s is Gr/Wh corner" % " ".join(map(str, corner_tuple)))
-                green_white_corners.append(corner_tuple)
+            if "Gr" in corner_colors:
+                if "Wh" in corner_colors:
+                    green_white_corners.append(corner_tuple)
+                elif "Ye" in corner_colors:
+                    green_yellow_corners.append(corner_tuple)
 
-            elif "Gr" in corner_colors and "Ye" in corner_colors:
-                # log.info("%s is Gr/Ye corner" % " ".join(map(str, corner_tuple)))
-                green_yellow_corners.append(corner_tuple)
-
-            elif "Bu" in corner_colors and "Wh" in corner_colors:
-                # log.info("%s is Bu/Wh corner" % " ".join(map(str, corner_tuple)))
-                blue_white_corners.append(corner_tuple)
-
-            elif "Bu" in corner_colors and "Ye" in corner_colors:
-                # log.info("%s is Bu/Ye corner" % " ".join(map(str, corner_tuple)))
-                blue_yellow_corners.append(corner_tuple)
+            elif "Bu" in corner_colors:
+                if "Wh" in corner_colors:
+                    blue_white_corners.append(corner_tuple)
+                elif "Ye" in corner_colors:
+                    blue_yellow_corners.append(corner_tuple)
 
         return (
             green_white_corners,
@@ -2409,6 +2405,11 @@ div#colormapping {
     def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
         ref_get_lab_distance = get_lab_distance
 
+        if (self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0)):
+            high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
+        else:
+            high_low_edge_per_color = None
+
         def fix_orange_vs_red_for_color(target_color, target_color_red_or_orange_edges):
 
             if len(target_color_red_or_orange_edges) == 2:
@@ -2454,13 +2455,8 @@ div#colormapping {
 
                 if (self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0)):
 
-                    for (index, (target_color_square, partner_square)) in enumerate(
-                        target_color_red_or_orange_edges
-                    ):
+                    for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                         red_orange = red_orange_permutation[index]
-                        high_low_edge_per_color = self.get_high_low_per_edge_color(
-                            target_orbit_id
-                        )
                         edge_color_pair = edge_color_pair_map[
                             "%s/%s"
                             % (
@@ -2493,9 +2489,7 @@ div#colormapping {
             log.info("min_distance_permutation %s" % ",".join(min_distance_permutation))
                     '''
 
-            for (index, (target_color_square, partner_square)) in enumerate(
-                target_color_red_or_orange_edges
-            ):
+            for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                 if partner_square.color_name != min_distance_permutation[index]:
                     '''
                     log.warning(
@@ -2562,11 +2556,11 @@ div#colormapping {
         elif self.width == 3:
             from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
         elif self.width == 4:
-            from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs
+            from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs, highlow_edge_values
         elif self.width == 5:
-            from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs
+            from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs, highlow_edge_values
         elif self.width == 6:
-            from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs
+            from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs, highlow_edge_values
         elif self.width == 7:
             from rubikscolorresolver.cube_777 import edge_orbit_wing_pairs
 
@@ -2589,14 +2583,11 @@ div#colormapping {
             square = self.pos2square[square_index]
             partner = self.pos2square[partner_index]
 
-            if self.width == 6:
-                from rubikscolorresolver.cube_666 import highlow_edge_values
+            if self.width == 4:
                 highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
             elif self.width == 5:
-                from rubikscolorresolver.cube_555 import highlow_edge_values
                 highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
-            elif self.width == 4:
-                from rubikscolorresolver.cube_444 import highlow_edge_values
+            elif self.width == 6:
                 highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
             else:
                 raise Exception("Add support for %sx%sx%s" % (self.width, self.width, self.width))
@@ -2889,12 +2880,7 @@ div#colormapping {
 
     @timed_function
     def sanity_check_corner_squares(self):
-        (
-            green_white_corners,
-            green_yellow_corners,
-            blue_white_corners,
-            blue_yellow_corners,
-        ) = self.find_corners_by_color()
+        (green_white_corners, green_yellow_corners, blue_white_corners, blue_yellow_corners) = self.find_corners_by_color()
         self.assign_green_white_corners(green_white_corners)
         self.assign_green_yellow_corners(green_yellow_corners)
         self.assign_blue_white_corners(blue_white_corners)
@@ -3261,14 +3247,7 @@ div#colormapping {
         blue_orange_position = None
         blue_red_position = None
 
-        for side in (
-            self.sideU,
-            self.sideL,
-            self.sideF,
-            self.sideR,
-            self.sideB,
-            self.sideD,
-        ):
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for square in side.edge_squares:
                 partner_position = side.get_wing_partner(square.position)
                 partner = self.pos2square[partner_position]
@@ -3296,32 +3275,16 @@ div#colormapping {
         # we can swap orange/red for the blue edges. Which will result in the
         # lowest color distance with our orange/red baselines?
         distance_swap_green_edge = 0
-        distance_swap_green_edge += ref_get_lab_distance(
-            square_blue_orange.lab, self.orange_baseline
-        )
-        distance_swap_green_edge += ref_get_lab_distance(
-            square_blue_red.lab, self.red_baseline
-        )
-        distance_swap_green_edge += ref_get_lab_distance(
-            square_green_orange.lab, self.red_baseline
-        )
-        distance_swap_green_edge += ref_get_lab_distance(
-            square_green_red.lab, self.orange_baseline
-        )
+        distance_swap_green_edge += ref_get_lab_distance(square_blue_orange.lab, self.orange_baseline)
+        distance_swap_green_edge += ref_get_lab_distance(square_blue_red.lab, self.red_baseline)
+        distance_swap_green_edge += ref_get_lab_distance(square_green_orange.lab, self.red_baseline)
+        distance_swap_green_edge += ref_get_lab_distance(square_green_red.lab, self.orange_baseline)
 
         distance_swap_blue_edge = 0
-        distance_swap_blue_edge += ref_get_lab_distance(
-            square_green_orange.lab, self.orange_baseline
-        )
-        distance_swap_blue_edge += ref_get_lab_distance(
-            square_green_red.lab, self.red_baseline
-        )
-        distance_swap_blue_edge += ref_get_lab_distance(
-            square_blue_orange.lab, self.red_baseline
-        )
-        distance_swap_blue_edge += ref_get_lab_distance(
-            square_blue_red.lab, self.orange_baseline
-        )
+        distance_swap_blue_edge += ref_get_lab_distance(square_green_orange.lab, self.orange_baseline)
+        distance_swap_blue_edge += ref_get_lab_distance(square_green_red.lab, self.red_baseline)
+        distance_swap_blue_edge += ref_get_lab_distance(square_blue_orange.lab, self.red_baseline)
+        distance_swap_blue_edge += ref_get_lab_distance(square_blue_red.lab, self.orange_baseline)
 
         #log.info("distance_swap_green_edge %s" % distance_swap_green_edge)
         #log.info("distance_swap_blue_edge %s" % distance_swap_blue_edge)
@@ -3339,12 +3302,8 @@ div#colormapping {
             '''
             square_green_orange.color_name = "Rd"
             square_green_red.color_name = "OR"
-            square_green_orange.side_name = self.color_to_side_name[
-                square_green_orange.color_name
-            ]
-            square_green_red.side_name = self.color_to_side_name[
-                square_green_red.color_name
-            ]
+            square_green_orange.side_name = self.color_to_side_name[square_green_orange.color_name]
+            square_green_red.side_name = self.color_to_side_name[square_green_red.color_name]
         else:
             '''
             log.warning(
@@ -3358,12 +3317,8 @@ div#colormapping {
             '''
             square_blue_orange.color_name = "Rd"
             square_blue_red.color_name = "OR"
-            square_blue_orange.side_name = self.color_to_side_name[
-                square_blue_orange.color_name
-            ]
-            square_blue_red.side_name = self.color_to_side_name[
-                square_blue_red.color_name
-            ]
+            square_blue_orange.side_name = self.color_to_side_name[square_blue_orange.color_name]
+            square_blue_red.side_name = self.color_to_side_name[square_blue_red.color_name]
 
         edges_even = self.edge_swaps_even(None, debug)
         corners_even = self.corner_swaps_even(debug)
@@ -3458,6 +3413,7 @@ def resolve_colors(argv):
     width = int(sqrt(square_count_per_side))
 
     cube = RubiksColorSolverGeneric(width)
+    cube.write_debug_file = True
     cube.enter_scan_data(scan_data)
     cube.crunch_colors()
     cube.print_profile_data()
