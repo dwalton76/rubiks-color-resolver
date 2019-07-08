@@ -1072,22 +1072,17 @@ def get_swap_count(listA, listB, debug=False):
 @timed_function
 def traveling_salesman(squares, endpoints=None):
     ref_get_lab_distance = get_lab_distance
-
-    # build a full matrix of color to color distances
     len_squares = len(squares)
-    matrix = [[0 for i in range(len_squares)] for j in range(len_squares)]
     r_len_squares = range(len_squares)
 
+    # build a full matrix of color to color distances
+    matrix = [[0 for i in r_len_squares] for j in r_len_squares]
+
     for x in r_len_squares:
-        x_square = squares[x]
-        (x_red, x_green, x_blue) = x_square.rgb
-        x_lab = x_square.lab
-        matrix[x][x] = 0
+        x_lab = squares[x].lab
 
         for y in range(x+1, len_squares):
-            y_square = squares[y]
-            (y_red, y_green, y_blue) = y_square.rgb
-            y_lab = y_square.lab
+            y_lab = squares[y].lab
 
             distance = ref_get_lab_distance(x_lab, y_lab)
             matrix[x][y] = distance
@@ -1229,6 +1224,9 @@ def hex_to_rgb(rgb_string):
 @timed_function
 def hashtag_rgb_to_labcolor(rgb_string):
     (red, green, blue) = hex_to_rgb(rgb_string)
+    #lab = rgb2lab((red, green, blue))
+    #print("LabColor({}, {}, {}, {}, {}, {}),".format(lab.L, lab.a, lab.b, lab.red, lab.green, lab.blue))
+    #return lab
     return rgb2lab((red, green, blue))
 
 
@@ -1244,12 +1242,18 @@ crayola_colors = {
     #   blue = (22, 57, 103)
     #   red = (104, 4, 2)
     #
-    "Wh": hashtag_rgb_to_labcolor("#FFFFFF"),
-    "Gr": hashtag_rgb_to_labcolor("#14694a"),
-    "Ye": hashtag_rgb_to_labcolor("#FFFF00"),
-    "OR": hashtag_rgb_to_labcolor("#943509"),
-    "Bu": hashtag_rgb_to_labcolor("#163967"),
-    "Rd": hashtag_rgb_to_labcolor("#680402"),
+    #"Wh": hashtag_rgb_to_labcolor("#FFFFFF"),
+    #"Gr": hashtag_rgb_to_labcolor("#14694a"),
+    #"Ye": hashtag_rgb_to_labcolor("#FFFF00"),
+    #"OR": hashtag_rgb_to_labcolor("#943509"),
+    #"Bu": hashtag_rgb_to_labcolor("#163967"),
+    #"Rd": hashtag_rgb_to_labcolor("#680402"),
+    "Wh" : LabColor(100.0, 0.00526049995830391, -0.01040818452526793, 255, 255, 255),
+    "Gr" : LabColor(39.14982168015123, -32.45052099773829, 10.60519920674466, 20, 105, 74),
+    "Ye" : LabColor(97.13824698129729, -21.55590833483229, 94.48248544644462, 255, 255, 0),
+    "OR" : LabColor(35.71689493804023, 38.18518746791636, 43.98251678431012, 148, 53, 9),
+    "Bu" : LabColor(23.92144819784853, 5.28400492805528, -30.63998357385018, 22, 57, 103),
+    "Rd" : LabColor(20.18063311070288, 40.48184409611946, 29.94038922869042, 104, 4, 2),
 }
 
 
@@ -1499,11 +1503,11 @@ class RubiksColorSolverGeneric(object):
         self.sideB = self.sides["B"]
         self.sideD = self.sides["D"]
         self.side_order = ("U", "L", "F", "R", "B", "D")
+        self.pos2side = {}
+
 
         # U and B
-        for (pos1, pos2) in zip(
-            self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)
-        ):
+        for (pos1, pos2) in zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)):
             self.all_edge_positions.append((pos1, pos2))
 
         # U and L
@@ -1515,9 +1519,7 @@ class RubiksColorSolverGeneric(object):
             self.all_edge_positions.append((pos1, pos2))
 
         # U and R
-        for (pos1, pos2) in zip(
-            self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos)
-        ):
+        for (pos1, pos2) in zip(self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos)):
             self.all_edge_positions.append((pos1, pos2))
 
         # F and L
@@ -1537,9 +1539,7 @@ class RubiksColorSolverGeneric(object):
             self.all_edge_positions.append((pos1, pos2))
 
         # L and D
-        for (pos1, pos2) in zip(
-            self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos)
-        ):
+        for (pos1, pos2) in zip(self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos)):
             self.all_edge_positions.append((pos1, pos2))
 
         # R and D
@@ -1551,15 +1551,20 @@ class RubiksColorSolverGeneric(object):
             self.all_edge_positions.append((pos1, pos2))
 
         # B and D
-        for (pos1, pos2) in zip(
-            reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos
-        ):
+        for (pos1, pos2) in zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos):
             self.all_edge_positions.append((pos1, pos2))
 
         for side in self.sides.values():
             side.calculate_wing_partners()
 
+        self.calculate_pos2side()
         self.www_header()
+
+    @timed_function
+    def calculate_pos2side(self):
+        for side in self.sides.values():
+            for x in range(side.min_pos, side.max_pos + 1):
+                self.pos2side[x] = side
 
     @timed_function
     def www_header(self):
@@ -1710,27 +1715,17 @@ div#colormapping {
             )
 
     @timed_function
-    def get_side(self, position):
-        """
-        Given a position on the cube return the Side object
-        that contians that position
-        """
-        for side in self.sides.values():
-            if position >= side.min_pos and position <= side.max_pos:
-                return side
-        raise Exception("Could not find side for %d" % position)
-
-    @timed_function
     def get_square(self, position):
-        side = self.get_side(position)
-        return side.squares[position]
+        #side = self.pos2side[position]
+        #return side.squares[position]
+        return self.pos2side[position].squares[position]
 
     @timed_function
     def enter_scan_data(self, scan_data):
 
         for (position, (red, green, blue)) in scan_data.items():
             position = int(position)
-            side = self.get_side(position)
+            side = self.pos2side[position]
             side.set_square(position, red, green, blue)
 
         with open(HTML_FILENAME, "a") as fh:
@@ -1739,7 +1734,6 @@ div#colormapping {
 
     @timed_function
     def write_cube(self, desc, use_html_colors):
-        # TODO clean this up...should not need the 'cube' var
         cube = ["dummy"]
 
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
@@ -1755,7 +1749,7 @@ div#colormapping {
                     green = square.rgb[1]
                     blue = square.rgb[2]
 
-                cube.append((red, green, blue, square.color_name))
+                cube.append((red, green, blue, square.color_name, square.lab))
 
         col = 1
         squares_per_side = self.width * self.width
@@ -1763,9 +1757,7 @@ div#colormapping {
 
         sides = ("upper", "left", "front", "right", "back", "down")
         side_index = -1
-        (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(
-            self.width
-        )
+        (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
 
         with open(HTML_FILENAME, "a") as fh:
             fh.write("<h1>%s</h1>\n" % desc)
@@ -1774,25 +1766,17 @@ div#colormapping {
                     side_index += 1
                     fh.write("<div class='side' id='%s'>\n" % sides[side_index])
 
-                (red, green, blue, color_name) = cube[index]
-                lab = rgb2lab((red, green, blue))
+                (red, green, blue, color_name, lab) = cube[index]
 
                 fh.write(
                     "    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), "
                     "color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n"
-                    % (
-                        col,
-                        red,
-                        green,
-                        blue,
-                        int(lab.L),
-                        int(lab.a),
-                        int(lab.b),
-                        color_name,
-                        red,
-                        green,
-                        blue,
-                        index,
+                    % (col,
+                       red, green, blue,
+                       int(lab.L), int(lab.a), int(lab.b),
+                       color_name,
+                       red, green, blue,
+                       index,
                     )
                 )
 
@@ -3081,7 +3065,7 @@ div#colormapping {
         current_edges = []
 
         for square_index in to_check:
-            side = self.get_side(square_index)
+            side = self.pos2side[square_index]
             partner_index = side.get_wing_partner(square_index)
             square1 = self.get_square(square_index)
             square2 = self.get_square(partner_index)
