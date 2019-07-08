@@ -1112,7 +1112,7 @@ def traveling_salesman(squares, endpoints=None):
         cie2000_cache = {}
         gc.collect()
 
-    path = solve_tsp(matrix, optim_steps=1, endpoints=endpoints)
+    path = solve_tsp(matrix, optim_steps=0, endpoints=endpoints)
     return [squares[x] for x in path]
 
 
