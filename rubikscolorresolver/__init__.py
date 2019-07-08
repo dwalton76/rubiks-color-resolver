@@ -3,7 +3,7 @@ import array
 import gc
 from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 from rubikscolorresolver.tsp_solver_greedy import solve_tsp
-from rubikscolorresolver.profile import timed_function, print_profile_data
+#from rubikscolorresolver.profile import timed_function, print_profile_data
 import sys
 
 if sys.version_info < (3, 4):
@@ -25,7 +25,7 @@ else:
     from json import loads as json_loads
 
 
-@timed_function
+# @timed_function
 def get_lab_distance(lab1, lab2):
     """
     http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
@@ -38,7 +38,7 @@ def get_lab_distance(lab1, lab2):
     return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
 
 '''
-@timed_function
+# @timed_function
 def get_lab_distance(lab1, lab2):
     """
     delta CIE 2000
@@ -970,7 +970,7 @@ class ListMissingValue(Exception):
     pass
 
 
-@timed_function
+# @timed_function
 def median(list_foo):
     list_foo = sorted(list_foo)
     list_foo_len = len(list_foo)
@@ -990,7 +990,7 @@ def median(list_foo):
         return list_foo[int((list_foo_len - 1) / 2)]
 
 
-@timed_function
+# @timed_function
 def find_index_for_value(list_foo, target, min_index):
     for (index, value) in enumerate(list_foo):
         if value == target and index >= min_index:
@@ -998,7 +998,7 @@ def find_index_for_value(list_foo, target, min_index):
     raise ListMissingValue("Did not find %s in list %s".format(target, list_foo))
 
 
-@timed_function
+# @timed_function
 def get_swap_count(listA, listB, debug=False):
     """
     How many swaps do we have to make in listB for it to match listA
@@ -1059,7 +1059,7 @@ matrix_30x30 = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 matrix_48x48 = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
 
-@timed_function
+# @timed_function
 def traveling_salesman(squares, endpoints=None):
     len_squares = len(squares)
     r_len_squares = range(len_squares)
@@ -1092,7 +1092,7 @@ def traveling_salesman(squares, endpoints=None):
     return [squares[x] for x in path]
 
 
-@timed_function
+# @timed_function
 def get_important_square_indexes(size):
     squares_per_side = size * size
     max_square = squares_per_side * 6
@@ -1111,7 +1111,7 @@ def get_important_square_indexes(size):
 
 class LabColor(object):
 
-    @timed_function
+    # @timed_function
     def __init__(self, L, a, b, red, green, blue):
         self.L = L
         self.a = a
@@ -1136,7 +1136,7 @@ class LabColor(object):
         return self.b < other.b
 
 
-@timed_function
+# @timed_function
 def rgb2lab(inputColor):
     (red, green, blue) = inputColor
 
@@ -1202,7 +1202,7 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
-@timed_function
+# @timed_function
 def hex_to_rgb(rgb_string):
     """
     Takes #112233 and returns the RGB values in decimal
@@ -1216,7 +1216,7 @@ def hex_to_rgb(rgb_string):
     return (red, green, blue)
 
 
-@timed_function
+# @timed_function
 def hashtag_rgb_to_labcolor(rgb_string):
     (red, green, blue) = hex_to_rgb(rgb_string)
     #lab = rgb2lab((red, green, blue))
@@ -1252,7 +1252,7 @@ crayola_colors = {
 }
 
 
-@timed_function
+# @timed_function
 def get_row_color_distances(squares, row_baseline_lab):
     """
     'colors' is list if (index, (red, green, blue)) tuples
@@ -1280,7 +1280,7 @@ def get_row_color_distances(squares, row_baseline_lab):
     return results
 
 
-@timed_function
+# @timed_function
 def get_squares_for_row(squares, target_row_index):
     results = []
     squares_per_row = int(len(squares) / 6)
@@ -1298,7 +1298,7 @@ def get_squares_for_row(squares, target_row_index):
     return results
 
 
-@timed_function
+# @timed_function
 def rgb_list_to_lab(rgbs):
     reds = array.array("B")
     greens = array.array("B")
@@ -1422,7 +1422,7 @@ class Side(object):
     def __repr__(self):
         return self.__str__()
 
-    @timed_function
+    # @timed_function
     def set_square(self, position, red, green, blue):
         self.squares[position] = Square(self, self.cube, position, red, green, blue)
 
@@ -1438,7 +1438,7 @@ class Side(object):
         else:
             raise Exception("Could not determine egde vs corner vs center")
 
-    @timed_function
+    # @timed_function
     def calculate_wing_partners(self):
         for (pos1, pos2) in self.cube.all_edge_positions:
             if pos1 >= self.min_pos and pos1 <= self.max_pos:
@@ -1446,7 +1446,7 @@ class Side(object):
             elif pos2 >= self.min_pos and pos2 <= self.max_pos:
                 self.wing_partner[pos2] = pos1
 
-    @timed_function
+    # @timed_function
     def get_wing_partner(self, wing_index):
         try:
             return self.wing_partner[wing_index]
@@ -1554,19 +1554,19 @@ class RubiksColorSolverGeneric(object):
 
         self.calculate_pos2side()
 
-    @timed_function
+    # @timed_function
     def calculate_pos2side(self):
         for side in self.sides.values():
             for x in range(side.min_pos, side.max_pos + 1):
                 self.pos2side[x] = side
 
-    @timed_function
+    # @timed_function
     def calculate_pos2square(self):
         for side in self.sides.values():
             for (position, square) in side.squares.items():
                 self.pos2square[position] = square
 
-    @timed_function
+    # @timed_function
     def www_header(self):
         """
         Write the <head> including css
@@ -1670,7 +1670,7 @@ div#colormapping {
                 )
             )
 
-    @timed_function
+    # @timed_function
     def write_colors(self, desc, squares):
         with open(HTML_FILENAME, "a") as fh:
             squares_per_row = int(len(squares) / 6)
@@ -1704,7 +1704,7 @@ div#colormapping {
                     fh.write("<br>")
             fh.write("</div>\n")
 
-    @timed_function
+    # @timed_function
     def www_footer(self):
         with open(HTML_FILENAME, "a") as fh:
             fh.write("""
@@ -1712,7 +1712,7 @@ div#colormapping {
 </html>
 """)
 
-    @timed_function
+    # @timed_function
     def enter_scan_data(self, scan_data):
 
         for (position, (red, green, blue)) in scan_data.items():
@@ -1729,7 +1729,7 @@ div#colormapping {
 
         self.calculate_pos2square()
 
-    @timed_function
+    # @timed_function
     def write_cube(self, desc, use_html_colors):
         cube = ["dummy"]
 
@@ -1788,7 +1788,7 @@ div#colormapping {
                 if col == self.width + 1:
                     col = 1
 
-    @timed_function
+    # @timed_function
     def print_cube(self):
         data = []
         for x in range(3 * self.height):
@@ -1863,15 +1863,15 @@ div#colormapping {
             fh.write("<br>")
             fh.write("</div>\n")
 
-    @timed_function
+    # @timed_function
     def write_crayola_colors(self):
         self._write_colors("crayola box", crayola_colors)
 
-    @timed_function
+    # @timed_function
     def write_color_box(self):
         self._write_colors("color_box", self.color_box)
 
-    @timed_function
+    # @timed_function
     def set_state(self):
         self.state = []
 
@@ -1935,7 +1935,7 @@ div#colormapping {
                 square = side.squares[x]
                 square.side_name = self.color_to_side_name[square.color_name]
 
-    @timed_function
+    # @timed_function
     def cube_for_kociemba_strict(self):
         #log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
         data = []
@@ -1946,7 +1946,7 @@ div#colormapping {
 
         return data
 
-    @timed_function
+    # @timed_function
     def cube_for_json(self):
         """
         Return a dictionary of the cube data so that we can json dump it
@@ -1966,7 +1966,7 @@ div#colormapping {
 
         return data
 
-    @timed_function
+    # @timed_function
     def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
         """
         Assign a color name to each square in each squares_list. Compute
@@ -2134,7 +2134,7 @@ div#colormapping {
             for square in squares_list:
                 square.color_name = color_name
 
-    @timed_function
+    # @timed_function
     def set_sorted_corner_squares(self):
         corner_squares = []
 
@@ -2144,7 +2144,7 @@ div#colormapping {
 
         self.sorted_corner_squares = traveling_salesman(corner_squares)
 
-    @timed_function
+    # @timed_function
     def resolve_color_box(self):
         """
         Assign names to the corner squares, use crayola colors as reference point.
@@ -2205,7 +2205,7 @@ div#colormapping {
         self.orange_baseline = self.color_box["OR"]
         self.red_baseline = self.color_box["Rd"]
 
-    @timed_function
+    # @timed_function
     def resolve_corner_squares(self):
         """
         Assign names to the corner squares
@@ -2221,7 +2221,7 @@ div#colormapping {
         if self.write_debug_file:
             self.write_colors("corners", self.sorted_corner_squares)
 
-    @timed_function
+    # @timed_function
     def validate_edge_orbit(self, orbit_id):
 
         if self.width == 2:
@@ -2272,7 +2272,7 @@ div#colormapping {
         # assert valid, "Cube is invalid"
         return valid
 
-    @timed_function
+    # @timed_function
     def find_corners_by_color(self):
         green_white_corners = []
         green_yellow_corners = []
@@ -2319,7 +2319,7 @@ div#colormapping {
             blue_yellow_corners,
         )
 
-    @timed_function
+    # @timed_function
     def find_edges_by_color(self, orbit_id):
 
         if self.width == 2:
@@ -2391,7 +2391,7 @@ div#colormapping {
             yellow_red_or_orange_edges,
         )
 
-    @timed_function
+    # @timed_function
     def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
 
         if (self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0)):
@@ -2533,7 +2533,7 @@ div#colormapping {
 
         self.validate_edge_orbit(target_orbit_id)
 
-    @timed_function
+    # @timed_function
     def get_high_low_per_edge_color(self, target_orbit_id):
 
         if self.width == 2:
@@ -2584,12 +2584,12 @@ div#colormapping {
         # log.info("")
         return high_low_per_edge_color
 
-    @timed_function
+    # @timed_function
     def sanity_check_edge_squares(self):
         for orbit_id in range(self.orbits):
             self.sanity_check_edges_red_orange_count_for_orbit(orbit_id)
 
-    @timed_function
+    # @timed_function
     def resolve_edge_squares(self):
         """
         Use traveling salesman algorithm to sort the colors
@@ -2634,7 +2634,7 @@ div#colormapping {
             if self.write_debug_file:
                 self.write_colors("edges - orbit %d" % target_orbit_id, sorted_edge_squares)
 
-    @timed_function
+    # @timed_function
     def assign_green_white_corners(self, green_white_corners):
         # log.info("Gr/Wh corner tuples %s".format(green_white_corners))
         valid_green_orange_white = (
@@ -2691,7 +2691,7 @@ div#colormapping {
                     #    "change Gr/Wh corner partner %s from Rd to OR" % corner3
                     #)
 
-    @timed_function
+    # @timed_function
     def assign_green_yellow_corners(self, green_yellow_corners):
         valid_green_yellow_orange = (
             ["Gr", "Ye", "OR"],
@@ -2748,7 +2748,7 @@ div#colormapping {
                     #    "change Gr/Ye corner partner %s from Rd to OR" % corner3
                     #)
 
-    @timed_function
+    # @timed_function
     def assign_blue_white_corners(self, blue_white_corners):
         # log.info("Bu/Wh corner tuples %s".format(blue_white_corners))
         valid_blue_white_orange = (
@@ -2806,7 +2806,7 @@ div#colormapping {
                     #    "change Bu/Wh corner partner %s from Rd to OR" % corner3
                     #)
 
-    @timed_function
+    # @timed_function
     def assign_blue_yellow_corners(self, blue_yellow_corners):
         valid_blue_yellow_red = (
             ["Bu", "Ye", "Rd"],
@@ -2863,7 +2863,7 @@ div#colormapping {
                     #    "change Bu/Ye corner partner %s from Rd to OR" % corner3
                     #)
 
-    @timed_function
+    # @timed_function
     def sanity_check_corner_squares(self):
         (green_white_corners, green_yellow_corners, blue_white_corners, blue_yellow_corners) = self.find_corners_by_color()
         self.assign_green_white_corners(green_white_corners)
@@ -2871,7 +2871,7 @@ div#colormapping {
         self.assign_blue_white_corners(blue_white_corners)
         self.assign_blue_yellow_corners(blue_yellow_corners)
 
-    @timed_function
+    # @timed_function
     def resolve_center_squares(self):
         """
         Use traveling salesman algorithm to sort the squares by color
@@ -2911,7 +2911,7 @@ div#colormapping {
             if self.write_debug_file:
                 self.write_colors(desc, sorted_center_squares)
 
-    @timed_function
+    # @timed_function
     def get_corner_swap_count(self, debug=False):
 
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
@@ -2982,19 +2982,19 @@ div#colormapping {
 
         return get_swap_count(needed_corners, current_corners, debug)
 
-    @timed_function
+    # @timed_function
     def corner_swaps_even(self, debug=False):
         if self.get_corner_swap_count(debug) % 2 == 0:
             return True
         return False
 
-    @timed_function
+    # @timed_function
     def corner_swaps_odd(self, debug=False):
         if self.get_corner_swap_count(debug) % 2 == 1:
             return True
         return False
 
-    @timed_function
+    # @timed_function
     def get_edge_swap_count(self, orbit, debug=False):
         needed_edges = []
         to_check = []
@@ -3104,19 +3104,19 @@ div#colormapping {
 
         return get_swap_count(needed_edges, current_edges, debug)
 
-    @timed_function
+    # @timed_function
     def edge_swaps_even(self, orbit, debug):
         if self.get_edge_swap_count(orbit, debug) % 2 == 0:
             return True
         return False
 
-    @timed_function
+    # @timed_function
     def edge_swaps_odd(self, orbit, debug):
         if self.get_edge_swap_count(orbit, debug) % 2 == 1:
             return True
         return False
 
-    @timed_function
+    # @timed_function
     def validate_all_corners_found(self):
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
 
@@ -3179,7 +3179,7 @@ div#colormapping {
             if corner not in current_corners:
                 raise Exception("corner {} is missing".format(corner))
 
-    @timed_function
+    # @timed_function
     def validate_odd_cube_midge_vs_corner_parity(self):
         """
         http://www.ryanheise.com/cube/parity.html
@@ -3312,7 +3312,7 @@ div#colormapping {
             % (edges_even, corners_even)
         )
 
-    @timed_function
+    # @timed_function
     def crunch_colors(self):
         if self.write_debug_file:
             self.write_cube("Initial RGB values", False)
@@ -3342,10 +3342,11 @@ div#colormapping {
             self.www_footer()
 
     def print_profile_data(self):
-        print_profile_data()
+        #print_profile_data()
+        pass
 
 
-@timed_function
+# @timed_function
 def resolve_colors(argv):
     help_string = """usage: rubiks-color-resolver.py [-h] [-j] [--filename FILENAME] [--rgb RGB]
 
