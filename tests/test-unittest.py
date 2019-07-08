@@ -78,7 +78,7 @@ class TestRGB2Lab(unittest.TestCase):
         self.assertEqual(lab.b, -10.57740141476744)
 
 
-
+'''
 if not is_micropython():
     from rubikscolorresolver import get_lab_distance
 
@@ -136,6 +136,7 @@ if not is_micropython():
             lab2 = rgb2lab((49, 249, 220))
             delta_e = get_lab_distance(lab1, lab2)
             self.assertEqual(delta_e, 24.96260521154151)
+'''
 
 
 class TestMedian(unittest.TestCase):

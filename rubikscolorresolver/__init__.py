@@ -19,136 +19,119 @@ if is_micropython():
     from ujson import dumps as json_dumps
     from ujson import loads as json_loads
 
-    use_cie2000_cache = False
-
-    @timed_function
-    def get_lab_distance(lab1, lab2):
-        """
-        http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
-
-        In mathematics, the Euclidean distance or Euclidean metric is the "ordinary"
-        (i.e. straight-line) distance between two points in Euclidean space. With this
-        distance, Euclidean space becomes a metric space. The associated norm is called
-        the Euclidean norm.
-        """
-        return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
-
 else:
     from collections import OrderedDict
     from json import dumps as json_dumps
     from json import loads as json_loads
 
-    use_cie2000_cache = True
 
-    @timed_function
-    def get_lab_distance(lab1, lab2):
-        """
-        delta CIE 2000
+@timed_function
+def get_lab_distance(lab1, lab2):
+    """
+    http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
 
-        Ported from this php implementation
-        https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
-        """
-        l1 = lab1.L
-        a1 = lab1.a
-        b1 = lab1.b
+    In mathematics, the Euclidean distance or Euclidean metric is the "ordinary"
+    (i.e. straight-line) distance between two points in Euclidean space. With this
+    distance, Euclidean space becomes a metric space. The associated norm is called
+    the Euclidean norm.
+    """
+    return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
 
-        l2 = lab2.L
-        a2 = lab2.a
-        b2 = lab2.b
+'''
+@timed_function
+def get_lab_distance(lab1, lab2):
+    """
+    delta CIE 2000
 
-        if use_cie2000_cache:
-            delta_e = cie2000_cache.get((l1, a1, b1, l2, a2, b2))
+    Ported from this php implementation
+    https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
+    """
+    l1 = lab1.L
+    a1 = lab1.a
+    b1 = lab1.b
 
-            if delta_e is not None:
-                return delta_e
+    l2 = lab2.L
+    a2 = lab2.a
+    b2 = lab2.b
 
-            delta_e = cie2000_cache.get((l2, a2, b2, l1, a1, b1))
+    if use_cie2000_cache:
+        delta_e = cie2000_cache.get((l1, a1, b1, l2, a2, b2))
 
-            if delta_e is not None:
-                return delta_e
+        if delta_e is not None:
+            return delta_e
 
-        avg_lp = (l1 + l2) / 2.0
-        c1 = sqrt(a1 ** 2 + b1 ** 2)
-        c2 = sqrt(a2 ** 2 + b2 ** 2)
-        avg_c = (c1 + c2) / 2.0
-        g = (1 - sqrt(avg_c ** 7 / (avg_c ** 7 + 25 ** 7))) / 2.0
-        a1p = a1 * (1 + g)
-        a2p = a2 * (1 + g)
-        c1p = sqrt(a1p ** 2 + b1 ** 2)
-        c2p = sqrt(a2p ** 2 + b2 ** 2)
-        avg_cp = (c1p + c2p) / 2.0
-        h1p = degrees(atan2(b1, a1p))
+        delta_e = cie2000_cache.get((l2, a2, b2, l1, a1, b1))
 
-        if h1p < 0:
-            h1p += 360
+        if delta_e is not None:
+            return delta_e
 
-        h2p = degrees(atan2(b2, a2p))
+    avg_lp = (l1 + l2) / 2.0
+    c1 = sqrt(a1 ** 2 + b1 ** 2)
+    c2 = sqrt(a2 ** 2 + b2 ** 2)
+    avg_c = (c1 + c2) / 2.0
+    g = (1 - sqrt(avg_c ** 7 / (avg_c ** 7 + 25 ** 7))) / 2.0
+    a1p = a1 * (1 + g)
+    a2p = a2 * (1 + g)
+    c1p = sqrt(a1p ** 2 + b1 ** 2)
+    c2p = sqrt(a2p ** 2 + b2 ** 2)
+    avg_cp = (c1p + c2p) / 2.0
+    h1p = degrees(atan2(b1, a1p))
 
-        if h2p < 0:
-            h2p += 360
+    if h1p < 0:
+        h1p += 360
 
-        if abs(h1p - h2p) > 180:
-            avg_hp = (h1p + h2p + 360) / 2.0
+    h2p = degrees(atan2(b2, a2p))
+
+    if h2p < 0:
+        h2p += 360
+
+    if abs(h1p - h2p) > 180:
+        avg_hp = (h1p + h2p + 360) / 2.0
+    else:
+        avg_hp = (h1p + h2p) / 2.0
+
+    t = (
+        1
+        - 0.17 * cos(radians(avg_hp - 30))
+        + 0.24 * cos(radians(2 * avg_hp))
+        + 0.32 * cos(radians(3 * avg_hp + 6))
+        - 0.2 * cos(radians(4 * avg_hp - 63))
+    )
+    delta_hp = h2p - h1p
+
+    if abs(delta_hp) > 180:
+        if h2p <= h1p:
+            delta_hp += 360
         else:
-            avg_hp = (h1p + h2p) / 2.0
+            delta_hp -= 360
 
-        t = (
-            1
-            - 0.17 * cos(radians(avg_hp - 30))
-            + 0.24 * cos(radians(2 * avg_hp))
-            + 0.32 * cos(radians(3 * avg_hp + 6))
-            - 0.2 * cos(radians(4 * avg_hp - 63))
-        )
-        delta_hp = h2p - h1p
+    delta_lp = l2 - l1
+    delta_cp = c2p - c1p
+    delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
+    s_l = 1 + ((0.015 * ((avg_lp - 50) ** 2)) / sqrt(20 + ((avg_lp - 50) ** 2)))
+    s_c = 1 + 0.045 * avg_cp
+    s_h = 1 + 0.015 * avg_cp * t
 
-        if abs(delta_hp) > 180:
-            if h2p <= h1p:
-                delta_hp += 360
-            else:
-                delta_hp -= 360
+    delta_ro = 30 * exp(-((((avg_hp - 275) / 25.0) ** 2)))
 
-        delta_lp = l2 - l1
-        delta_cp = c2p - c1p
-        delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
-        s_l = 1 + ((0.015 * ((avg_lp - 50) ** 2)) / sqrt(20 + ((avg_lp - 50) ** 2)))
-        s_c = 1 + 0.045 * avg_cp
-        s_h = 1 + 0.015 * avg_cp * t
+    r_c = 2 * sqrt((avg_cp ** 7) / ((avg_cp ** 7) + (25 ** 7)))
+    r_t = -r_c * sin(2 * radians(delta_ro))
+    kl = 1.0
+    kc = 1.0
+    kh = 1.0
+    delta_e = sqrt(
+        ((delta_lp / (s_l * kl)) ** 2)
+        + ((delta_cp / (s_c * kc)) ** 2)
+        + ((delta_hp / (s_h * kh)) ** 2)
+        + r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh))
+    )
 
-        delta_ro = 30 * exp(-((((avg_hp - 275) / 25.0) ** 2)))
+    if use_cie2000_cache:
+        cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
+        cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
 
-        r_c = 2 * sqrt((avg_cp ** 7) / ((avg_cp ** 7) + (25 ** 7)))
-        r_t = -r_c * sin(2 * radians(delta_ro))
-        kl = 1.0
-        kc = 1.0
-        kh = 1.0
-        delta_e = sqrt(
-            ((delta_lp / (s_l * kl)) ** 2)
-            + ((delta_cp / (s_c * kc)) ** 2)
-            + ((delta_hp / (s_h * kh)) ** 2)
-            + r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh))
-        )
-
-        if use_cie2000_cache:
-            cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
-            cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
-
-        # I used this once to build some test cases for TestDeltaCIE2000
-        '''
-        with open("/tmp/foobar.txt", "a") as fh:
-            fh.write("""
-            def test_%d_%d_%d_vs_%d_%d_%d(self):
-                lab1 = rgb2lab((%d, %d, %d))
-                lab2 = rgb2lab((%d, %d, %d))
-                delta_e = delta_e_cie2000(lab1, lab2)
-                self.assertEqual(delta_e, %s)
-    """ % ( lab1.red, lab1.green, lab1.blue,
-            lab2.red, lab2.green, lab2.blue,
-            lab1.red, lab1.green, lab1.blue,
-            lab2.red, lab2.green, lab2.blue,
-            delta_e))
-        '''
-
-        return delta_e
+    return delta_e
+'''
 
 
 cie2000_cache = {}
@@ -1078,7 +1061,6 @@ matrix_48x48 = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 
 @timed_function
 def traveling_salesman(squares, endpoints=None):
-    ref_get_lab_distance = get_lab_distance
     len_squares = len(squares)
     r_len_squares = range(len_squares)
 
@@ -1102,15 +1084,9 @@ def traveling_salesman(squares, endpoints=None):
         for y in range(x+1, len_squares):
             y_lab = squares[y].lab
 
-            distance = ref_get_lab_distance(x_lab, y_lab)
-            #distance = sqrt(((x_lab.L - y_lab.L) ** 2) + ((x_lab.a - y_lab.a) ** 2) + ((x_lab.b - y_lab.b) ** 2))
+            distance = sqrt(((x_lab.L - y_lab.L) ** 2) + ((x_lab.a - y_lab.a) ** 2) + ((x_lab.b - y_lab.b) ** 2))
             matrix[x][y] = distance
             matrix[y][x] = distance
-
-    if use_cie2000_cache:
-        global cie2000_cache
-        cie2000_cache = {}
-        gc.collect()
 
     path = solve_tsp(matrix, optim_steps=0, endpoints=endpoints)
     return [squares[x] for x in path]
@@ -1284,7 +1260,6 @@ def get_row_color_distances(squares, row_baseline_lab):
 
     Return the total distance of the colors in a row vs their baseline
     """
-    ref_get_lab_distance = get_lab_distance
     results = []
     squares_per_row = int(len(squares) / 6)
     count = 0
@@ -1294,7 +1269,7 @@ def get_row_color_distances(squares, row_baseline_lab):
 
     for square in squares:
         baseline_lab = row_baseline_lab[row_index]
-        distance += ref_get_lab_distance(baseline_lab, square.lab)
+        distance += sqrt(((baseline_lab.L - square.lab.L) ** 2) + ((baseline_lab.a - square.lab.a) ** 2) + ((baseline_lab.b - square.lab.b) ** 2))
         count += 1
 
         if count % squares_per_row == 0:
@@ -1899,7 +1874,6 @@ div#colormapping {
     @timed_function
     def set_state(self):
         self.state = []
-        ref_get_lab_distance = get_lab_distance
 
         # odd cube
         if self.sideU.mid_pos is not None:
@@ -1924,7 +1898,7 @@ div#colormapping {
                 for (index, center_square) in enumerate(center_squares):
                     color_name = permutation[index]
                     color_obj = crayola_colors[color_name]
-                    distance += ref_get_lab_distance(center_square.lab, color_obj)
+                    distance += sqrt(((center_square.lab.L - color_obj.L) ** 2) + ((center_square.lab.a - color_obj.a) ** 2) + ((center_square.lab.b - color_obj.b) ** 2))
 
                 if min_distance is None or distance < min_distance:
                     min_distance = distance
@@ -2009,7 +1983,6 @@ div#colormapping {
             end = start + LINE_LENGTH
             return ref_even_cube_center_color_permutations[start:end].split()
 
-        ref_get_lab_distance = get_lab_distance
         ref_ALL_COLORS = ALL_COLORS
 
         # squares_lists_all is sorted by color. Split that list into 6 even buckets (squares_lists).
@@ -2035,7 +2008,7 @@ div#colormapping {
             for (index, squares_list) in enumerate(squares_lists):
                 distance = 0
                 for square in squares_list:
-                    distance += ref_get_lab_distance(square.lab, color_lab)
+                    distance += sqrt(((square.lab.L - color_lab.L) ** 2) + ((square.lab.a - color_lab.a) ** 2) + ((square.lab.b - color_lab.b) ** 2))
                 distances_of_square_list_per_color[color_name].append(int(distance))
             distances_of_square_list_per_color[color_name] = distances_of_square_list_per_color[color_name]
 
@@ -2420,7 +2393,6 @@ div#colormapping {
 
     @timed_function
     def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
-        ref_get_lab_distance = get_lab_distance
 
         if (self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0)):
             high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
@@ -2457,13 +2429,9 @@ div#colormapping {
                     red_orange = red_orange_permutation[index]
 
                     if red_orange == "OR":
-                        distance += ref_get_lab_distance(
-                            partner_square.lab, self.orange_baseline
-                        )
+                        distance += sqrt(((partner_square.lab.L - self.orange_baseline.L) ** 2) + ((partner_square.lab.a - self.orange_baseline.a) ** 2) + ((partner_square.lab.b - self.orange_baseline.b) ** 2))
                     elif red_orange == "Rd":
-                        distance += ref_get_lab_distance(
-                            partner_square.lab, self.red_baseline
-                        )
+                        distance += sqrt(((partner_square.lab.L - self.red_baseline.L) ** 2) + ((partner_square.lab.a - self.red_baseline.a) ** 2) + ((partner_square.lab.b - self.red_baseline.b) ** 2))
                     else:
                         raise Exception(red_orange)
 
