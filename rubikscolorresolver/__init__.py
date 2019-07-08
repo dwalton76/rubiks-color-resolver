@@ -1504,7 +1504,7 @@ class RubiksColorSolverGeneric(object):
         self.sideD = self.sides["D"]
         self.side_order = ("U", "L", "F", "R", "B", "D")
         self.pos2side = {}
-
+        self.pos2square = {}
 
         # U and B
         for (pos1, pos2) in zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)):
@@ -1565,6 +1565,13 @@ class RubiksColorSolverGeneric(object):
         for side in self.sides.values():
             for x in range(side.min_pos, side.max_pos + 1):
                 self.pos2side[x] = side
+
+    @timed_function
+    def calculate_pos2square(self):
+        for side in self.sides.values():
+            for (position, square) in side.squares.items():
+                self.pos2square[position] = square
+        print(self.pos2square)
 
     @timed_function
     def www_header(self):
@@ -1707,18 +1714,10 @@ div#colormapping {
     @timed_function
     def www_footer(self):
         with open(HTML_FILENAME, "a") as fh:
-            fh.write(
-                """
+            fh.write("""
 </body>
 </html>
-"""
-            )
-
-    @timed_function
-    def get_square(self, position):
-        #side = self.pos2side[position]
-        #return side.squares[position]
-        return self.pos2side[position].squares[position]
+""")
 
     @timed_function
     def enter_scan_data(self, scan_data):
@@ -1731,6 +1730,8 @@ div#colormapping {
         with open(HTML_FILENAME, "a") as fh:
             fh.write("<h1>JSON Input</h1>\n")
             fh.write("<pre>%s</pre>\n" % json_dumps(scan_data))
+
+        self.calculate_pos2square()
 
     @timed_function
     def write_cube(self, desc, use_html_colors):
@@ -2214,8 +2215,8 @@ div#colormapping {
         wing_pair_counts = {}
 
         for (square1_position, square2_position) in edge_orbit_wing_pairs[orbit_id]:
-            square1 = self.get_square(square1_position)
-            square2 = self.get_square(square2_position)
+            square1 = self.pos2square[square1_position]
+            square2 = self.pos2square[square2_position]
             wing_pair_string = ", ".join(
                 sorted([square1.color_name, square2.color_name])
             )
@@ -2267,7 +2268,7 @@ div#colormapping {
             corner_colors = []
 
             for position in corner_tuple:
-                square = self.get_square(position)
+                square = self.pos2square[position]
                 # log.info("square %s is %s" % (square, square.color_name))
                 corner_colors.append(square.color_name)
 
@@ -2320,8 +2321,8 @@ div#colormapping {
         yellow_red_or_orange_edges = []
 
         for (square_index, partner_index) in edge_orbit_wing_pairs[orbit_id]:
-            square = self.get_square(square_index)
-            partner = self.get_square(partner_index)
+            square = self.pos2square[square_index]
+            partner = self.pos2square[partner_index]
 
             if (
                 square.color_name in green_red_orange_color_names
@@ -2547,8 +2548,8 @@ div#colormapping {
         }
 
         for (square_index, partner_index) in edge_orbit_wing_pairs[target_orbit_id]:
-            square = self.get_square(square_index)
-            partner = self.get_square(partner_index)
+            square = self.pos2square[square_index]
+            partner = self.pos2square[partner_index]
 
             if self.width == 6:
                 from rubikscolorresolver.cube_666 import highlow_edge_values
@@ -2633,9 +2634,9 @@ div#colormapping {
         )
 
         for (corner1_index, corner2_index, corner3_index) in green_white_corners:
-            corner1 = self.get_square(corner1_index)
-            corner2 = self.get_square(corner2_index)
-            corner3 = self.get_square(corner3_index)
+            corner1 = self.pos2square[corner1_index]
+            corner2 = self.pos2square[corner2_index]
+            corner3 = self.pos2square[corner3_index]
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
@@ -2689,9 +2690,9 @@ div#colormapping {
         )
 
         for (corner1_index, corner2_index, corner3_index) in green_yellow_corners:
-            corner1 = self.get_square(corner1_index)
-            corner2 = self.get_square(corner2_index)
-            corner3 = self.get_square(corner3_index)
+            corner1 = self.pos2square[corner1_index]
+            corner2 = self.pos2square[corner2_index]
+            corner3 = self.pos2square[corner3_index]
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
@@ -2747,9 +2748,9 @@ div#colormapping {
         )
 
         for (corner1_index, corner2_index, corner3_index) in blue_white_corners:
-            corner1 = self.get_square(corner1_index)
-            corner2 = self.get_square(corner2_index)
-            corner3 = self.get_square(corner3_index)
+            corner1 = self.pos2square[corner1_index]
+            corner2 = self.pos2square[corner2_index]
+            corner3 = self.pos2square[corner3_index]
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
@@ -2804,9 +2805,9 @@ div#colormapping {
         )
 
         for (corner1_index, corner2_index, corner3_index) in blue_yellow_corners:
-            corner1 = self.get_square(corner1_index)
-            corner2 = self.get_square(corner2_index)
-            corner3 = self.get_square(corner3_index)
+            corner1 = self.pos2square[corner1_index]
+            corner2 = self.pos2square[corner2_index]
+            corner3 = self.pos2square[corner3_index]
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
@@ -2884,7 +2885,7 @@ div#colormapping {
             center_squares = []
 
             for position in centers_squares:
-                square = self.get_square(position)
+                square = self.pos2square[position]
                 center_squares.append(square)
 
             if desc == "centers":
@@ -2947,9 +2948,9 @@ div#colormapping {
 
         current_corners = []
         for (square_index1, square_index2, square_index3) in to_check:
-            square1 = self.get_square(square_index1)
-            square2 = self.get_square(square_index2)
-            square3 = self.get_square(square_index3)
+            square1 = self.pos2square[square_index1]
+            square2 = self.pos2square[square_index2]
+            square3 = self.pos2square[square_index3]
             corner_str = "".join(
                 sorted([square1.side_name, square2.side_name, square3.side_name])
             )
@@ -3067,8 +3068,8 @@ div#colormapping {
         for square_index in to_check:
             side = self.pos2side[square_index]
             partner_index = side.get_wing_partner(square_index)
-            square1 = self.get_square(square_index)
-            square2 = self.get_square(partner_index)
+            square1 = self.pos2square[square_index]
+            square2 = self.pos2square[partner_index]
 
             if square1.side_name in ("U", "D"):
                 wing_str = square1.side_name + square2.side_name
@@ -3151,9 +3152,9 @@ div#colormapping {
 
         current_corners = []
         for (square_index1, square_index2, square_index3) in to_check:
-            square1 = self.get_square(square_index1)
-            square2 = self.get_square(square_index2)
-            square3 = self.get_square(square_index3)
+            square1 = self.pos2square[square_index1]
+            square2 = self.pos2square[square_index2]
+            square3 = self.pos2square[square_index3]
             corner_str = "".join(
                 sorted([square1.side_name, square2.side_name, square3.side_name])
             )
@@ -3228,7 +3229,7 @@ div#colormapping {
         ):
             for square in side.edge_squares:
                 partner_position = side.get_wing_partner(square.position)
-                partner = self.get_square(partner_position)
+                partner = self.pos2square[partner_position]
 
                 if square.color_name == "Gr" and partner.color_name == "OR":
                     green_orange_position = partner_position
@@ -3244,10 +3245,10 @@ div#colormapping {
         #log.debug("blue_orange_position %s".format(blue_orange_position))
         #log.debug("blue_red_position %s".format(blue_red_position))
 
-        square_green_orange = self.get_square(green_orange_position)
-        square_green_red = self.get_square(green_red_position)
-        square_blue_orange = self.get_square(blue_orange_position)
-        square_blue_red = self.get_square(blue_red_position)
+        square_green_orange = self.pos2square[green_orange_position]
+        square_green_red = self.pos2square[green_red_position]
+        square_blue_orange = self.pos2square[blue_orange_position]
+        square_blue_red = self.pos2square[blue_red_position]
 
         # To correct the parity we can swap orange/red for the green edges or
         # we can swap orange/red for the blue edges. Which will result in the
