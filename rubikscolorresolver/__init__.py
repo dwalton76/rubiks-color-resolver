@@ -1076,7 +1076,8 @@ def traveling_salesman(squares, endpoints=None):
     r_len_squares = range(len_squares)
 
     # build a full matrix of color to color distances
-    matrix = [[0 for i in r_len_squares] for j in r_len_squares]
+    # init the 2d list with 0s
+    matrix = [x[:] for x in [[0] * len_squares] * len_squares]
 
     for x in r_len_squares:
         x_lab = squares[x].lab
@@ -1085,6 +1086,7 @@ def traveling_salesman(squares, endpoints=None):
             y_lab = squares[y].lab
 
             distance = ref_get_lab_distance(x_lab, y_lab)
+            #distance = sqrt(((x_lab.L - y_lab.L) ** 2) + ((x_lab.a - y_lab.a) ** 2) + ((x_lab.b - y_lab.b) ** 2))
             matrix[x][y] = distance
             matrix[y][x] = distance
 
@@ -1473,6 +1475,7 @@ class RubiksColorSolverGeneric(object):
         self.red_baseline = None
         self.white_squares = []
         self.all_edge_positions = []
+        self.write_debug_file = False
 
         if self.width % 2 == 0:
             self.even = True
@@ -1558,7 +1561,9 @@ class RubiksColorSolverGeneric(object):
             side.calculate_wing_partners()
 
         self.calculate_pos2side()
-        self.www_header()
+
+        if self.write_debug_file:
+            self.www_header()
 
     @timed_function
     def calculate_pos2side(self):
@@ -1571,7 +1576,6 @@ class RubiksColorSolverGeneric(object):
         for side in self.sides.values():
             for (position, square) in side.squares.items():
                 self.pos2square[position] = square
-        print(self.pos2square)
 
     @timed_function
     def www_header(self):
@@ -1837,6 +1841,7 @@ div#colormapping {
         for row in data:
             output.append(" ".join(row))
 
+        print("Cube\n\n%s\n" % "\n".join(output))
         #log.info("Cube\n\n%s\n" % "\n".join(output))
 
     def _write_colors(self, desc, box):
@@ -2141,7 +2146,9 @@ div#colormapping {
             crayola_colors,
         )
         self.sanity_check_corner_squares()
-        self.write_colors("color_box corners", self.sorted_corner_squares)
+
+        if self.write_debug_file:
+            self.write_colors("color_box corners", self.sorted_corner_squares)
 
         # Build a color_box dictionary from the centers
         self.color_box = {}
@@ -2191,7 +2198,9 @@ div#colormapping {
             self.color_box,
         )
         self.sanity_check_corner_squares()
-        self.write_colors("corners", self.sorted_corner_squares)
+
+        if self.write_debug_file:
+            self.write_colors("corners", self.sorted_corner_squares)
 
     @timed_function
     def validate_edge_orbit(self, orbit_id):
@@ -2616,7 +2625,9 @@ div#colormapping {
                 "even_cube_center_color_permutations",
                 self.color_box,
             )
-            self.write_colors("edges - orbit %d" % target_orbit_id, sorted_edge_squares)
+
+            if self.write_debug_file:
+                self.write_colors("edges - orbit %d" % target_orbit_id, sorted_edge_squares)
 
     @timed_function
     def assign_green_white_corners(self, green_white_corners):
@@ -2896,7 +2907,9 @@ div#colormapping {
                 permutations = "even_cube_center_color_permutations"
 
             self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
-            self.write_colors(desc, sorted_center_squares)
+
+            if self.write_debug_file:
+                self.write_colors(desc, sorted_center_squares)
 
     @timed_function
     def get_corner_swap_count(self, debug=False):
@@ -3332,12 +3345,15 @@ div#colormapping {
 
     @timed_function
     def crunch_colors(self):
-        self.write_cube("Initial RGB values", False)
-        self.write_crayola_colors()
+        if self.write_debug_file:
+            self.write_cube("Initial RGB values", False)
+            self.write_crayola_colors()
 
         self.set_sorted_corner_squares()
         self.resolve_color_box()
-        self.write_color_box()
+
+        if self.write_debug_file:
+            self.write_color_box()
 
         # corners
         self.resolve_corner_squares()
@@ -3351,10 +3367,11 @@ div#colormapping {
         self.sanity_check_edge_squares()
         self.validate_all_corners_found()
         self.validate_odd_cube_midge_vs_corner_parity()
-
-        self.write_cube("Final Cube", True)
         self.print_cube()
-        self.www_footer()
+
+        if self.write_debug_file:
+            self.write_cube("Final Cube", True)
+            self.www_footer()
 
     def print_profile_data(self):
         print_profile_data()
