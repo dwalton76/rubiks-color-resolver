@@ -30,6 +30,16 @@ def get_lab_distance(lab1, lab2):
     return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
 
 
+html_color = {
+    "Gr": {"red": 0, "green": 102, "blue": 0},
+    "Bu": {"red": 0, "green": 0, "blue": 153},
+    "OR": {"red": 255, "green": 102, "blue": 0},
+    "Rd": {"red": 204, "green": 0, "blue": 0},
+    "Wh": {"red": 255, "green": 255, "blue": 255},
+    "Ye": {"red": 255, "green": 204, "blue": 0},
+}
+
+
 edge_color_pair_map = {
     # Up (white)
     "Gr/Wh": "Gr/Wh",
@@ -223,14 +233,14 @@ def rgb2lab(inputColor):
 
 class Square(object):
 
-    def __init__(self, side, cube, position, red, green, blue):
+    def __init__(self, side, cube, position, red, green, blue, side_name=None, color_name=None):
         #self.cube = cube
         self.side = side
         self.position = position
         self.rgb = (red, green, blue)
         self.lab = rgb2lab((red, green, blue))
-        self.color_name = None
-        self.side_name = None  # ULFRBD
+        self.side_name = side_name # ULFRBD
+        self.color_name = color_name
 
     def __str__(self):
         return "{}{}-{}".format(self.side, self.position, self.color_name)
@@ -328,8 +338,8 @@ class Side(object):
         return self.__str__()
 
     # @timed_function
-    def set_square(self, position, red, green, blue):
-        self.squares[position] = Square(self, self.cube, position, red, green, blue)
+    def set_square(self, position, red, green, blue, side_name=None, color_name=None):
+        self.squares[position] = Square(self, self.cube, position, red, green, blue, side_name, color_name)
 
         if position in self.center_pos:
             self.center_squares.append(self.squares[position])
@@ -466,6 +476,73 @@ class RubiksColorSolverGenericBase(object):
         for side in self.sides.values():
             for (position, square) in side.squares.items():
                 self.pos2square[position] = square
+
+    def enter_cube_state(self, input_state, order="URFDLB"):
+        """
+        If you already have the cube state this method allows you to enter it
+        so we can then validate the cube state via:
+
+            - sanity_check_edge_squares()
+            - validate_all_corners_found()
+            - validate_odd_cube_midge_vs_corner_parity()
+
+        The primary use case for this is a robot with a color sensor that can
+        return color names (red, green, etc) but not RGB values.
+        """
+        input_state = list(input_state)
+        state = []
+
+        # kociemba order
+        if order == 'URFDLB':
+            state.extend(input_state[0:self.squares_per_side])                            # U
+            state.extend(input_state[(self.squares_per_side * 4):(self.squares_per_side * 5)]) # L
+            state.extend(input_state[(self.squares_per_side * 2):(self.squares_per_side * 3)]) # F
+            state.extend(input_state[(self.squares_per_side * 1):(self.squares_per_side * 2)]) # R
+            state.extend(input_state[(self.squares_per_side * 5):(self.squares_per_side * 6)]) # B
+            state.extend(input_state[(self.squares_per_side * 3):(self.squares_per_side * 4)]) # D
+        elif order == 'ULFRBD':
+            state.extend(input_state[0:self.squares_per_side])                            # U
+            state.extend(input_state[(self.squares_per_side * 1):(self.squares_per_side * 2)]) # L
+            state.extend(input_state[(self.squares_per_side * 2):(self.squares_per_side * 3)]) # F
+            state.extend(input_state[(self.squares_per_side * 3):(self.squares_per_side * 4)]) # R
+            state.extend(input_state[(self.squares_per_side * 4):(self.squares_per_side * 5)]) # B
+            state.extend(input_state[(self.squares_per_side * 5):(self.squares_per_side * 6)]) # D
+        else:
+            raise Exception("Add support for order %s" % order)
+
+        self.color_to_side_name = {
+            "Wh": "U",
+            "OR": "L",
+            "Gr": "F",
+            "Rd": "R",
+            "Bu": "B",
+            "Ye": "D",
+        }
+
+        side_name_to_color = {
+            "U" : "Wh",
+            "L" : "OR",
+            "F" : "Gr",
+            "R" : "Rd",
+            "B" : "Bu",
+            "D" : "Ye",
+        }
+
+        self.orange_baseline = rgb2lab((html_color["OR"]["red"], html_color["OR"]["green"], html_color["OR"]["blue"]))
+        self.red_baseline = rgb2lab((html_color["Rd"]["red"], html_color["Rd"]["green"], html_color["Rd"]["blue"]))
+
+        for position in range(1, (self.squares_per_side*6) + 1):
+            side_name = state[position-1]
+            color_name = side_name_to_color[side_name]
+
+            red = html_color[color_name]["red"]
+            green = html_color[color_name]["green"]
+            blue = html_color[color_name]["blue"]
+
+            side = self.pos2side[position]
+            side.set_square(position, red, green, blue, side_name, color_name)
+
+        self.calculate_pos2square()
 
     # @timed_function
     def print_cube(self):

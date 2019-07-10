@@ -5,6 +5,7 @@ from math import sqrt
 from rubikscolorresolver.base import (
     LabColor,
     RubiksColorSolverGenericBase,
+    html_color,
     rgb2lab,
 )
 from rubikscolorresolver.tsp_solver_greedy import solve_tsp
@@ -128,15 +129,6 @@ def get_lab_distance(lab1, lab2):
 cie2000_cache = {}
 
 ALL_COLORS = ("Bu", "Gr", "OR", "Rd", "Wh", "Ye")
-
-html_color = {
-    "Gr": {"red": 0, "green": 102, "blue": 0},
-    "Bu": {"red": 0, "green": 0, "blue": 153},
-    "OR": {"red": 255, "green": 102, "blue": 0},
-    "Rd": {"red": 204, "green": 0, "blue": 0},
-    "Wh": {"red": 255, "green": 255, "blue": 255},
-    "Ye": {"red": 255, "green": 204, "blue": 0},
-}
 
 
 def permutations(iterable, r=None):
