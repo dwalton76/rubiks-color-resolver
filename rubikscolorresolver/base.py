@@ -75,7 +75,7 @@ def find_index_for_value(list_foo, target, min_index):
 
 
 # @timed_function
-def get_swap_count(listA, listB, debug=False):
+def get_swap_count(listA, listB):
     """
     How many swaps do we have to make in listB for it to match listA
     Example:
@@ -574,7 +574,6 @@ class RubiksColorSolverGenericBase(object):
         #    log.info("wing_pair_counts:\n{}\n".format(wing_pair_counts))
         #    log.warning("valid: {}".format(valid))
 
-        # assert valid, "Cube is invalid"
         return valid
 
     # @timed_function
@@ -1126,7 +1125,7 @@ class RubiksColorSolverGenericBase(object):
         self.assign_blue_yellow_corners(blue_yellow_corners)
 
     # @timed_function
-    def get_corner_swap_count(self, debug=False):
+    def get_corner_swap_count(self):
 
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
 
@@ -1183,22 +1182,22 @@ class RubiksColorSolverGenericBase(object):
             )
             current_corners.append(corner_str)
 
-        return get_swap_count(needed_corners, current_corners, debug)
+        return get_swap_count(needed_corners, current_corners)
 
     # @timed_function
-    def corner_swaps_even(self, debug=False):
-        if self.get_corner_swap_count(debug) % 2 == 0:
+    def corner_swaps_even(self):
+        if self.get_corner_swap_count() % 2 == 0:
             return True
         return False
 
     # @timed_function
-    def corner_swaps_odd(self, debug=False):
-        if self.get_corner_swap_count(debug) % 2 == 1:
+    def corner_swaps_odd(self):
+        if self.get_corner_swap_count() % 2 == 1:
             return True
         return False
 
     # @timed_function
-    def get_edge_swap_count(self, orbit, debug=False):
+    def get_edge_swap_count(self, orbit):
         needed_edges = []
         to_check = []
 
@@ -1289,20 +1288,17 @@ class RubiksColorSolverGenericBase(object):
 
             current_edges.append(wing_str)
 
-        #if debug:
-        #    log.info("current edges: %s" % " ".join(current_edges))
-
-        return get_swap_count(needed_edges, current_edges, debug)
+        return get_swap_count(needed_edges, current_edges)
 
     # @timed_function
-    def edge_swaps_even(self, orbit, debug):
-        if self.get_edge_swap_count(orbit, debug) % 2 == 0:
+    def edge_swaps_even(self, orbit):
+        if self.get_edge_swap_count(orbit) % 2 == 0:
             return True
         return False
 
     # @timed_function
-    def edge_swaps_odd(self, orbit, debug):
-        if self.get_edge_swap_count(orbit, debug) % 2 == 1:
+    def edge_swaps_odd(self, orbit):
+        if self.get_edge_swap_count(orbit) % 2 == 1:
             return True
         return False
 
@@ -1393,8 +1389,8 @@ class RubiksColorSolverGenericBase(object):
         ref_get_lab_distance = get_lab_distance
 
         try:
-            edges_even = self.edge_swaps_even(None, debug)
-            corners_even = self.corner_swaps_even(debug)
+            edges_even = self.edge_swaps_even(None)
+            corners_even = self.corner_swaps_even()
 
             if edges_even == corners_even:
                 return
@@ -1495,8 +1491,8 @@ class RubiksColorSolverGenericBase(object):
             square_blue_orange.side_name = self.color_to_side_name[square_blue_orange.color_name]
             square_blue_red.side_name = self.color_to_side_name[square_blue_red.color_name]
 
-        edges_even = self.edge_swaps_even(None, debug)
-        corners_even = self.corner_swaps_even(debug)
+        edges_even = self.edge_swaps_even(None)
+        corners_even = self.corner_swaps_even()
         assert edges_even == corners_even, (
             "parity is still broken, edges_even %s, corners_even %s"
             % (edges_even, corners_even)
