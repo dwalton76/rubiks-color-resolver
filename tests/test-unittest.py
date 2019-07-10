@@ -1,9 +1,11 @@
 
-from rubikscolorresolver import (
+from rubikscolorresolver.base import (
     get_swap_count,
+    rgb2lab,
+)
+from rubikscolorresolver import (
     hex_to_rgb,
     median,
-    rgb2lab,
 )
 import logging
 import unittest

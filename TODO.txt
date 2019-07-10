@@ -1,0 +1,15 @@
+
+- The SPIKE color sensor appears to be really good. Create a lightweight class
+that only has the following:
+
+    self.sanity_check_edge_squares()
+    self.validate_all_corners_found()
+    self.validate_odd_cube_midge_vs_corner_parity()
+
+We can use that to validate the colors returned from the SPIKE color sensor.
+This will save us some much needed memory and CPU cycles on SPIKE.
+
+Create some test cases for this where you feed it a kociemba string and it
+validates that the cube is legit.
+
+- Combine the fh.write() calls into a single call
