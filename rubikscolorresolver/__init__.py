@@ -1428,9 +1428,17 @@ div#colormapping {
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
                 color = square.color_name
-                data["squares"][square.position] = {
-                    "finalSide": self.color_to_side_name[color]
-                }
+                side_name = self.color_to_side_name[color]
+
+                if side_name not in data["sides"]:
+                    data["sides"][side_name] = {}
+                    data["sides"][side_name]["colorName"] = color
+                    data["sides"][side_name]["colorHTML"] = {}
+                    data["sides"][side_name]["colorHTML"]["red"] = html_color[color]["red"]
+                    data["sides"][side_name]["colorHTML"]["green"] = html_color[color]["green"]
+                    data["sides"][side_name]["colorHTML"]["blue"] = html_color[color]["blue"]
+
+                data["squares"][square.position] = {"finalSide": side_name }
 
         return data
 
@@ -1868,6 +1876,7 @@ def resolve_colors(argv):
     cube.print_cube()
 
     if use_json:
+        from json import dumps as json_dumps
         result = json_dumps(cube.cube_for_json(), indent=4, sort_keys=True)
     else:
         result = "".join(cube.cube_for_kociemba_strict())

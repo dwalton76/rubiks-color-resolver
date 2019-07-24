@@ -589,8 +589,7 @@ class RubiksColorSolverGenericBase(object):
         for row in data:
             output.append(" ".join(row))
 
-        print("Cube\n\n%s\n" % "\n".join(output))
-        #log.info("Cube\n\n%s\n" % "\n".join(output))
+        sys.stderr.write("Cube\n\n%s\n" % "\n".join(output))
 
     # @timed_function
     def cube_for_kociemba_strict(self):
