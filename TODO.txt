@@ -1,2 +1,0 @@
-
-- Combine the fh.write() calls into a single call
