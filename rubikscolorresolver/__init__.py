@@ -25,22 +25,21 @@ if sys.version_info < (3, 4):
 def is_micropython():
     return sys.implementation.name == "micropython"
 
-
-if is_micropython():
-    from ucollections import OrderedDict
-else:
-    from collections import OrderedDict
-
 ALL_COLORS = ("Bu", "Gr", "OR", "Rd", "Wh", "Ye")
 SIDES_COUNT = 6
 
-if os.path.exists("/tmp/"):
-    HTML_FILENAME = "/tmp/rubiks-color-resolver.html"
-else:
+if is_micropython():
+    from ucollections import OrderedDict
     HTML_FILENAME = "rubiks-color-resolver.html"
+else:
+    from collections import OrderedDict
+    HTML_FILENAME = "/tmp/rubiks-color-resolver.html"
 
-if os.path.exists(HTML_FILENAME):
+try:
     os.unlink(HTML_FILENAME)
+except Exception:
+    pass
+
 
 # @timed_function
 def median(list_foo):
@@ -435,7 +434,7 @@ $(document).ready(function()
         (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
 
         html = []
-        html.append(f"<div class='cube {div_class}'>")
+        html.append("<div class='cube {}'>".format(div_class))
         html.append("<h1>%s</h1>\n" % desc)
         for index in range(1, max_square + 1):
             if index in first_squares:
@@ -835,7 +834,6 @@ $(document).ready(function()
         self.color_box["Rd"] = rgb_list_to_lab(red_corners)
         self.color_box["Gr"] = rgb_list_to_lab(green_corners)
         self.color_box["Bu"] = rgb_list_to_lab(blue_corners)
-        # log.info(f"self.color_box: {self.color_box}")
 
         self.orange_baseline = self.color_box["OR"]
         self.red_baseline = self.color_box["Rd"]
@@ -968,7 +966,7 @@ $(document).ready(function()
 
         if self.write_debug_file:
             html_final_cube = self.html_cube("Final Cube", True, "final_cube")
-            html = f"<div id='bottom'>{html_init_cube}{html_final_cube}</div>"
+            html = "<div id='bottom'>{}{}</div>".format(html_init_cube, html_final_cube)
 
             self.write_html(html)
             self.www_footer()
