@@ -835,7 +835,7 @@ def median(list_foo):
 
 
 # @timed_function
-def traveling_salesman(squares, endpoints=None):
+def traveling_salesman(squares, desc):
     len_squares = len(squares)
     r_len_squares = range(len_squares)
 
@@ -853,7 +853,7 @@ def traveling_salesman(squares, endpoints=None):
             matrix[x][y] = distance
             matrix[y][x] = distance
 
-    path = solve_tsp(matrix, optim_steps=0, endpoints=endpoints)
+    path = solve_tsp(matrix, desc=desc)
     return [squares[x] for x in path]
 
 
@@ -1549,7 +1549,7 @@ $(document).ready(function()
             for square in side.corner_squares:
                 corner_squares.append(square)
 
-        self.sorted_corner_squares = traveling_salesman(corner_squares)
+        self.sorted_corner_squares = traveling_salesman(corner_squares, "corners")
 
     # @timed_function
     def resolve_color_box(self):
@@ -1661,7 +1661,7 @@ $(document).ready(function()
                     if orbit_id == target_orbit_id:
                         edge_squares.append(square)
 
-            sorted_edge_squares = traveling_salesman(edge_squares)
+            sorted_edge_squares = traveling_salesman(edge_squares, "edges")
             self.assign_color_names(
                 "edge orbit %d" % target_orbit_id,
                 sorted_edge_squares,
@@ -1704,7 +1704,7 @@ $(document).ready(function()
                 sorted_center_squares = center_squares[:]
                 permutations = "odd_cube_center_color_permutations"
             else:
-                sorted_center_squares = traveling_salesman(center_squares)
+                sorted_center_squares = traveling_salesman(center_squares, "centers")
                 permutations = "even_cube_center_color_permutations"
 
             self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)

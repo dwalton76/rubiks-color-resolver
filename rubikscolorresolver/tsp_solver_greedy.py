@@ -99,8 +99,38 @@ def pairs_by_dist(N, distances):
     return ((ij // N, ij % N) for ij in indices)
 
 
+def calc_path_cost(distances, path):
+    """
+    Calculate the total for each row (if there are 24 squares, 6 sides of a cube then
+    there are 4 squares per row) and total all of those together. We do this because
+    we do not care about the cost from square at the end of one row to the square at
+    the start of the next row.
+    """
+    cost = 0
+    row_cost = 0
+    prev_x = None
+    ROW_SIZE = len(path) / 6
+
+    for (index, x) in enumerate(path):
+        if prev_x is not None:
+
+            if (index + 1) % ROW_SIZE  == 0:
+                row_cost += distances[prev_x][x]
+                cost += row_cost
+                row_cost = 0
+
+            elif (index + 1) % (ROW_SIZE + 1) == 0:
+                pass
+
+            else:
+                row_cost += distances[prev_x][x]
+
+        prev_x = x
+
+    return cost
+
 # @timed_function
-def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=None):
+def solve_tsp(distances, optim_steps=0, endpoints=None, desc=None):
     """
     Given a distance matrix, finds a solution for the TSP problem.
     Returns list of vertex indices.
@@ -118,6 +148,9 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
 
     if N == 1:
         return [0]
+
+    if N == 2:
+        return [0,1]
 
     # State of the TSP solver algorithm.
     node_valency = pyarray("i", [2] * N)  # Initially, each node has 2 sticky ends
@@ -188,7 +221,6 @@ def solve_tsp(distances, optim_steps=3, pairs_by_dist=pairs_by_dist, endpoints=N
 
             if edges_left == 0:
                 break
-
 
     # invoke main greedy algorithm
     join_segments(pairs_by_dist(N, distances))
