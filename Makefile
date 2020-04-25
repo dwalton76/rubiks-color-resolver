@@ -1,4 +1,8 @@
 
+init:
+	python3.6 -m venv venv
+	@./venv/bin/python3 -m pip install -e .
+
 install:
 	micropython -m upip install micropython-array
 	micropython -m upip install micropython-logging
@@ -8,7 +12,8 @@ install:
 	python3 setup.py install
 
 clean:
-	sudo rm -rf build dist rubikscolorresolver.egg-info rubikscolorresolver/*.pyc rubikscolorresolver/__pycache__
+	sudo rm -rf build dist venv
+	sudo rm -rf rubikscolorresolver.egg-info rubikscolorresolver/*.pyc rubikscolorresolver/__pycache__
 
 test:
 	python3 ./tests/test-unittest.py
