@@ -1,6 +1,7 @@
 
 import array
 import gc
+import os
 from math import sqrt
 from rubikscolorresolver.base import (
     LabColor,
@@ -803,17 +804,15 @@ Ye Wh Rd Gr OR Bu
 Ye Wh Rd OR Bu Gr
 Ye Wh Rd OR Gr Bu"""
 len_even_cube_center_color_permutations = 720
-
-
 SIDES_COUNT = 6
-HTML_DIRECTORY = "/tmp/rubiks-color-resolver/"
-#HTML_FILENAME = HTML_DIRECTORY + "index.html"
-HTML_FILENAME = "rubiks-color-resolver.html"
 
+if os.path.exists("/tmp/"):
+    HTML_FILENAME = "/tmp/rubiks-color-resolver.html"
+else:
+    HTML_FILENAME = "rubiks-color-resolver.html"
 
-def print_mem_stats(desc):
-    print('{} free: {} allocated: {}'.format(desc, gc.mem_free(), gc.mem_alloc()))
-
+if os.path.exists(HTML_FILENAME):
+    os.unlink(HTML_FILENAME)
 
 # @timed_function
 def median(list_foo):
@@ -1080,8 +1079,34 @@ div#colormapping {
     float: left;
 }
 
+div#bottom {
+    cursor: pointer;
+}
+
+div#bottom div.initial_rgb_values {
+    display: none;
+}
 </style>
-<title>CraneCuber</title>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+$(document).ready(function()
+{
+    $("div#bottom").click(function(event)
+    {
+        if ($("div.final_cube").is(":visible")) {
+            $("div.initial_rgb_values").show();
+            $("div.final_cube").hide();
+        } else {
+            $("div.initial_rgb_values").hide();
+            $("div.final_cube").show();
+        }
+    })
+});
+</script>
+
+
+<title>Rubiks Cube Color Resolver</title>
 </head>
 <body>
 """
@@ -1099,8 +1124,8 @@ div#colormapping {
     def write_colors(self, desc, squares):
         with open(HTML_FILENAME, "a") as fh:
             squares_per_row = int(len(squares) / 6)
-            fh.write("<h2>%s</h2>\n" % desc)
             fh.write("<div class='clear colors'>\n")
+            fh.write("<h2>%s</h2>\n" % desc)
 
             count = 0
             for square in squares:
@@ -1155,7 +1180,7 @@ div#colormapping {
         self.calculate_pos2square()
 
     # @timed_function
-    def write_cube(self, desc, use_html_colors):
+    def html_cube(self, desc, use_html_colors, div_class):
         cube = ["dummy"]
 
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
@@ -1181,42 +1206,50 @@ div#colormapping {
         side_index = -1
         (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
 
-        with open(HTML_FILENAME, "a") as fh:
-            fh.write("<h1>%s</h1>\n" % desc)
-            for index in range(1, max_square + 1):
-                if index in first_squares:
-                    side_index += 1
-                    fh.write("<div class='side' id='%s'>\n" % sides[side_index])
+        html = []
+        html.append(f"<div class='cube {div_class}'>")
+        html.append("<h1>%s</h1>\n" % desc)
+        for index in range(1, max_square + 1):
+            if index in first_squares:
+                side_index += 1
+                html.append("<div class='side' id='%s'>\n" % sides[side_index])
 
-                (red, green, blue, color_name, lab) = cube[index]
+            (red, green, blue, color_name, lab) = cube[index]
 
-                fh.write(
-                    "    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), "
-                    "color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n"
-                    % (col,
-                       red, green, blue,
-                       int(lab.L), int(lab.a), int(lab.b),
-                       color_name,
-                       red, green, blue,
-                       index,
-                    )
+            html.append(
+                "    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), "
+                "color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n"
+                % (col,
+                   red, green, blue,
+                   int(lab.L), int(lab.a), int(lab.b),
+                   color_name,
+                   red, green, blue,
+                   index,
                 )
+            )
 
-                if index in last_squares:
-                    fh.write("</div>\n")
+            if index in last_squares:
+                html.append("</div>\n")
 
-                    if index in last_UBD_squares:
-                        fh.write("<div class='clear'></div>\n")
+                if index in last_UBD_squares:
+                    html.append("<div class='clear'></div>\n")
 
-                col += 1
+            col += 1
 
-                if col == self.width + 1:
-                    col = 1
+            if col == self.width + 1:
+                col = 1
+
+        html.append("</div>")
+        return "".join(html)
+
+    def write_html(self, html):
+        with open(HTML_FILENAME, "a") as fh:
+            fh.write(html)
 
     def _write_colors(self, desc, box):
         with open(HTML_FILENAME, "a") as fh:
-            fh.write("<h2>{}</h2>\n".format(desc))
             fh.write("<div class='clear colors'>\n")
+            fh.write("<h2>{}</h2>\n".format(desc))
 
             for color_name in ("Wh", "Ye", "Gr", "Bu", "OR", "Rd"):
                 lab = box[color_name]
@@ -1629,7 +1662,6 @@ div#colormapping {
                         edge_squares.append(square)
 
             sorted_edge_squares = traveling_salesman(edge_squares)
-
             self.assign_color_names(
                 "edge orbit %d" % target_orbit_id,
                 sorted_edge_squares,
@@ -1683,7 +1715,8 @@ div#colormapping {
     # @timed_function
     def crunch_colors(self):
         if self.write_debug_file:
-            self.write_cube("Initial RGB values", False)
+            html_init_cube = self.html_cube("Initial RGB values", False, "initial_rgb_values")
+            self.write_html(html_init_cube)
             self.write_crayola_colors()
 
         self.set_sorted_corner_squares()
@@ -1706,7 +1739,10 @@ div#colormapping {
         self.validate_odd_cube_midge_vs_corner_parity()
 
         if self.write_debug_file:
-            self.write_cube("Final Cube", True)
+            html_final_cube = self.html_cube("Final Cube", True, "final_cube")
+            html = f"<div id='bottom'>{html_init_cube}{html_final_cube}</div>"
+
+            self.write_html(html)
             self.www_footer()
 
     def print_profile_data(self):
