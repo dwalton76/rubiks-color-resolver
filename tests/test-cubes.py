@@ -81,6 +81,11 @@ test_cases = (
         "BUDDUBLDDRURURFBLDULBFFLRDDFRLRDBRDFUFFRLLBFUFRLUBBLBU",
     ),
     (
+        "3x3x3 random 08",
+        "test-data/3x3x3-random-08.txt",
+        "TBD",
+    ),
+    (
         "4x4x4 solved 01",
         "test-data/4x4x4-solved-01.txt",
         "DDDDDDDDDDDDDDDDBBBBBBBBBBBBBBBBLLLLLLLLLLLLLLLLUUUUUUUUUUUUUUUUFFFFFFFFFFFFFFFFRRRRRRRRRRRRRRRR",
