@@ -2,13 +2,14 @@ from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
 cie2000_cache = {}
 
-def get_lab_distance(lab1, lab2):
+def lab_distance_cie2000(lab1, lab2):
     """
     delta CIE 2000
 
     Ported from this php implementation
     https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
     """
+    global cie2000_cache
     l1 = lab1.L
     a1 = lab1.a
     b1 = lab1.b
@@ -88,7 +89,6 @@ def get_lab_distance(lab1, lab2):
         + r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh))
     )
 
-    global cie2000_cache
     cie2000_cache[(l1, a1, b1, l2, a2, b2)] = delta_e
     cie2000_cache[(l2, a2, b2, l1, a1, b1)] = delta_e
 

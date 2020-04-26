@@ -1,4 +1,5 @@
 
+from rubikscolorresolver.cie2000 import lab_distance_cie2000
 #from rubikscolorresolver.profile import timed_function
 from math import ceil, sqrt
 import sys
@@ -18,7 +19,7 @@ else:
 
 
 # @timed_function
-def get_lab_distance(lab1, lab2):
+def lab_distance(lab1, lab2):
     """
     http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
 
@@ -27,16 +28,17 @@ def get_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
+    #return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
+    return lab_distance_cie2000(lab1, lab2)
 
 
 html_color = {
     "Gr": {"red": 0, "green": 102, "blue": 0},
     "Bu": {"red": 0, "green": 0, "blue": 153},
-    "OR": {"red": 255, "green": 102, "blue": 0},
-    "Rd": {"red": 204, "green": 0, "blue": 0},
+    "OR": {"red": 255, "green": 153, "blue": 0},
+    "Rd": {"red": 204, "green": 51, "blue": 0},
     "Wh": {"red": 255, "green": 255, "blue": 255},
-    "Ye": {"red": 255, "green": 204, "blue": 0},
+    "Ye": {"red": 255, "green": 255, "blue": 0},
 }
 
 
@@ -231,14 +233,37 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
+def rgb_to_hsv(r, g, b):
+    mx = max(r, g, b)
+    mn = min(r, g, b)
+    df = mx-mn
+
+    if mx == mn:
+        h = 0
+    elif mx == r:
+        h = (60 * ((g-b) / df) + 360) % 360
+    elif mx == g:
+        h = (60 * ((b-r) / df) + 120) % 360
+    elif mx == b:
+        h = (60 * ((r-g) / df) + 240) % 360
+
+    if mx == 0:
+        s = 0
+    else:
+        s = (df/mx) * 100
+
+    v = mx * 100
+    return (h, s, v)
+
+
 class Square(object):
 
-    def __init__(self, side, cube, position, red, green, blue, side_name=None, color_name=None):
-        #self.cube = cube
+    def __init__(self, side, position, red, green, blue, side_name=None, color_name=None):
         self.side = side
         self.position = position
         self.rgb = (red, green, blue)
         self.lab = rgb2lab((red, green, blue))
+        self.hsv = rgb_to_hsv(red, green, blue)
         self.side_name = side_name # ULFRBD
         self.color_name = color_name
 
@@ -339,7 +364,7 @@ class Side(object):
 
     # @timed_function
     def set_square(self, position, red, green, blue, side_name=None, color_name=None):
-        self.squares[position] = Square(self, self.cube, position, red, green, blue, side_name, color_name)
+        self.squares[position] = Square(self, position, red, green, blue, side_name, color_name)
 
         if position in self.center_pos:
             self.center_squares.append(self.squares[position])
@@ -809,9 +834,9 @@ class RubiksColorSolverGenericBase(object):
                     red_orange = red_orange_permutation[index]
 
                     if red_orange == "OR":
-                        distance += sqrt(((partner_square.lab.L - self.orange_baseline.L) ** 2) + ((partner_square.lab.a - self.orange_baseline.a) ** 2) + ((partner_square.lab.b - self.orange_baseline.b) ** 2))
+                        distance += lab_distance(partner_square.lab, self.orange_baseline)
                     elif red_orange == "Rd":
-                        distance += sqrt(((partner_square.lab.L - self.red_baseline.L) ** 2) + ((partner_square.lab.a - self.red_baseline.a) ** 2) + ((partner_square.lab.b - self.red_baseline.b) ** 2))
+                        distance += lab_distance(partner_square.lab, self.red_baseline)
                     else:
                         raise Exception(red_orange)
 
@@ -887,28 +912,9 @@ class RubiksColorSolverGenericBase(object):
             white_red_or_orange_edges,
             yellow_red_or_orange_edges,
         ) = self.find_edges_by_color(target_orbit_id)
-        #log.info(
-        #    "orbit %s green_red_or_orange_edges %s"
-        #    % (target_orbit_id, green_red_or_orange_edges)
-        #)
         fix_orange_vs_red_for_color("green", green_red_or_orange_edges)
-
-        #log.info(
-        #    "orbit %s blue_red_or_orange_edges %s"
-        #    % (target_orbit_id, blue_red_or_orange_edges)
-        #)
         fix_orange_vs_red_for_color("blue", blue_red_or_orange_edges)
-
-        #log.info(
-        #    "orbit %s white_red_or_orange_edges %s"
-        #    % (target_orbit_id, white_red_or_orange_edges)
-        #)
         fix_orange_vs_red_for_color("white", white_red_or_orange_edges)
-
-        #log.info(
-        #    "orbit %s yellow_red_or_orange_edges %s"
-        #    % (target_orbit_id, yellow_red_or_orange_edges)
-        #)
         fix_orange_vs_red_for_color("yellow", yellow_red_or_orange_edges)
 
         self.validate_edge_orbit(target_orbit_id)
@@ -1462,7 +1468,6 @@ class RubiksColorSolverGenericBase(object):
             return
 
         debug = False
-        ref_get_lab_distance = get_lab_distance
 
         try:
             edges_even = self.edge_swaps_even(None)
@@ -1522,16 +1527,16 @@ class RubiksColorSolverGenericBase(object):
         # we can swap orange/red for the blue edges. Which will result in the
         # lowest color distance with our orange/red baselines?
         distance_swap_green_edge = 0
-        distance_swap_green_edge += ref_get_lab_distance(square_blue_orange.lab, self.orange_baseline)
-        distance_swap_green_edge += ref_get_lab_distance(square_blue_red.lab, self.red_baseline)
-        distance_swap_green_edge += ref_get_lab_distance(square_green_orange.lab, self.red_baseline)
-        distance_swap_green_edge += ref_get_lab_distance(square_green_red.lab, self.orange_baseline)
+        distance_swap_green_edge += lab_distance(square_blue_orange.lab, self.orange_baseline)
+        distance_swap_green_edge += lab_distance(square_blue_red.lab, self.red_baseline)
+        distance_swap_green_edge += lab_distance(square_green_orange.lab, self.red_baseline)
+        distance_swap_green_edge += lab_distance(square_green_red.lab, self.orange_baseline)
 
         distance_swap_blue_edge = 0
-        distance_swap_blue_edge += ref_get_lab_distance(square_green_orange.lab, self.orange_baseline)
-        distance_swap_blue_edge += ref_get_lab_distance(square_green_red.lab, self.red_baseline)
-        distance_swap_blue_edge += ref_get_lab_distance(square_blue_orange.lab, self.red_baseline)
-        distance_swap_blue_edge += ref_get_lab_distance(square_blue_red.lab, self.orange_baseline)
+        distance_swap_blue_edge += lab_distance(square_green_orange.lab, self.orange_baseline)
+        distance_swap_blue_edge += lab_distance(square_green_red.lab, self.red_baseline)
+        distance_swap_blue_edge += lab_distance(square_blue_orange.lab, self.red_baseline)
+        distance_swap_blue_edge += lab_distance(square_blue_red.lab, self.orange_baseline)
 
         #log.info("distance_swap_green_edge %s" % distance_swap_green_edge)
         #log.info("distance_swap_blue_edge %s" % distance_swap_blue_edge)

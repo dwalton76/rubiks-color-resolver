@@ -86,6 +86,26 @@ test_cases = (
         "TBD",
     ),
     (
+        "3x3x3 random 09",
+        "test-data/3x3x3-random-09.txt",
+        "TBD",
+    ),
+    (
+        "3x3x3 random 10",
+        "test-data/3x3x3-random-10.txt",
+        "UUUUUUUUUBBBRRRRRRRRRFFFFFFDDDDDDDDDFFFLLLLLLLLLBBBBBB",
+    ),
+    (
+        "3x3x3 random 11",
+        "test-data/3x3x3-random-11.txt",
+        "UUUUUUUUUBBBRRRRRRRRRFFFFFFDDDDDDDDDFFFLLLLLLLLLBBBBBB",
+    ),
+    (
+        "3x3x3 random 12",
+        "test-data/3x3x3-random-12.txt",
+        "UUUUUUUUUBBBRRRRRRRRRFFFFFFDDDDDDDDDFFFLLLLLLLLLBBBBBB",
+    ),
+    (
         "4x4x4 solved 01",
         "test-data/4x4x4-solved-01.txt",
         "DDDDDDDDDDDDDDDDBBBBBBBBBBBBBBBBLLLLLLLLLLLLLLLLUUUUUUUUUUUUUUUUFFFFFFFFFFFFFFFFRRRRRRRRRRRRRRRR",
@@ -94,11 +114,6 @@ test_cases = (
         "4x4x4 random 01",
         "test-data/4x4x4-random-01.txt",
         "LUFLUBLBRBLFBFFLBDRFLUURLUUUFDFDRLRURFLBRFLBUDUDRLRRBBBBFFFLLLRBDBUUUDDDUDDBDDDFUULBFRRFLRRBRDDF",
-    ),
-    (
-        "4x4x4 random 02",
-        "test-data/4x4x4-random-02.txt",
-        "RUFFURLLRBBFFFFBDUUDDRFFRLFFLLDRDDDRLDDBBUUDLRRFDBBUDFFUULRLBRDUUFULBBLFBBRULRLBRLBBRUULRDDLFBDU",
     ),
     (
         "4x4x4 random 03",
