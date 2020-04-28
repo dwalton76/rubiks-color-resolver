@@ -1,6 +1,7 @@
 
 import array
 import gc
+import itertools
 import os
 from math import sqrt
 from rubikscolorresolver.base import (
@@ -114,6 +115,13 @@ def tsp_matrix_corners(corners):
     return matrix
 
 
+def corner_distance(corner1, corner2):
+    return (
+        lab_distance(corner1[0].lab, corner2[0].lab) +
+        lab_distance(corner1[1].lab, corner2[1].lab) +
+        lab_distance(corner1[2].lab, corner2[2].lab)
+    )
+
 def traveling_salesman_corners(corners, desc):
     matrix = tsp_matrix_corners(corners)
     path = solve_tsp(matrix, desc=desc)
@@ -155,6 +163,44 @@ def traveling_salesman_corners(corners, desc):
         else:
             raise ValueError(distance)
 
+    while True:
+        max_delta = 0
+        max_delta_corners_to_swap = None
+
+        for x in range(0, len(sorted_corners), 2):
+            corner1 = sorted_corners[x]
+            corner2 = sorted_corners[x+1]
+            distance12 = corner_distance(corner1, corner2)
+
+            for y in range(x+2, len(sorted_corners), 2):
+                corner3 = sorted_corners[y]
+                corner4 = sorted_corners[y+1]
+                distance34 = corner_distance(corner3, corner4)
+
+                # If we were to swap corner2 with corner4, what would that do to the corner1->corner2 distance plus the corner3->corner4 distance?
+                distance14 = corner_distance(corner1, corner4)
+                distance32 = corner_distance(corner3, corner2)
+
+                if distance14 + distance32 < distance12 + distance34:
+                    delta = (distance12 + distance34) - (distance14 + distance32)
+
+                    if delta > max_delta:
+                        max_delta = delta
+                        max_delta_corners_to_swap = (x+1, y+1)
+                    #    print(f"corner swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)} (NEW MAX)")
+                    #else:
+                    #    print(f"corner swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)}")
+
+        if max_delta_corners_to_swap:
+            (x, y) = max_delta_corners_to_swap
+            orig_x = sorted_corners[x]
+            sorted_corners[x] = sorted_corners[y]
+            sorted_corners[y] = orig_x
+            # print("")
+
+        else:
+            break
+
     return sorted_corners
 
 
@@ -195,6 +241,19 @@ def tsp_matrix_edge_pairs(edge_pairs):
 
     return matrix
 
+
+def edge_pair_distance(pair1, pair2, normal):
+    if normal:
+        return (
+            lab_distance(pair1[0].lab, pair2[0].lab) +
+            lab_distance(pair1[1].lab, pair2[1].lab)
+        )
+    else:
+        return (
+            lab_distance(pair1[0].lab, pair2[1].lab) +
+            lab_distance(pair1[1].lab, pair2[0].lab)
+        )
+
 def traveling_salesman_edge_pairs(edge_pairs, desc):
     matrix = tsp_matrix_edge_pairs(edge_pairs)
     path = solve_tsp(matrix, desc=desc)
@@ -203,18 +262,54 @@ def traveling_salesman_edge_pairs(edge_pairs, desc):
     for x in range(0, len(sorted_edge_pairs), 2):
         pair1 = sorted_edge_pairs[x]
         pair2 = sorted_edge_pairs[x+1]
-
-        distance_01 = (
-            lab_distance(pair1[0].lab, pair2[0].lab) +
-            lab_distance(pair1[1].lab, pair2[1].lab)
-        )
-        distance_10 = (
-            lab_distance(pair1[0].lab, pair2[1].lab) +
-            lab_distance(pair1[1].lab, pair2[0].lab)
-        )
+        distance_01 = edge_pair_distance(pair1, pair2, normal=True)
+        distance_10 = edge_pair_distance(pair1, pair2, normal=False)
 
         if distance_10 < distance_01:
             sorted_edge_pairs[x+1] = (sorted_edge_pairs[x+1][1], sorted_edge_pairs[x+1][0])
+
+        distance = min(distance_01, distance_10)
+
+    while True:
+        max_delta = 0
+        max_delta_edges_to_swap = None
+
+        for x in range(0, len(sorted_edge_pairs), 2):
+            pair1 = sorted_edge_pairs[x]
+            pair2 = sorted_edge_pairs[x+1]
+            distance12 = edge_pair_distance(pair1, pair2, True)
+
+            for y in range(x+2, len(sorted_edge_pairs), 2):
+                pair3 = sorted_edge_pairs[y]
+                pair4 = sorted_edge_pairs[y+1]
+                distance34 = edge_pair_distance(pair3, pair4, True)
+
+                # If we were to swap pair2 with pair4, what would that do to the pair1->pair2 distance plus the pair3->pair4 distance?
+                distance14 = edge_pair_distance(pair1, pair4, True)
+                distance32 = edge_pair_distance(pair3, pair2, True)
+
+                if distance14 + distance32 < distance12 + distance34:
+                    delta = (distance12 + distance34) - (distance14 + distance32)
+
+                    if delta > max_delta:
+                        max_delta = delta
+                        max_delta_edges_to_swap = (x+1, y+1)
+                    #    print(f"edge swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)} (NEW MAX)")
+                    #else:
+                    #    print(f"edge swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)}")
+                #else:
+                #    delta = (distance14 + distance32) - (distance12 + distance34)
+                #    print(f"edge swap ({x}, {y}) would increase distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)}")
+
+        if max_delta_edges_to_swap:
+            (x, y) = max_delta_edges_to_swap
+            orig_x = sorted_edge_pairs[x]
+            sorted_edge_pairs[x] = sorted_edge_pairs[y]
+            sorted_edge_pairs[y] = orig_x
+            #print("")
+
+        else:
+            break
 
     return sorted_edge_pairs
 
@@ -234,15 +329,55 @@ def path_streak_cost(squares):
     return cost
 
 
-def best_path_streak(sorted_squares, streak_length):
+def best_path_streak(sorted_squares, streak_length, middle_squares, edge_pairs, corners):
     max_cost_start = len(sorted_squares) - streak_length
     min_cost = 999
     min_cost_start = None
+    # print(middle_squares)
+    len_edge_pairs = len(edge_pairs)
+
+    if len_edge_pairs == 0:
+        pass
+    elif len_edge_pairs == 12:
+        target_edges_in_streak = 4
+    else:
+        raise ValueError(len_edge_pairs)
 
     for x in range(0, max_cost_start):
-        cost = path_streak_cost(sorted_squares[x:x + streak_length])
+        squares_for_streak = sorted_squares[x:x + streak_length]
+        cost = path_streak_cost(squares_for_streak)
+        valid = True
 
-        if cost < min_cost:
+        if middle_squares:
+            middle_squares_in_streak = [square for square in squares_for_streak if square in middle_squares]
+            valid = bool(len(middle_squares_in_streak) == 1)
+            # print(middle_squares_in_streak)
+
+        '''
+        if valid and edge_pairs:
+            for edge_pair in edge_pairs:
+                edges_in_pair_in_streak = [square for square in squares_for_streak if square in edge_pair]
+                valid = bool(len(edges_in_pair_in_streak) == target_edges_in_streak)
+        '''
+
+        if valid and corners:
+            # print(f"corners {corners}")
+            corners_in_streak = []
+
+            for corner in corners:
+                corner_in_streak = [square for square in squares_for_streak if square in corner]
+                corners_in_streak.extend(corner_in_streak)
+                # print(f"corner_in_streak {len(corner_in_streak)}")
+                valid = bool(len(corner_in_streak) <= 1)
+
+                if not valid:
+                    break
+
+            if valid:
+                valid = bool(len(corners_in_streak) == 4)
+            # print(f"corners_in_streak {len(corners_in_streak)}")
+
+        if valid and cost < min_cost:
             min_cost = cost
             min_cost_start = x
 
@@ -271,7 +406,8 @@ def tsp_matrix(squares):
 
 
 # @timed_function
-def traveling_salesman(squares, desc):
+def traveling_salesman(squares, desc, middle_squares=[], edge_pairs=[], corners=[]):
+    '''
     SQUARES_PER_ROW = int(len(squares) / SIDES_COUNT)
     results = []
     _squares = squares[:]
@@ -286,7 +422,7 @@ def traveling_salesman(squares, desc):
             matrix = tsp_matrix(_squares)
             path = solve_tsp(matrix, desc=desc)
             path_squares = [_squares[x] for x in path]
-            results.extend(best_path_streak(path_squares, SQUARES_PER_ROW))
+            results.extend(best_path_streak(path_squares, SQUARES_PER_ROW, middle_squares, edge_pairs, corners))
             _squares = [square for square in squares if square not in results]
 
     return results
@@ -294,7 +430,17 @@ def traveling_salesman(squares, desc):
     matrix = tsp_matrix(squares)
     path = solve_tsp(matrix, desc=desc)
     return [squares[x] for x in path]
-    '''
+
+
+def traveling_salesman_two_colors(squares, endpoints=None, desc=None):
+    matrix = tsp_matrix(squares)
+
+    if endpoints:
+        start_index = squares.index(endpoints[0])
+        end_index = squares.index(endpoints[1])
+        endpoints = (start_index, end_index)
+    path = solve_tsp(matrix, endpoints=endpoints, desc=desc)
+    return [squares[x] for x in path]
 
 
 # @timed_function
@@ -411,12 +557,13 @@ def get_squares_for_row(squares, target_row_index):
 
 
 # @timed_function
-def rgb_list_to_lab(rgbs):
+def square_list_to_lab(squares):
     reds = array.array("B")
     greens = array.array("B")
     blues = array.array("B")
 
-    for (red, green, blue) in rgbs:
+    for square in squares:
+        (red, green, blue) = square.rgb
         reds.append(red)
         greens.append(green)
         blues.append(blue)
@@ -1074,6 +1221,38 @@ $(document).ready(function()
             for square in squares_list:
                 square.color_name = color_name
 
+    def get_squares_by_color_name(self):
+        white_squares = []
+        yellow_squares = []
+        orange_squares = []
+        red_squares = []
+        green_squares = []
+        blue_squares = []
+
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+            for square in side.center_squares + side.corner_squares + side.edge_squares:
+                if square.color_name == "Wh":
+                    white_squares.append(square)
+                elif square.color_name == "Ye":
+                    yellow_squares.append(square)
+                elif square.color_name == "OR":
+                    orange_squares.append(square)
+                elif square.color_name == "Rd":
+                    red_squares.append(square)
+                elif square.color_name == "Gr":
+                    green_squares.append(square)
+                elif square.color_name == "Bu":
+                    blue_squares.append(square)
+
+        return (
+            white_squares,
+            yellow_squares,
+            orange_squares,
+            red_squares,
+            green_squares,
+            blue_squares,
+        )
+
     # @timed_function
     def resolve_color_box(self):
         """
@@ -1083,14 +1262,6 @@ $(document).ready(function()
         references Wh, Ye, OR, Rd, Gr, Bu colors for assigning color names to edge
         and center squares.
         """
-
-        # Build a color_box dictionary from the centers
-        white_corners = []
-        yellow_corners = []
-        orange_corners = []
-        red_corners = []
-        green_corners = []
-        blue_corners = []
 
         # Only works on odd cubes and can cause problems if the scan of the center square happens
         # to be much brighter/darker than all squares of the same color
@@ -1136,48 +1307,127 @@ $(document).ready(function()
 
         elif use_all_squares:
             all_squares = []
+            middle_squares = []
 
             for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
                 for square in side.center_squares + side.corner_squares + side.edge_squares:
                     all_squares.append(square)
 
-            sorted_all_squares = traveling_salesman(all_squares, "all")
+                if side.mid_pos:
+                    middle_squares.append(side.squares[side.mid_pos])
+
+            edge_pairs = []
+
+            if self.width == 2:
+                from rubikscolorresolver.cube_222 import corner_tuples
+            elif self.width == 3:
+                from rubikscolorresolver.cube_333 import corner_tuples
+            elif self.width == 4:
+                from rubikscolorresolver.cube_444 import corner_tuples
+            elif self.width == 5:
+                from rubikscolorresolver.cube_555 import corner_tuples
+            elif self.width == 6:
+                from rubikscolorresolver.cube_666 import corner_tuples
+            elif self.width == 7:
+                from rubikscolorresolver.cube_777 import corner_tuples
+
+            corners = []
+
+            for corner_tuple in corner_tuples:
+                corners.append((
+                    self.pos2square[corner_tuple[0]],
+                    self.pos2square[corner_tuple[1]],
+                    self.pos2square[corner_tuple[2]],
+                ))
+
+            # ======
+            # pass 1
+            # ======
+            sorted_all_squares = traveling_salesman(all_squares, "all", middle_squares, edge_pairs, corners)
 
             self.assign_color_names(
-                "all squares for color_box",
+                "squares for color_box (pass 1)",
                 sorted_all_squares,
                 "even_cube_center_color_permutations",
                 crayola_colors,
             )
 
             if self.write_debug_file:
-                self.write_colors("all for color_box", sorted_all_squares)
+                self.write_colors("squares for color_box (pass 1)", sorted_all_squares)
+
+            # ======
+            # pass 2
+            # ======
+            (white_squares, yellow_squares, orange_squares, red_squares, green_squares, blue_squares) = self.get_squares_by_color_name()
+            green_blue_endpoints = None
+            white_yellow_endpoints = None
+            red_orange_endpoints = None
+
+            # odd cube
+            if self.width % 2 == 1:
+                white_center = None
+                yellow_center = None
+                orange_center = None
+                red_center = None
+                green_center = None
+                blue_center = None
+
+                for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+                    square = self.pos2square[side.mid_pos]
+
+                    if square.color_name == "Wh":
+                        white_center = square
+                    elif square.color_name == "Ye":
+                        yellow_center = square
+                    elif square.color_name == "OR":
+                        orange_center = square
+                    elif square.color_name == "Rd":
+                        red_center = square
+                    elif square.color_name == "Gr":
+                        green_center = square
+                    elif square.color_name == "Bu":
+                        blue_center = square
+
+                if white_center and yellow_center:
+                    white_yellow_endpoints = (white_center, yellow_center)
+
+                if green_center and blue_center:
+                    green_blue_endpoints = (green_center, blue_center)
+
+                if red_center and orange_center:
+                    red_orange_endpoints = (red_center, orange_center)
+
+            # Nuke all color names (they were temporary)
+            for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+                for square in side.center_squares + side.corner_squares + side.edge_squares:
+                    square.color_name = None
+
+            sorted_green_blue = traveling_salesman_two_colors(green_squares + blue_squares, endpoints=green_blue_endpoints, desc="green blue")
+            sorted_white_yellow = traveling_salesman_two_colors(white_squares + yellow_squares, endpoints=white_yellow_endpoints, desc="white yellow")
+            sorted_red_orange = traveling_salesman_two_colors(red_squares + orange_squares, endpoints=red_orange_endpoints, desc="white yellow")
+            sorted_all_squares = sorted_green_blue + sorted_white_yellow + sorted_red_orange
+
+            self.assign_color_names(
+                "squares for color_box (pass 2)",
+                sorted_all_squares,
+                "even_cube_center_color_permutations",
+                crayola_colors,
+            )
+
+            if self.write_debug_file:
+                self.write_colors("squares for color_box (pass 2)", sorted_all_squares)
 
         else:
             raise Exception()
 
-        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
-            for square in side.center_squares + side.corner_squares + side.edge_squares:
-                if square.color_name == "Wh":
-                    white_corners.append(square.rgb)
-                elif square.color_name == "Ye":
-                    yellow_corners.append(square.rgb)
-                elif square.color_name == "OR":
-                    orange_corners.append(square.rgb)
-                elif square.color_name == "Rd":
-                    red_corners.append(square.rgb)
-                elif square.color_name == "Gr":
-                    green_corners.append(square.rgb)
-                elif square.color_name == "Bu":
-                    blue_corners.append(square.rgb)
-
+        (white_squares, yellow_squares, orange_squares, red_squares, green_squares, blue_squares) = self.get_squares_by_color_name()
         self.color_box = {}
-        self.color_box["Wh"] = rgb_list_to_lab(white_corners)
-        self.color_box["Ye"] = rgb_list_to_lab(yellow_corners)
-        self.color_box["OR"] = rgb_list_to_lab(orange_corners)
-        self.color_box["Rd"] = rgb_list_to_lab(red_corners)
-        self.color_box["Gr"] = rgb_list_to_lab(green_corners)
-        self.color_box["Bu"] = rgb_list_to_lab(blue_corners)
+        self.color_box["Wh"] = square_list_to_lab(white_squares)
+        self.color_box["Ye"] = square_list_to_lab(yellow_squares)
+        self.color_box["OR"] = square_list_to_lab(orange_squares)
+        self.color_box["Rd"] = square_list_to_lab(red_squares)
+        self.color_box["Gr"] = square_list_to_lab(green_squares)
+        self.color_box["Bu"] = square_list_to_lab(blue_squares)
 
         self.orange_baseline = self.color_box["OR"]
         self.red_baseline = self.color_box["Rd"]
@@ -1394,7 +1644,7 @@ $(document).ready(function()
                 sorted_center_squares = center_squares[:]
                 permutations = "odd_cube_center_color_permutations"
             else:
-                sorted_center_squares = traveling_salesman(center_squares, "centers")
+                sorted_center_squares = traveling_salesman(center_squares, desc)
                 permutations = "even_cube_center_color_permutations"
 
             self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)

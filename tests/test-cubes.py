@@ -83,12 +83,12 @@ test_cases = (
     (
         "3x3x3 random 08",
         "test-data/3x3x3-random-08.txt",
-        "TBD",
+        "BFRLURFUUFFFLRBBUDUFLDFDRRDBULLDBUFFUURRLBRBDDLLRBDLDB",
     ),
     (
         "3x3x3 random 09",
         "test-data/3x3x3-random-09.txt",
-        "TBD",
+        "FBFUULBUBLBRFRDBBBDRDBFRDLLFFULDDFDULLRULULDRURURBFRFD",
     ),
     (
         "3x3x3 random 10",

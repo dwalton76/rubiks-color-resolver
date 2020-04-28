@@ -28,8 +28,12 @@ def lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    #return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
-    return lab_distance_cie2000(lab1, lab2)
+
+    # CIE2000 takes much more CPU so use euclidean when on micropython
+    if is_micropython():
+        return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
+    else:
+        return lab_distance_cie2000(lab1, lab2)
 
 
 html_color = {
@@ -311,7 +315,7 @@ class Side(object):
         if self.width % 2 == 0:
             self.mid_pos = None
         else:
-            self.mid_pos = (self.min_pos + self.max_pos) / 2
+            self.mid_pos = int((self.min_pos + self.max_pos) / 2)
 
         self.corner_pos = (
             self.min_pos,
