@@ -1,5 +1,4 @@
 
-from rubikscolorresolver.cie2000 import lab_distance_cie2000
 #from rubikscolorresolver.profile import timed_function
 from math import ceil, sqrt
 import sys
@@ -16,6 +15,7 @@ if is_micropython():
     from ucollections import OrderedDict
 else:
     from collections import OrderedDict
+    from rubikscolorresolver.cie2000 import lab_distance_cie2000
 
 
 # @timed_function
@@ -29,9 +29,10 @@ def lab_distance(lab1, lab2):
     the Euclidean norm.
     """
 
-    # CIE2000 takes much more CPU so use euclidean when on micropython
     if is_micropython():
-        return sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2))
+        # CIE2000 takes much more CPU so use euclidean when on micropython
+        # Use int instead of float to save a little memory
+        return int(sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2)))
     else:
         return lab_distance_cie2000(lab1, lab2)
 
@@ -263,11 +264,8 @@ def rgb_to_hsv(r, g, b):
 class Square(object):
 
     def __init__(self, side, position, red, green, blue, side_name=None, color_name=None):
-        self.side = side
         self.position = position
-        self.rgb = (red, green, blue)
         self.lab = rgb2lab((red, green, blue))
-        self.hsv = rgb_to_hsv(red, green, blue)
         self.side_name = side_name # ULFRBD
         self.color_name = color_name
 
@@ -493,6 +491,9 @@ class RubiksColorSolverGenericBase(object):
             side.calculate_wing_partners()
 
         self.calculate_pos2side()
+
+        # This is no longer neeeded now that the Side objects have been created
+        self.all_edge_positions = []
 
     # @timed_function
     def calculate_pos2side(self):

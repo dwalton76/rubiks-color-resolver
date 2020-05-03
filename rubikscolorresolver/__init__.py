@@ -1,7 +1,6 @@
 
 import array
 import gc
-import itertools
 import os
 from math import sqrt
 from rubikscolorresolver.base import (
@@ -314,6 +313,7 @@ def traveling_salesman_edge_pairs(edge_pairs, desc):
     return sorted_edge_pairs
 
 
+"""
 def path_streak_cost(squares):
 
     if len(squares) <= 1:
@@ -382,6 +382,7 @@ def best_path_streak(sorted_squares, streak_length, middle_squares, edge_pairs, 
             min_cost_start = x
 
     return sorted_squares[min_cost_start : min_cost_start + streak_length]
+"""
 
 
 def tsp_matrix(squares):
@@ -401,6 +402,12 @@ def tsp_matrix(squares):
             distance = lab_distance(x_lab, y_lab)
             matrix[x][y] = distance
             matrix[y][x] = distance
+
+    # convert to tuple of tuples
+    for (row_index, row) in enumerate(matrix):
+        matrix[row_index] = tuple(row)
+
+    matrix = tuple(matrix)
 
     return matrix
 
@@ -563,7 +570,7 @@ def square_list_to_lab(squares):
     blues = array.array("B")
 
     for square in squares:
-        (red, green, blue) = square.rgb
+        (red, green, blue) = (square.lab.red, square.lab.green, square.lab.blue)
         reds.append(red)
         greens.append(green)
         blues.append(blue)
@@ -738,7 +745,7 @@ $(document).ready(function()
                     else:
                         raise ValueError(row_index)
 
-                    (red, green, blue) = square.rgb
+                    (red, green, blue) = (square.lab.red, square.lab.green, square.lab.blue)
 
                     if index and index % 2 == 0:
                         fh.write("<span class='half_square'></span>")
@@ -776,7 +783,7 @@ $(document).ready(function()
                     else:
                         square = square2
 
-                    (red, green, blue) = square.rgb
+                    (red, green, blue) = (square.lab.red, square.lab.green, square.lab.blue)
 
                     if index and index % 2 == 0:
                         fh.write("<span class='half_square'></span>")
@@ -810,7 +817,7 @@ $(document).ready(function()
 
             count = 0
             for square in squares:
-                (red, green, blue) = square.rgb
+                (red, green, blue) = (square.lab.red, square.lab.green, square.lab.blue)
                 fh.write(
                     "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s, side %s'>%d</span>\n"
                     % (
@@ -873,9 +880,9 @@ $(document).ready(function()
                     green = html_color[square.color_name]["green"]
                     blue = html_color[square.color_name]["blue"]
                 else:
-                    red = square.rgb[0]
-                    green = square.rgb[1]
-                    blue = square.rgb[2]
+                    red = square.lab.red
+                    green = square.lab.green
+                    blue = square.lab.blue
 
                 cube.append((red, green, blue, square.color_name, square.lab))
 
@@ -1267,7 +1274,13 @@ $(document).ready(function()
         # to be much brighter/darker than all squares of the same color
         use_center_squares = False
         use_corner_squares = False
-        use_all_squares = True
+        use_all_squares = False
+
+        # LEGO SPIKE (micropython) has very little memory so only do TSP on the corners
+        if is_micropython():
+            use_corner_squares = True
+        else:
+            use_all_squares = True
 
         if use_center_squares:
             center_squares = []
@@ -1659,20 +1672,29 @@ $(document).ready(function()
             self.write_html(html_init_cube)
             self.write_crayola_colors()
 
+        gc.collect()
         self.resolve_color_box()
 
         # corners
+        gc.collect()
         self.resolve_corner_squares()
 
         # centers
+        gc.collect()
         self.resolve_center_squares()
 
         # edges
+        gc.collect()
         self.resolve_edge_squares()
+        gc.collect()
         self.set_state()
+        gc.collect()
         self.sanity_check_edge_squares()
+        gc.collect()
         self.validate_all_corners_found()
+        gc.collect()
         self.validate_odd_cube_midge_vs_corner_parity()
+        gc.collect()
 
         if self.write_debug_file:
             html_final_cube = self.html_cube("Final Cube", True, "final_cube")
@@ -1732,7 +1754,11 @@ def resolve_colors(argv):
         print("ERROR: Neither --filename or --rgb was specified")
         sys.exit(1)
 
+    argv = None
     scan_data = eval(rgb)
+
+    for key, value in scan_data.items():
+        scan_data[key] = tuple(value)
 
     square_count = len(list(scan_data.keys()))
     square_count_per_side = int(square_count / 6)

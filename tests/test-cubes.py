@@ -81,31 +81,6 @@ test_cases = (
         "BUDDUBLDDRURURFBLDULBFFLRDDFRLRDBRDFUFFRLLBFUFRLUBBLBU",
     ),
     (
-        "3x3x3 random 08",
-        "test-data/3x3x3-random-08.txt",
-        "BFRLURFUUFFFLRBBUDUFLDFDRRDBULLDBUFFUURRLBRBDDLLRBDLDB",
-    ),
-    (
-        "3x3x3 random 09",
-        "test-data/3x3x3-random-09.txt",
-        "FBFUULBUBLBRFRDBBBDRDBFRDLLFFULDDFDULLRULULDRURURBFRFD",
-    ),
-    (
-        "3x3x3 random 10",
-        "test-data/3x3x3-random-10.txt",
-        "UUUUUUUUUBBBRRRRRRRRRFFFFFFDDDDDDDDDFFFLLLLLLLLLBBBBBB",
-    ),
-    (
-        "3x3x3 random 11",
-        "test-data/3x3x3-random-11.txt",
-        "UUUUUUUUUBBBRRRRRRRRRFFFFFFDDDDDDDDDFFFLLLLLLLLLBBBBBB",
-    ),
-    (
-        "3x3x3 random 12",
-        "test-data/3x3x3-random-12.txt",
-        "UUUUUUUUUBBBRRRRRRRRRFFFFFFDDDDDDDDDFFFLLLLLLLLLBBBBBB",
-    ),
-    (
         "4x4x4 solved 01",
         "test-data/4x4x4-solved-01.txt",
         "DDDDDDDDDDDDDDDDBBBBBBBBBBBBBBBBLLLLLLLLLLLLLLLLUUUUUUUUUUUUUUUUFFFFFFFFFFFFFFFFRRRRRRRRRRRRRRRR",
