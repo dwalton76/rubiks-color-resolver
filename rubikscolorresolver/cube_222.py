@@ -9,5 +9,5 @@ corner_tuples = (
     (24, 16, 19),
 )
 
-edge_orbit_wing_pairs = ()
+edge_orbit_wing_pairs = (())
 center_groups = ()

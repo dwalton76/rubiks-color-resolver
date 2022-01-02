@@ -447,7 +447,6 @@ def assign_points(data_points, centers):
 
 
 def distance(a, b):
-    """ """
     dimensions = len(a)
 
     _sum = 0
