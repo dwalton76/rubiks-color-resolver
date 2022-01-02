@@ -94,7 +94,7 @@ def find_index_for_value(list_foo, target, min_index):
     for (index, value) in enumerate(list_foo):
         if value == target and index >= min_index:
             return index
-    raise ListMissingValue("Did not find %s in list %s".format(target, list_foo))
+    raise ListMissingValue("Did not find %s in list %s" % (target, list_foo))
 
 
 # @timed_function
@@ -1567,8 +1567,6 @@ class RubiksColorSolverGenericBase(object):
         # TODO add support for 555 and 777
         if self.width != 3:
             return
-
-        debug = False
 
         try:
             edges_even = self.edge_swaps_even(None)

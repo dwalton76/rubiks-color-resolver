@@ -32,12 +32,8 @@ ALL_COLORS = ("Bu", "Gr", "OR", "Rd", "Wh", "Ye")
 SIDES_COUNT = 6
 
 if is_micropython():
-    from ucollections import OrderedDict
-
     HTML_FILENAME = "rubiks-color-resolver.html"
 else:
-    from collections import OrderedDict
-
     HTML_FILENAME = "/tmp/rubiks-color-resolver.html"
 
 try:
@@ -196,16 +192,12 @@ def traveling_salesman_corners(corners, desc):
                     if delta > max_delta:
                         max_delta = delta
                         max_delta_corners_to_swap = (x + 1, y + 1)
-                    #    print(f"corner swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)} (NEW MAX)")
-                    # else:
-                    #    print(f"corner swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)}")
 
         if max_delta_corners_to_swap:
             (x, y) = max_delta_corners_to_swap
             orig_x = sorted_corners[x]
             sorted_corners[x] = sorted_corners[y]
             sorted_corners[y] = orig_x
-            # print("")
 
         else:
             break
@@ -283,8 +275,6 @@ def traveling_salesman_edge_pairs(edge_pairs, desc):
                 sorted_edge_pairs[x + 1][0],
             )
 
-        distance = min(distance_01, distance_10)
-
     while True:
         max_delta = 0
         max_delta_edges_to_swap = None
@@ -309,19 +299,12 @@ def traveling_salesman_edge_pairs(edge_pairs, desc):
                     if delta > max_delta:
                         max_delta = delta
                         max_delta_edges_to_swap = (x + 1, y + 1)
-                    #    print(f"edge swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)} (NEW MAX)")
-                    # else:
-                    #    print(f"edge swap ({x}, {y}) would reduce distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)}")
-                # else:
-                #    delta = (distance14 + distance32) - (distance12 + distance34)
-                #    print(f"edge swap ({x}, {y}) would increase distance {int(delta)} from {int(distance12 + distance34)} to {int(distance14 + distance32)}")
 
         if max_delta_edges_to_swap:
             (x, y) = max_delta_edges_to_swap
             orig_x = sorted_edge_pairs[x]
             sorted_edge_pairs[x] = sorted_edge_pairs[y]
             sorted_edge_pairs[y] = orig_x
-            # print("")
 
         else:
             break
