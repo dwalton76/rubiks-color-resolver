@@ -2,6 +2,7 @@ from math import atan2, ceil, cos, degrees, exp, radians, sin, sqrt
 
 cie2000_cache = {}
 
+
 def lab_distance_cie2000(lab1, lab2):
     """
     delta CIE 2000

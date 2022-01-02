@@ -1,4 +1,3 @@
-
 def permutations(iterable, r=None):
     """
     From https://github.com/python/cpython/blob/master/Modules/itertoolsmodule.c
@@ -7,13 +6,13 @@ def permutations(iterable, r=None):
     n = len(pool)
     r = n if r is None else r
     indices = list(range(n))
-    cycles = list(range(n-r+1, n+1))[::-1]
+    cycles = list(range(n - r + 1, n + 1))[::-1]
     yield tuple(pool[i] for i in indices[:r])
     while n:
         for i in reversed(list(range(r))):
             cycles[i] -= 1
             if cycles[i] == 0:
-                indices[i:] = indices[i+1:] + indices[i:i+1]
+                indices[i:] = indices[i + 1 :] + indices[i : i + 1]
                 cycles[i] = n - i
             else:
                 j = cycles[i]
@@ -51,7 +50,7 @@ odd_cube_center_color_permutations = (
     ("Bu", "OR", "Wh", "Rd", "Ye", "Gr"),
 )
 
-#even_cube_center_color_permutations = list(sorted(permutations(ALL_COLORS)))
+# even_cube_center_color_permutations = list(sorted(permutations(ALL_COLORS)))
 even_cube_center_color_permutations = """Bu Gr OR Rd Wh Ye
 Bu Gr OR Rd Ye Wh
 Bu Gr OR Wh Rd Ye
