@@ -447,8 +447,6 @@ def assign_points(data_points, centers):
 
 
 def distance(a, b):
-    """
-    """
     dimensions = len(a)
 
     _sum = 0
@@ -624,7 +622,7 @@ def _plot_animated_gif(
     for i in range(len(x_values)):
         filename = "image%03d-%s.png" % (i, color_space)
         print(filename)
-        plt.plot(x_values[i: i + 2], y_values[i: i + 2], z_values[i: i + 2], "ro-")
+        plt.plot(x_values[i : i + 2], y_values[i : i + 2], z_values[i : i + 2], "ro-")
         plt.savefig(filename, dpi=200, bbox_inches="tight")
 
     subprocess.check_output(
@@ -645,7 +643,7 @@ def _plot_show_or_save(
 
     for i in range(len(x_values)):
         ax.scatter(x_values[i], y_values[i], z_values[i], c=colors[i])
-        plt.plot(x_values[i: i + 2], y_values[i: i + 2], z_values[i: i + 2], "ro-")
+        plt.plot(x_values[i : i + 2], y_values[i : i + 2], z_values[i : i + 2], "ro-")
 
     if show:
         plt.show()

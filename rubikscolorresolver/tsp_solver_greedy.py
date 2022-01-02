@@ -4,6 +4,7 @@ https://github.com/dmishin/tsp-solver/blob/master/tsp_solver/greedy.py
 """
 
 from array import array as pyarray
+
 # from rubikscolorresolver.profile import timed_function
 
 
@@ -114,7 +115,7 @@ def calc_path_cost(distances, path):
     for (index, x) in enumerate(path):
         if prev_x is not None:
 
-            if (index + 1) % ROW_SIZE  == 0:
+            if (index + 1) % ROW_SIZE == 0:
                 row_cost += distances[prev_x][x]
                 cost += row_cost
                 row_cost = 0
@@ -128,6 +129,7 @@ def calc_path_cost(distances, path):
         prev_x = x
 
     return cost
+
 
 # @timed_function
 def solve_tsp(distances, optim_steps=0, endpoints=None, desc=None):
@@ -150,7 +152,7 @@ def solve_tsp(distances, optim_steps=0, endpoints=None, desc=None):
         return [0]
 
     if N == 2:
-        return [0,1]
+        return [0, 1]
 
     # State of the TSP solver algorithm.
     node_valency = pyarray("i", [2] * N)  # Initially, each node has 2 sticky ends
