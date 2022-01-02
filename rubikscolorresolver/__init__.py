@@ -1270,36 +1270,10 @@ $(document).ready(function()
         and center squares.
         """
 
-        # Only works on odd cubes and can cause problems if the scan of the center square happens
-        # to be much brighter/darker than all squares of the same color
-        use_center_squares = False
-        use_corner_squares = False
-        use_all_squares = False
-
-        # LEGO SPIKE (micropython) has very little memory so only do TSP on the corners
-        if is_micropython():
-            use_corner_squares = True
-        else:
-            use_all_squares = True
-
-        if use_center_squares:
-            center_squares = []
-
-            for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-                for square in side.center_squares:
-                    center_squares.append(square)
-
-            self.assign_color_names(
-                "center squares for color_box",
-                center_squares,
-                "odd_cube_center_color_permutations",
-                crayola_colors,
-            )
-
-            if self.write_debug_file:
-                self.write_colors("centers for color_box", center_squares)
-
-        elif use_corner_squares:
+        if self.width == 3 or is_micropython():
+            # If we are solving a 3x3x3 or we are using micropython then we are most likely on an
+            # underpowered platform like a LEGO EV3.  Save a lot of CPU cycles by only using the
+            # corner squares to create the color box.
             corner_squares = []
 
             for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
@@ -1318,7 +1292,8 @@ $(document).ready(function()
             if self.write_debug_file:
                 self.write_colors("corners for color_box", sorted_corner_squares)
 
-        elif use_all_squares:
+        else:
+            # use all squares to create the color box...this takes much more CPU
             all_squares = []
             middle_squares = []
 
@@ -1429,9 +1404,6 @@ $(document).ready(function()
 
             if self.write_debug_file:
                 self.write_colors("squares for color_box (pass 2)", sorted_all_squares)
-
-        else:
-            raise Exception()
 
         (white_squares, yellow_squares, orange_squares, red_squares, green_squares, blue_squares) = self.get_squares_by_color_name()
         self.color_box = {}

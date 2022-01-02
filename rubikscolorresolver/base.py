@@ -29,9 +29,10 @@ def lab_distance(lab1, lab2):
     the Euclidean norm.
     """
 
-    if is_micropython():
-        # CIE2000 takes much more CPU so use euclidean when on micropython
-        # Use int instead of float to save a little memory
+    # CIE2000 takes about 3x more CPU so use euclidean distance to save some cycles.  CIE2000
+    # does give a more accurate distance metric but for our purposes it is no longer worth
+    # the extra CPU cycles.
+    if True or is_micropython():
         return int(sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2)))
     else:
         return lab_distance_cie2000(lab1, lab2)

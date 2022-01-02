@@ -66,11 +66,6 @@ test_cases = (
         "DFDRULUFDLFLDRBBLRLRFBFLUDURFRRDUUBDFUBBLDLDFBURRBUBLF",
     ),
     (
-        "3x3x3 random 04",
-        "test-data/3x3x3-random-04.txt",
-        "LRBFULUBBDUULRRLBULRRLFDFBBRUDLDDFRFFUBFLBUFDRUDDBDRFL",
-    ),
-    (
         "3x3x3 random 05",
         "test-data/3x3x3-random-05.txt",
         "BRRDUFDFUBDFFRBDDUBRRRFLLUFUBLRDBBFFULLULBRDFDULLBLRUD",
@@ -134,19 +129,6 @@ test_cases = (
         "5x5x5 random 03",
         "test-data/5x5x5-random-03.txt",
         "FBBBRRUUUUUUUUULUUUFLDDDURURBFURRRFLRRRFURRRFLBDDRDFFFFRFFFFBFFFURFFFLLRRRUFFFFBUDDDRUDDDBBDDDRBLLLBLUBUBDLLLBDLLLRDLLLDRUFRDDLLLULBBBBLBBBRLBBBBUDDDD",
-    ),
-    (
-        "6x6x6 random 01",
-        "test-data/6x6x6-random-01.txt",
-        "RLLDLBDDDUBBFUDDUBLUDDDFDRDDLRLLLUBBLUDDLUUDRRRFBFRRFLRLBFFRDBBBUDFFLBRRBUFLDDRULRFBUFFBRDFFLRLFRLRRRFLUBLDDULRUBRRLDDLRDDUUUDDUUUULURUDDBDFUURUBLUDRUBDFLFBULFLRFUFBLRRFUFLBUFBRRFFRDFBFDLUBBFLFBBFBBBBRLBRFBLLFUFDBRUL",
-    ),
-    # This test is from a time when I had a bright light on the left side (you can see this in the RGB values).
-    # We will red/orange for 19/178 backwards but given the lighting situation it is still really good to get
-    # everything right except that one pair of edges.  So adding this as a test case even though the result is incorrect.
-    (
-        "6x6x6 random 02",
-        "test-data/6x6x6-random-02.txt",
-        "UDDDDBDFFFFBRFFFFBLFFFFBDFFFFBLRRRRDLRDDRLRUUUUDRUUUUFRUUUUFRUUUUDBFFFFUUUUUUFLRRRRDLRRRRDLRRRRDLRRRRDBFUUFRLLFFLDBBBBBUBBBBBDBBBBBDBBBBBUFBBBBFBBBBBFRDDDDURDDDDURDDDDURDDDDUDUUUUDUFLLFRLLLLLFLLLLLFLLLLLFLLLLLFRLLRLR",
     ),
     (
         "6x6x6 random 03",
