@@ -3,6 +3,7 @@ Full credit to this code from:
 https://github.com/dmishin/tsp-solver/blob/master/tsp_solver/greedy.py
 """
 
+# standard libraries
 from array import array as pyarray
 
 # from rubikscolorresolver.profile import timed_function
@@ -179,11 +180,7 @@ def solve_tsp(distances, optim_steps=0, endpoints=None, desc=None):
                 (i, j) = ij
 
                 # if both start and end could have connections and both nodes connect to a different segments
-                if (
-                    node_valency[i]
-                    and node_valency[j]
-                    and (segments[i] is not segments[j])
-                ):
+                if node_valency[i] and node_valency[j] and (segments[i] is not segments[j]):
                     yield ij
 
         def connect_vertices(i, j):

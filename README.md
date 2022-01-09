@@ -20,7 +20,7 @@ rubiks-color-resolver.py and rubiks-color-resolver-micropython.py
 - analyzes all RGB values to assign each square one of the six colors of the cube. It then uses a Travelling Salesman algorithm (tsp_solver) to sort the colors.
 
 ```
-jdoe@laptop[rubiks-color-resolver]# ./usr/bin/rubiks-color-resolver.py --filename ./tests/test-data/3x3x3-tetris.txt
+$ ./usr/bin/rubiks-color-resolver.py --filename ./tests/test-data/3x3x3-tetris.txt
 Cube
 
            OR OR Rd
@@ -34,5 +34,5 @@ Cube
            Rd OR OR
 
 FFBFUBFBBUDDURDUUDRLLRFLRRLBBFBDFBFFUDDULDUUDLRRLBRLLR
-jdoe@laptop[rubiks-color-resolver]#
+$
 ```

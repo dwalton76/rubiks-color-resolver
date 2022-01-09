@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 
-from collections import defaultdict
-from math import sqrt, degrees, atan2, cos, radians, sin, exp
-from random import uniform
-from tsp_solver.greedy import solve_tsp
-
+# standard libraries
 import colorsys
 import json
 import math
-import matplotlib.pyplot as plt
 import random
 import subprocess
+from collections import defaultdict
+from math import atan2, cos, degrees, exp, radians, sin, sqrt
+from random import uniform
+
+# third party libraries
+import matplotlib.pyplot as plt
+from tsp_solver.greedy import solve_tsp
 
 lego_colors = []
 
-with open(
-    "/Users/ddwalton/rubiks-cube/rubiks-color-resolver/test-data/6x6x6-random-02.txt",
-    "r",
-) as fh:
+with open("/Users/ddwalton/rubiks-cube/rubiks-color-resolver/test-data/6x6x6-random-02.txt", "r") as fh:
     lego_colors.extend(list(json.load(fh).values()))
 
 
@@ -200,19 +199,7 @@ def write_colors(title, colors_to_write):
         fh.write(
             "<span class='square' style='background-color: #%02x%02x%02x;' "
             "title='RGB (%d, %d, %d)) Lab (%s, %s, %s), HSV (%s, %s, %s), HLS (%s, %s, %s)'></span>"
-            % (
-                red,
-                green,
-                blue,
-                red,
-                green,
-                blue,
-                int(lab.L),
-                int(lab.a),
-                int(lab.b),
-                *hsv,
-                *hls,
-            )
+            % (red, green, blue, red, green, blue, int(lab.L), int(lab.a), int(lab.b), *hsv, *hls)
         )
 
     fh.write("<br></div>")
@@ -573,15 +560,11 @@ def traveling_salesman(colors, alg):
                 distance = delta_e_cie2000(x_lab, y_lab)
 
             elif alg == "HSV":
-                y_hsv = colorsys.rgb_to_hsv(
-                    y_red / 255.0, y_green / 255.0, y_blue / 255.0
-                )
+                y_hsv = colorsys.rgb_to_hsv(y_red / 255.0, y_green / 255.0, y_blue / 255.0)
                 distance = get_hsv_distance(x_hsv, y_hsv)
 
             elif alg == "HLS":
-                y_hls = colorsys.rgb_to_hls(
-                    y_red / 255.0, y_green / 255.0, y_blue / 255.0
-                )
+                y_hls = colorsys.rgb_to_hls(y_red / 255.0, y_green / 255.0, y_blue / 255.0)
                 distance = get_hls_distance(x_hls, y_hls)
 
             elif alg == "Lab":
@@ -606,9 +589,7 @@ def my_rgb_to_hls(red, green, blue):
     return colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
 
 
-def _plot_animated_gif(
-    color_space, x_values, y_values, z_values, colors, x_label, y_label, z_label
-):
+def _plot_animated_gif(color_space, x_values, y_values, z_values, colors, x_label, y_label, z_label):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     ax.set_xlabel(x_label)
@@ -626,15 +607,11 @@ def _plot_animated_gif(
         plt.savefig(filename, dpi=200, bbox_inches="tight")
 
     subprocess.check_output(
-        "convert -delay 20 -loop 0 image*%s*.png image-final-%s.gif"
-        % (color_space, color_space),
-        shell=True,
+        "convert -delay 20 -loop 0 image*%s*.png image-final-%s.gif" % (color_space, color_space), shell=True
     )
 
 
-def _plot_show_or_save(
-    show, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
-):
+def _plot_show_or_save(show, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     ax.set_xlabel(x_label)
@@ -653,15 +630,11 @@ def _plot_show_or_save(
 
 
 def _plot_show(desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
-    _plot_show_or_save(
-        True, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
-    )
+    _plot_show_or_save(True, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label)
 
 
 def _plot_save(desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
-    _plot_show_or_save(
-        False, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
-    )
+    _plot_show_or_save(False, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label)
 
 
 def plot(plot_type, color_space, lego_colors):

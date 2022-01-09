@@ -1,3 +1,4 @@
+# standard libraries
 import sys
 
 stack_history = {}
@@ -7,6 +8,7 @@ profile_stats_calls = {}
 timed_function_stack = []
 
 if sys.implementation.name == "micropython":
+    # third party libraries
     import utime
 
     def timed_function(f, *args, **kwargs):
@@ -38,6 +40,7 @@ if sys.implementation.name == "micropython":
             return result
 
         return new_func
+
 
 else:
     # import time
@@ -83,9 +86,7 @@ def print_profile_data():
         profile_stats_time_excluding_children[function] = value
 
     for function in profile_stats_time_excluding_children.keys():
-        profile_stats_time_excluding_children[function] -= get_time_to_subtract(
-            function
-        )
+        profile_stats_time_excluding_children[function] -= get_time_to_subtract(function)
 
     for function in profile_stats_calls.keys():
         lines.append(

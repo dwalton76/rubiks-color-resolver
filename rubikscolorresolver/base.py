@@ -1,6 +1,7 @@
 # from rubikscolorresolver.profile import timed_function
-from math import ceil, sqrt
+# standard libraries
 import sys
+from math import ceil, sqrt
 
 if sys.version_info < (3, 4):
     raise SystemError("Must be using Python 3.4 or higher")
@@ -11,9 +12,13 @@ def is_micropython():
 
 
 if is_micropython():
+    # third party libraries
     from ucollections import OrderedDict
 else:
+    # standard libraries
     from collections import OrderedDict
+
+    # rubiks cube libraries
     from rubikscolorresolver.cie2000 import lab_distance_cie2000
 
 
@@ -32,13 +37,7 @@ def lab_distance(lab1, lab2):
     # does give a more accurate distance metric but for our purposes it is no longer worth
     # the extra CPU cycles.
     if True or is_micropython():
-        return int(
-            sqrt(
-                ((lab1.L - lab2.L) ** 2)
-                + ((lab1.a - lab2.a) ** 2)
-                + ((lab1.b - lab2.b) ** 2)
-            )
-        )
+        return int(sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2)))
     else:
         return lab_distance_cie2000(lab1, lab2)
 
@@ -116,10 +115,7 @@ def get_swap_count(listA, listB):
     if A_length != B_length:
         # log.info("listA %s" % " ".join(listA))
         # log.info("listB %s" % " ".join(listB))
-        assert False, "listA (len %d) and listB (len %d) must be the same length" % (
-            A_length,
-            B_length,
-        )
+        assert False, "listA (len %d) and listB (len %d) must be the same length" % (A_length, B_length)
 
     # if debug:
     #    log.info("INIT")
@@ -130,9 +126,7 @@ def get_swap_count(listA, listB):
     while listA != listB:
         if listA[index] != listB[index]:
             listA_value = listA[index]
-            listB_index_with_A_value = find_index_for_value(
-                listB, listA_value, index + 1
-            )
+            listB_index_with_A_value = find_index_for_value(listB, listA_value, index + 1)
             tmp = listB[index]
             listB[index] = listB[listB_index_with_A_value]
             listB[listB_index_with_A_value] = tmp
@@ -268,9 +262,7 @@ def rgb_to_hsv(r, g, b):
 
 
 class Square(object):
-    def __init__(
-        self, side, position, red, green, blue, side_name=None, color_name=None
-    ):
+    def __init__(self, side, position, red, green, blue, side_name=None, color_name=None):
         self.position = position
         self.lab = rgb2lab((red, green, blue))
         self.side_name = side_name  # ULFRBD
@@ -321,12 +313,7 @@ class Side(object):
         else:
             self.mid_pos = int((self.min_pos + self.max_pos) / 2)
 
-        self.corner_pos = (
-            self.min_pos,
-            self.min_pos + self.width - 1,
-            self.max_pos - self.width + 1,
-            self.max_pos,
-        )
+        self.corner_pos = (self.min_pos, self.min_pos + self.width - 1, self.max_pos - self.width + 1, self.max_pos)
         self.edge_pos = []
         self.edge_north_pos = []
         self.edge_west_pos = []
@@ -372,9 +359,7 @@ class Side(object):
 
     # @timed_function
     def set_square(self, position, red, green, blue, side_name=None, color_name=None):
-        self.squares[position] = Square(
-            self, position, red, green, blue, side_name, color_name
-        )
+        self.squares[position] = Square(self, position, red, green, blue, side_name, color_name)
 
         if position in self.center_pos:
             self.center_squares.append(self.squares[position])
@@ -447,9 +432,7 @@ class RubiksColorSolverGenericBase(object):
         self.pos2square = {}
 
         # U and B
-        for (pos1, pos2) in zip(
-            self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)
-        ):
+        for (pos1, pos2) in zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)):
             self.all_edge_positions.append((pos1, pos2))
 
         # U and L
@@ -461,9 +444,7 @@ class RubiksColorSolverGenericBase(object):
             self.all_edge_positions.append((pos1, pos2))
 
         # U and R
-        for (pos1, pos2) in zip(
-            self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos)
-        ):
+        for (pos1, pos2) in zip(self.sideU.edge_east_pos, reversed(self.sideR.edge_north_pos)):
             self.all_edge_positions.append((pos1, pos2))
 
         # F and L
@@ -483,9 +464,7 @@ class RubiksColorSolverGenericBase(object):
             self.all_edge_positions.append((pos1, pos2))
 
         # L and D
-        for (pos1, pos2) in zip(
-            self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos)
-        ):
+        for (pos1, pos2) in zip(self.sideL.edge_south_pos, reversed(self.sideD.edge_west_pos)):
             self.all_edge_positions.append((pos1, pos2))
 
         # R and D
@@ -497,9 +476,7 @@ class RubiksColorSolverGenericBase(object):
             self.all_edge_positions.append((pos1, pos2))
 
         # B and D
-        for (pos1, pos2) in zip(
-            reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos
-        ):
+        for (pos1, pos2) in zip(reversed(self.sideB.edge_south_pos), self.sideD.edge_south_pos):
             self.all_edge_positions.append((pos1, pos2))
 
         for side in self.sides.values():
@@ -540,73 +517,27 @@ class RubiksColorSolverGenericBase(object):
         # kociemba order
         if order == "URFDLB":
             state.extend(input_state[0 : self.squares_per_side])  # U
-            state.extend(
-                input_state[(self.squares_per_side * 4) : (self.squares_per_side * 5)]
-            )  # L
-            state.extend(
-                input_state[(self.squares_per_side * 2) : (self.squares_per_side * 3)]
-            )  # F
-            state.extend(
-                input_state[(self.squares_per_side * 1) : (self.squares_per_side * 2)]
-            )  # R
-            state.extend(
-                input_state[(self.squares_per_side * 5) : (self.squares_per_side * 6)]
-            )  # B
-            state.extend(
-                input_state[(self.squares_per_side * 3) : (self.squares_per_side * 4)]
-            )  # D
+            state.extend(input_state[(self.squares_per_side * 4) : (self.squares_per_side * 5)])  # L
+            state.extend(input_state[(self.squares_per_side * 2) : (self.squares_per_side * 3)])  # F
+            state.extend(input_state[(self.squares_per_side * 1) : (self.squares_per_side * 2)])  # R
+            state.extend(input_state[(self.squares_per_side * 5) : (self.squares_per_side * 6)])  # B
+            state.extend(input_state[(self.squares_per_side * 3) : (self.squares_per_side * 4)])  # D
         elif order == "ULFRBD":
             state.extend(input_state[0 : self.squares_per_side])  # U
-            state.extend(
-                input_state[(self.squares_per_side * 1) : (self.squares_per_side * 2)]
-            )  # L
-            state.extend(
-                input_state[(self.squares_per_side * 2) : (self.squares_per_side * 3)]
-            )  # F
-            state.extend(
-                input_state[(self.squares_per_side * 3) : (self.squares_per_side * 4)]
-            )  # R
-            state.extend(
-                input_state[(self.squares_per_side * 4) : (self.squares_per_side * 5)]
-            )  # B
-            state.extend(
-                input_state[(self.squares_per_side * 5) : (self.squares_per_side * 6)]
-            )  # D
+            state.extend(input_state[(self.squares_per_side * 1) : (self.squares_per_side * 2)])  # L
+            state.extend(input_state[(self.squares_per_side * 2) : (self.squares_per_side * 3)])  # F
+            state.extend(input_state[(self.squares_per_side * 3) : (self.squares_per_side * 4)])  # R
+            state.extend(input_state[(self.squares_per_side * 4) : (self.squares_per_side * 5)])  # B
+            state.extend(input_state[(self.squares_per_side * 5) : (self.squares_per_side * 6)])  # D
         else:
             raise Exception("Add support for order %s" % order)
 
-        self.color_to_side_name = {
-            "Wh": "U",
-            "OR": "L",
-            "Gr": "F",
-            "Rd": "R",
-            "Bu": "B",
-            "Ye": "D",
-        }
+        self.color_to_side_name = {"Wh": "U", "OR": "L", "Gr": "F", "Rd": "R", "Bu": "B", "Ye": "D"}
 
-        side_name_to_color = {
-            "U": "Wh",
-            "L": "OR",
-            "F": "Gr",
-            "R": "Rd",
-            "B": "Bu",
-            "D": "Ye",
-        }
+        side_name_to_color = {"U": "Wh", "L": "OR", "F": "Gr", "R": "Rd", "B": "Bu", "D": "Ye"}
 
-        self.orange_baseline = rgb2lab(
-            (
-                html_color["OR"]["red"],
-                html_color["OR"]["green"],
-                html_color["OR"]["blue"],
-            )
-        )
-        self.red_baseline = rgb2lab(
-            (
-                html_color["Rd"]["red"],
-                html_color["Rd"]["green"],
-                html_color["Rd"]["blue"],
-            )
-        )
+        self.orange_baseline = rgb2lab((html_color["OR"]["red"], html_color["OR"]["green"], html_color["OR"]["blue"]))
+        self.red_baseline = rgb2lab((html_color["Rd"]["red"], html_color["Rd"]["green"], html_color["Rd"]["blue"]))
 
         for position in range(1, (self.squares_per_side * 6) + 1):
             side_name = state[position - 1]
@@ -648,18 +579,14 @@ class RubiksColorSolverGenericBase(object):
 
                 # cols
                 for x in range(self.width):
-                    color_name = side.squares[
-                        side.min_pos + (y * self.width) + x
-                    ].color_name
+                    color_name = side.squares[side.min_pos + (y * self.width) + x].color_name
                     color_code = color_codes.get(color_name)
 
                     if color_name is None:
                         color_code = 97
                         data[line_number].append("\033[%dmFo\033[0m" % color_code)
                     else:
-                        data[line_number].append(
-                            "\033[%dm%s\033[0m" % (color_code, color_name)
-                        )
+                        data[line_number].append("\033[%dm%s\033[0m" % (color_code, color_name))
                 line_number += 1
 
         output = []
@@ -672,14 +599,7 @@ class RubiksColorSolverGenericBase(object):
     def cube_for_kociemba_strict(self):
         # log.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
         data = []
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
                 data.append(square.side_name)
@@ -690,16 +610,22 @@ class RubiksColorSolverGenericBase(object):
     def validate_edge_orbit(self, orbit_id):
 
         if self.width == 2:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
         elif self.width == 3:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
         elif self.width == 4:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs
         elif self.width == 5:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs
         elif self.width == 6:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs
         elif self.width == 7:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_777 import edge_orbit_wing_pairs
 
         valid = True
@@ -710,9 +636,7 @@ class RubiksColorSolverGenericBase(object):
         for (square1_position, square2_position) in edge_orbit_wing_pairs[orbit_id]:
             square1 = self.pos2square[square1_position]
             square2 = self.pos2square[square2_position]
-            wing_pair_string = ", ".join(
-                sorted([square1.color_name, square2.color_name])
-            )
+            wing_pair_string = ", ".join(sorted([square1.color_name, square2.color_name]))
             # log.info("orbit {}: ({}, {}) is ({})".format(orbit_id, square1_position, square2_position, wing_pair_string))
 
             if wing_pair_string not in wing_pair_counts:
@@ -744,16 +668,22 @@ class RubiksColorSolverGenericBase(object):
         blue_yellow_corners = []
 
         if self.width == 2:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_222 import corner_tuples
         elif self.width == 3:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import corner_tuples
         elif self.width == 4:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_444 import corner_tuples
         elif self.width == 5:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_555 import corner_tuples
         elif self.width == 6:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_666 import corner_tuples
         elif self.width == 7:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_777 import corner_tuples
 
         for corner_tuple in corner_tuples:
@@ -776,27 +706,28 @@ class RubiksColorSolverGenericBase(object):
                 elif "Ye" in corner_colors:
                     blue_yellow_corners.append(corner_tuple)
 
-        return (
-            green_white_corners,
-            green_yellow_corners,
-            blue_white_corners,
-            blue_yellow_corners,
-        )
+        return (green_white_corners, green_yellow_corners, blue_white_corners, blue_yellow_corners)
 
     # @timed_function
     def find_edges_by_color(self, orbit_id):
 
         if self.width == 2:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
         elif self.width == 3:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import edge_orbit_wing_pairs
         elif self.width == 4:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs
         elif self.width == 5:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs
         elif self.width == 6:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs
         elif self.width == 7:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_777 import edge_orbit_wing_pairs
 
         green_red_orange_color_names = ("Gr", "Rd", "OR")
@@ -812,27 +743,20 @@ class RubiksColorSolverGenericBase(object):
             square = self.pos2square[square_index]
             partner = self.pos2square[partner_index]
 
-            if (
-                square.color_name in green_red_orange_color_names
-                and partner.color_name in green_red_orange_color_names
-            ):
+            if square.color_name in green_red_orange_color_names and partner.color_name in green_red_orange_color_names:
                 if square.color_name == "Gr":
                     green_red_or_orange_edges.append((square, partner))
                 else:
                     green_red_or_orange_edges.append((partner, square))
 
-            elif (
-                square.color_name in blue_red_orange_color_names
-                and partner.color_name in blue_red_orange_color_names
-            ):
+            elif square.color_name in blue_red_orange_color_names and partner.color_name in blue_red_orange_color_names:
                 if square.color_name == "Bu":
                     blue_red_or_orange_edges.append((square, partner))
                 else:
                     blue_red_or_orange_edges.append((partner, square))
 
             elif (
-                square.color_name in white_red_orange_color_names
-                and partner.color_name in white_red_orange_color_names
+                square.color_name in white_red_orange_color_names and partner.color_name in white_red_orange_color_names
             ):
                 if square.color_name == "Wh":
                     white_red_or_orange_edges.append((square, partner))
@@ -858,11 +782,7 @@ class RubiksColorSolverGenericBase(object):
     # @timed_function
     def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
 
-        if (
-            self.width == 4
-            or self.width == 6
-            or (self.width == 5 and target_orbit_id == 0)
-        ):
+        if self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0):
             high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
         else:
             high_low_edge_per_color = None
@@ -882,10 +802,7 @@ class RubiksColorSolverGenericBase(object):
                     ("Rd", "OR", "OR", "Rd"),
                 )
             else:
-                raise Exception(
-                    "There should be either 2 or 4 but we have %s"
-                    % target_color_red_or_orange_edges
-                )
+                raise Exception("There should be either 2 or 4 but we have %s" % target_color_red_or_orange_edges)
 
             min_distance = None
             min_distance_permutation = None
@@ -893,41 +810,25 @@ class RubiksColorSolverGenericBase(object):
             for red_orange_permutation in red_orange_permutations:
                 distance = 0
 
-                for (index, (target_color_square, partner_square)) in enumerate(
-                    target_color_red_or_orange_edges
-                ):
+                for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                     red_orange = red_orange_permutation[index]
 
                     if red_orange == "OR":
-                        distance += lab_distance(
-                            partner_square.lab, self.orange_baseline
-                        )
+                        distance += lab_distance(partner_square.lab, self.orange_baseline)
                     elif red_orange == "Rd":
                         distance += lab_distance(partner_square.lab, self.red_baseline)
                     else:
                         raise Exception(red_orange)
 
                     partner_square.color_name = red_orange
-                    partner_square.side_name = self.color_to_side_name[
-                        partner_square.color_name
-                    ]
+                    partner_square.side_name = self.color_to_side_name[partner_square.color_name]
 
-                if (
-                    self.width == 4
-                    or self.width == 6
-                    or (self.width == 5 and target_orbit_id == 0)
-                ):
+                if self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0):
 
-                    for (index, (target_color_square, partner_square)) in enumerate(
-                        target_color_red_or_orange_edges
-                    ):
+                    for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                         red_orange = red_orange_permutation[index]
                         edge_color_pair = edge_color_pair_map[
-                            "%s/%s"
-                            % (
-                                target_color_square.color_name,
-                                partner_square.color_name,
-                            )
+                            "%s/%s" % (target_color_square.color_name, partner_square.color_name)
                         ]
                         # log.info("high_low_edge_per_color\n%s".format(high_low_edge_per_color))
 
@@ -954,9 +855,7 @@ class RubiksColorSolverGenericBase(object):
             log.info("min_distance_permutation %s" % ",".join(min_distance_permutation))
                     """
 
-            for (index, (target_color_square, partner_square)) in enumerate(
-                target_color_red_or_orange_edges
-            ):
+            for (index, (target_color_square, partner_square)) in enumerate(target_color_red_or_orange_edges):
                 if partner_square.color_name != min_distance_permutation[index]:
                     """
                     log.warning(
@@ -970,9 +869,7 @@ class RubiksColorSolverGenericBase(object):
                     )
                     """
                     partner_square.color_name = min_distance_permutation[index]
-                    partner_square.side_name = self.color_to_side_name[
-                        partner_square.color_name
-                    ]
+                    partner_square.side_name = self.color_to_side_name[partner_square.color_name]
                     """
                 else:
                     log.info(
@@ -1000,24 +897,16 @@ class RubiksColorSolverGenericBase(object):
     def get_high_low_per_edge_color(self, target_orbit_id):
 
         if self.width == 4:
-            from rubikscolorresolver.cube_444 import (
-                edge_orbit_wing_pairs,
-                highlow_edge_values,
-            )
+            # rubiks cube libraries
+            from rubikscolorresolver.cube_444 import edge_orbit_wing_pairs, highlow_edge_values
         elif self.width == 5:
-            from rubikscolorresolver.cube_555 import (
-                edge_orbit_wing_pairs,
-                highlow_edge_values,
-            )
+            # rubiks cube libraries
+            from rubikscolorresolver.cube_555 import edge_orbit_wing_pairs, highlow_edge_values
         elif self.width == 6:
-            from rubikscolorresolver.cube_666 import (
-                edge_orbit_wing_pairs,
-                highlow_edge_values,
-            )
+            # rubiks cube libraries
+            from rubikscolorresolver.cube_666 import edge_orbit_wing_pairs, highlow_edge_values
         else:
-            raise Exception(
-                "Add support for %sx%sx%s" % (self.width, self.width, self.width)
-            )
+            raise Exception("Add support for %sx%sx%s" % (self.width, self.width, self.width))
 
         high_low_per_edge_color = {
             "Gr/Wh": set(),
@@ -1039,21 +928,13 @@ class RubiksColorSolverGenericBase(object):
             partner = self.pos2square[partner_index]
 
             if self.width == 4:
-                highlow = highlow_edge_values[
-                    (square_index, partner_index, square.side_name, partner.side_name)
-                ]
+                highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
             elif self.width == 5:
-                highlow = highlow_edge_values[
-                    (square_index, partner_index, square.side_name, partner.side_name)
-                ]
+                highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
             elif self.width == 6:
-                highlow = highlow_edge_values[
-                    (square_index, partner_index, square.side_name, partner.side_name)
-                ]
+                highlow = highlow_edge_values[(square_index, partner_index, square.side_name, partner.side_name)]
 
-            edge_color_pair = edge_color_pair_map[
-                "%s/%s" % (square.color_name, partner.color_name)
-            ]
+            edge_color_pair = edge_color_pair_map["%s/%s" % (square.color_name, partner.color_name)]
             high_low_per_edge_color[edge_color_pair].add(highlow)
 
         # log.info("high_low_per_edge_color for orbit %d\n%s" % (target_orbit_id, high_low_per_edge_color))
@@ -1068,17 +949,9 @@ class RubiksColorSolverGenericBase(object):
     # @timed_function
     def assign_green_white_corners(self, green_white_corners):
         # log.info("Gr/Wh corner tuples %s".format(green_white_corners))
-        valid_green_orange_white = (
-            ["Gr", "OR", "Wh"],
-            ["Wh", "Gr", "OR"],
-            ["OR", "Wh", "Gr"],
-        )
+        valid_green_orange_white = (["Gr", "OR", "Wh"], ["Wh", "Gr", "OR"], ["OR", "Wh", "Gr"])
 
-        valid_green_white_red = (
-            ["Gr", "Wh", "Rd"],
-            ["Rd", "Gr", "Wh"],
-            ["Wh", "Rd", "Gr"],
-        )
+        valid_green_white_red = (["Gr", "Wh", "Rd"], ["Rd", "Gr", "Wh"], ["Wh", "Rd", "Gr"])
 
         for (corner1_index, corner2_index, corner3_index) in green_white_corners:
             corner1 = self.pos2square[corner1_index]
@@ -1087,10 +960,7 @@ class RubiksColorSolverGenericBase(object):
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
-            if (
-                color_seq not in valid_green_orange_white
-                and color_seq not in valid_green_white_red
-            ):
+            if color_seq not in valid_green_orange_white and color_seq not in valid_green_white_red:
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
                     # log.warning(
@@ -1124,17 +994,9 @@ class RubiksColorSolverGenericBase(object):
 
     # @timed_function
     def assign_green_yellow_corners(self, green_yellow_corners):
-        valid_green_yellow_orange = (
-            ["Gr", "Ye", "OR"],
-            ["OR", "Gr", "Ye"],
-            ["Ye", "OR", "Gr"],
-        )
+        valid_green_yellow_orange = (["Gr", "Ye", "OR"], ["OR", "Gr", "Ye"], ["Ye", "OR", "Gr"])
 
-        valid_green_red_yellow = (
-            ["Gr", "Rd", "Ye"],
-            ["Ye", "Gr", "Rd"],
-            ["Rd", "Ye", "Gr"],
-        )
+        valid_green_red_yellow = (["Gr", "Rd", "Ye"], ["Ye", "Gr", "Rd"], ["Rd", "Ye", "Gr"])
 
         for (corner1_index, corner2_index, corner3_index) in green_yellow_corners:
             corner1 = self.pos2square[corner1_index]
@@ -1143,10 +1005,7 @@ class RubiksColorSolverGenericBase(object):
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
-            if (
-                color_seq not in valid_green_yellow_orange
-                and color_seq not in valid_green_red_yellow
-            ):
+            if color_seq not in valid_green_yellow_orange and color_seq not in valid_green_red_yellow:
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
@@ -1182,17 +1041,9 @@ class RubiksColorSolverGenericBase(object):
     # @timed_function
     def assign_blue_white_corners(self, blue_white_corners):
         # log.info("Bu/Wh corner tuples %s".format(blue_white_corners))
-        valid_blue_white_orange = (
-            ["Bu", "Wh", "OR"],
-            ["OR", "Bu", "Wh"],
-            ["Wh", "OR", "Bu"],
-        )
+        valid_blue_white_orange = (["Bu", "Wh", "OR"], ["OR", "Bu", "Wh"], ["Wh", "OR", "Bu"])
 
-        valid_blue_red_white = (
-            ["Bu", "Rd", "Wh"],
-            ["Wh", "Bu", "Rd"],
-            ["Rd", "Wh", "Bu"],
-        )
+        valid_blue_red_white = (["Bu", "Rd", "Wh"], ["Wh", "Bu", "Rd"], ["Rd", "Wh", "Bu"])
 
         for (corner1_index, corner2_index, corner3_index) in blue_white_corners:
             corner1 = self.pos2square[corner1_index]
@@ -1201,10 +1052,7 @@ class RubiksColorSolverGenericBase(object):
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
-            if (
-                color_seq not in valid_blue_white_orange
-                and color_seq not in valid_blue_red_white
-            ):
+            if color_seq not in valid_blue_white_orange and color_seq not in valid_blue_red_white:
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
@@ -1239,17 +1087,9 @@ class RubiksColorSolverGenericBase(object):
 
     # @timed_function
     def assign_blue_yellow_corners(self, blue_yellow_corners):
-        valid_blue_yellow_red = (
-            ["Bu", "Ye", "Rd"],
-            ["Rd", "Bu", "Ye"],
-            ["Ye", "Rd", "Bu"],
-        )
+        valid_blue_yellow_red = (["Bu", "Ye", "Rd"], ["Rd", "Bu", "Ye"], ["Ye", "Rd", "Bu"])
 
-        valid_blue_orange_yellow = (
-            ["Bu", "OR", "Ye"],
-            ["Ye", "Bu", "OR"],
-            ["OR", "Ye", "Bu"],
-        )
+        valid_blue_orange_yellow = (["Bu", "OR", "Ye"], ["Ye", "Bu", "OR"], ["OR", "Ye", "Bu"])
 
         for (corner1_index, corner2_index, corner3_index) in blue_yellow_corners:
             corner1 = self.pos2square[corner1_index]
@@ -1258,10 +1098,7 @@ class RubiksColorSolverGenericBase(object):
             color_seq = [x.color_name for x in (corner1, corner2, corner3)]
 
             # If this is the case we must flip the orange to red or vice versa
-            if (
-                color_seq not in valid_blue_yellow_red
-                and color_seq not in valid_blue_orange_yellow
-            ):
+            if color_seq not in valid_blue_yellow_red and color_seq not in valid_blue_orange_yellow:
 
                 if corner1.color_name == "OR":
                     corner1.color_name = "Rd"
@@ -1313,46 +1150,14 @@ class RubiksColorSolverGenericBase(object):
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
 
         to_check = [
-            (
-                self.sideU.corner_pos[0],
-                self.sideL.corner_pos[0],
-                self.sideB.corner_pos[1],
-            ),  # ULB
-            (
-                self.sideU.corner_pos[1],
-                self.sideR.corner_pos[1],
-                self.sideB.corner_pos[0],
-            ),  # URB
-            (
-                self.sideU.corner_pos[2],
-                self.sideL.corner_pos[1],
-                self.sideF.corner_pos[0],
-            ),  # ULF
-            (
-                self.sideU.corner_pos[3],
-                self.sideF.corner_pos[1],
-                self.sideR.corner_pos[0],
-            ),  # UFR
-            (
-                self.sideD.corner_pos[0],
-                self.sideL.corner_pos[3],
-                self.sideF.corner_pos[2],
-            ),  # DLF
-            (
-                self.sideD.corner_pos[1],
-                self.sideF.corner_pos[3],
-                self.sideR.corner_pos[2],
-            ),  # DFR
-            (
-                self.sideD.corner_pos[2],
-                self.sideL.corner_pos[2],
-                self.sideB.corner_pos[3],
-            ),  # DLB
-            (
-                self.sideD.corner_pos[3],
-                self.sideR.corner_pos[3],
-                self.sideB.corner_pos[2],
-            ),  # DRB
+            (self.sideU.corner_pos[0], self.sideL.corner_pos[0], self.sideB.corner_pos[1]),  # ULB
+            (self.sideU.corner_pos[1], self.sideR.corner_pos[1], self.sideB.corner_pos[0]),  # URB
+            (self.sideU.corner_pos[2], self.sideL.corner_pos[1], self.sideF.corner_pos[0]),  # ULF
+            (self.sideU.corner_pos[3], self.sideF.corner_pos[1], self.sideR.corner_pos[0]),  # UFR
+            (self.sideD.corner_pos[0], self.sideL.corner_pos[3], self.sideF.corner_pos[2]),  # DLF
+            (self.sideD.corner_pos[1], self.sideF.corner_pos[3], self.sideR.corner_pos[2]),  # DFR
+            (self.sideD.corner_pos[2], self.sideL.corner_pos[2], self.sideB.corner_pos[3]),  # DLB
+            (self.sideD.corner_pos[3], self.sideR.corner_pos[3], self.sideB.corner_pos[2]),  # DRB
         ]
 
         current_corners = []
@@ -1360,9 +1165,7 @@ class RubiksColorSolverGenericBase(object):
             square1 = self.pos2square[square_index1]
             square2 = self.pos2square[square_index2]
             square3 = self.pos2square[square_index3]
-            corner_str = "".join(
-                sorted([square1.side_name, square2.side_name, square3.side_name])
-            )
+            corner_str = "".join(sorted([square1.side_name, square2.side_name, square3.side_name]))
             current_corners.append(corner_str)
 
         return get_swap_count(needed_corners, current_corners)
@@ -1465,9 +1268,7 @@ class RubiksColorSolverGenericBase(object):
             elif square2.side_name in ("L", "R"):
                 wing_str = square2.side_name + square1.side_name
             else:
-                raise Exception(
-                    "Could not determine wing_str for (%s, %s)" % (square1, square2)
-                )
+                raise Exception("Could not determine wing_str for (%s, %s)" % (square1, square2))
 
             current_edges.append(wing_str)
 
@@ -1490,46 +1291,14 @@ class RubiksColorSolverGenericBase(object):
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
 
         to_check = [
-            (
-                self.sideU.corner_pos[0],
-                self.sideL.corner_pos[0],
-                self.sideB.corner_pos[1],
-            ),  # ULB
-            (
-                self.sideU.corner_pos[1],
-                self.sideR.corner_pos[1],
-                self.sideB.corner_pos[0],
-            ),  # URB
-            (
-                self.sideU.corner_pos[2],
-                self.sideL.corner_pos[1],
-                self.sideF.corner_pos[0],
-            ),  # ULF
-            (
-                self.sideU.corner_pos[3],
-                self.sideF.corner_pos[1],
-                self.sideR.corner_pos[0],
-            ),  # UFR
-            (
-                self.sideD.corner_pos[0],
-                self.sideL.corner_pos[3],
-                self.sideF.corner_pos[2],
-            ),  # DLF
-            (
-                self.sideD.corner_pos[1],
-                self.sideF.corner_pos[3],
-                self.sideR.corner_pos[2],
-            ),  # DFR
-            (
-                self.sideD.corner_pos[2],
-                self.sideL.corner_pos[2],
-                self.sideB.corner_pos[3],
-            ),  # DLB
-            (
-                self.sideD.corner_pos[3],
-                self.sideR.corner_pos[3],
-                self.sideB.corner_pos[2],
-            ),  # DRB
+            (self.sideU.corner_pos[0], self.sideL.corner_pos[0], self.sideB.corner_pos[1]),  # ULB
+            (self.sideU.corner_pos[1], self.sideR.corner_pos[1], self.sideB.corner_pos[0]),  # URB
+            (self.sideU.corner_pos[2], self.sideL.corner_pos[1], self.sideF.corner_pos[0]),  # ULF
+            (self.sideU.corner_pos[3], self.sideF.corner_pos[1], self.sideR.corner_pos[0]),  # UFR
+            (self.sideD.corner_pos[0], self.sideL.corner_pos[3], self.sideF.corner_pos[2]),  # DLF
+            (self.sideD.corner_pos[1], self.sideF.corner_pos[3], self.sideR.corner_pos[2]),  # DFR
+            (self.sideD.corner_pos[2], self.sideL.corner_pos[2], self.sideB.corner_pos[3]),  # DLB
+            (self.sideD.corner_pos[3], self.sideR.corner_pos[3], self.sideB.corner_pos[2]),  # DRB
         ]
 
         current_corners = []
@@ -1537,9 +1306,7 @@ class RubiksColorSolverGenericBase(object):
             square1 = self.pos2square[square_index1]
             square2 = self.pos2square[square_index2]
             square3 = self.pos2square[square_index3]
-            corner_str = "".join(
-                sorted([square1.side_name, square2.side_name, square3.side_name])
-            )
+            corner_str = "".join(sorted([square1.side_name, square2.side_name, square3.side_name]))
             current_corners.append(corner_str)
 
         # We need a way to validate all of the needed_corners are present and
@@ -1598,14 +1365,7 @@ class RubiksColorSolverGenericBase(object):
         blue_orange_position = None
         blue_red_position = None
 
-        for side in (
-            self.sideU,
-            self.sideL,
-            self.sideF,
-            self.sideR,
-            self.sideB,
-            self.sideD,
-        ):
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for square in side.edge_squares:
                 partner_position = side.get_wing_partner(square.position)
                 partner = self.pos2square[partner_position]
@@ -1633,28 +1393,16 @@ class RubiksColorSolverGenericBase(object):
         # we can swap orange/red for the blue edges. Which will result in the
         # lowest color distance with our orange/red baselines?
         distance_swap_green_edge = 0
-        distance_swap_green_edge += lab_distance(
-            square_blue_orange.lab, self.orange_baseline
-        )
+        distance_swap_green_edge += lab_distance(square_blue_orange.lab, self.orange_baseline)
         distance_swap_green_edge += lab_distance(square_blue_red.lab, self.red_baseline)
-        distance_swap_green_edge += lab_distance(
-            square_green_orange.lab, self.red_baseline
-        )
-        distance_swap_green_edge += lab_distance(
-            square_green_red.lab, self.orange_baseline
-        )
+        distance_swap_green_edge += lab_distance(square_green_orange.lab, self.red_baseline)
+        distance_swap_green_edge += lab_distance(square_green_red.lab, self.orange_baseline)
 
         distance_swap_blue_edge = 0
-        distance_swap_blue_edge += lab_distance(
-            square_green_orange.lab, self.orange_baseline
-        )
+        distance_swap_blue_edge += lab_distance(square_green_orange.lab, self.orange_baseline)
         distance_swap_blue_edge += lab_distance(square_green_red.lab, self.red_baseline)
-        distance_swap_blue_edge += lab_distance(
-            square_blue_orange.lab, self.red_baseline
-        )
-        distance_swap_blue_edge += lab_distance(
-            square_blue_red.lab, self.orange_baseline
-        )
+        distance_swap_blue_edge += lab_distance(square_blue_orange.lab, self.red_baseline)
+        distance_swap_blue_edge += lab_distance(square_blue_red.lab, self.orange_baseline)
 
         # log.info("distance_swap_green_edge %s" % distance_swap_green_edge)
         # log.info("distance_swap_blue_edge %s" % distance_swap_blue_edge)
@@ -1672,12 +1420,8 @@ class RubiksColorSolverGenericBase(object):
             """
             square_green_orange.color_name = "Rd"
             square_green_red.color_name = "OR"
-            square_green_orange.side_name = self.color_to_side_name[
-                square_green_orange.color_name
-            ]
-            square_green_red.side_name = self.color_to_side_name[
-                square_green_red.color_name
-            ]
+            square_green_orange.side_name = self.color_to_side_name[square_green_orange.color_name]
+            square_green_red.side_name = self.color_to_side_name[square_green_red.color_name]
         else:
             """
             log.warning(
@@ -1691,18 +1435,12 @@ class RubiksColorSolverGenericBase(object):
             """
             square_blue_orange.color_name = "Rd"
             square_blue_red.color_name = "OR"
-            square_blue_orange.side_name = self.color_to_side_name[
-                square_blue_orange.color_name
-            ]
-            square_blue_red.side_name = self.color_to_side_name[
-                square_blue_red.color_name
-            ]
+            square_blue_orange.side_name = self.color_to_side_name[square_blue_orange.color_name]
+            square_blue_red.side_name = self.color_to_side_name[square_blue_red.color_name]
 
         edges_even = self.edge_swaps_even(None)
         corners_even = self.corner_swaps_even()
-        assert (
-            edges_even == corners_even
-        ), "parity is still broken, edges_even %s, corners_even %s" % (
+        assert edges_even == corners_even, "parity is still broken, edges_even %s, corners_even %s" % (
             edges_even,
             corners_even,
         )

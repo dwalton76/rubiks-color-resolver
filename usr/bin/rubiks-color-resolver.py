@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from rubikscolorresolver import resolve_colors
+# standard libraries
 import logging
 import sys
 
+# rubiks cube libraries
+from rubikscolorresolver import resolve_colors
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)7s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)7s: %(message)s")
 
 resolve_colors(sys.argv)

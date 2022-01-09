@@ -8,16 +8,21 @@ Against Rubiks cube RGB values
 I skipped hilbert, that one was more trouble than it was worth
 """
 
-from rubikscolorresolver import k_means_colors_dictionary
-from sklearn.cluster import KMeans
-from copy import deepcopy
-from scipy.spatial import distance
-import numpy as np
+# standard libraries
 import colorsys
 import json
 import logging
 import math
 import sys
+from copy import deepcopy
+
+# third party libraries
+import numpy as np
+from scipy.spatial import distance
+from sklearn.cluster import KMeans
+
+# rubiks cube libraries
+from rubikscolorresolver import k_means_colors_dictionary
 
 
 def convert_key_strings_to_int(data):
@@ -73,9 +78,7 @@ def write_colors(fh, algorithm, colors):
             continue
 
         # to use python coloursys convertion we have to rescale to range 0-1
-        (H, S, V) = colorsys.rgb_to_hsv(
-            float(red / 255), float(green / 255), float(blue / 255)
-        )
+        (H, S, V) = colorsys.rgb_to_hsv(float(red / 255), float(green / 255), float(blue / 255))
 
         # rescale H to 360 degrees and S, V to percent of 100%
         H = int(H * 360)
@@ -205,10 +208,7 @@ def travelling_salesman(colors):
 if __name__ == "__main__":
 
     # logging.basicConfig(filename='rubiks.log',
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(filename)12s %(levelname)8s: %(message)s",
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(filename)12s %(levelname)8s: %(message)s")
     log = logging.getLogger(__name__)
 
     filename = sys.argv[1]
@@ -266,9 +266,7 @@ if __name__ == "__main__":
             elif algorithm == "kmeans2":
                 tmp_colors = []
                 # for rgb_list in k_means_colors_dictionary(deepcopy(data), (13, 38, 63, 88, 113, 138)):
-                for rgb_list in k_means_colors_dictionary(
-                    deepcopy(data), (31, 42, 73, 108, 139, 186)
-                ):
+                for rgb_list in k_means_colors_dictionary(deepcopy(data), (31, 42, 73, 108, 139, 186)):
                     for rgb in rgb_list:
                         tmp_colors.append(rgb)
                     tmp_colors.append((None, None, None))

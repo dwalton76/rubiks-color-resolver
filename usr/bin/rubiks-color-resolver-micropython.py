@@ -1,6 +1,9 @@
 #!/usr/bin/env micropython
 
-from rubikscolorresolver import resolve_colors
+# standard libraries
 import sys
+
+# rubiks cube libraries
+from rubikscolorresolver import resolve_colors
 
 resolve_colors(sys.argv)

@@ -1,24 +1,18 @@
+# standard libraries
 import array
 import gc
 import os
+import sys
 from math import sqrt
-from rubikscolorresolver.base import (
-    LabColor,
-    RubiksColorSolverGenericBase,
-    Square,
-    lab_distance,
-    html_color,
-    rgb2lab,
-)
-from rubikscolorresolver.tsp_solver_greedy import solve_tsp
+
+# rubiks cube libraries
+from rubikscolorresolver.base import LabColor, RubiksColorSolverGenericBase, Square, html_color, lab_distance, rgb2lab
 from rubikscolorresolver.permutations import (
     even_cube_center_color_permutations,
     len_even_cube_center_color_permutations,
     odd_cube_center_color_permutations,
 )
-
-# from rubikscolorresolver.profile import timed_function, print_profile_data
-import sys
+from rubikscolorresolver.tsp_solver_greedy import solve_tsp
 
 if sys.version_info < (3, 4):
     raise SystemError("Must be using Python 3.4 or higher")
@@ -52,10 +46,7 @@ def median(list_foo):
 
     # Even number of entries
     if list_foo_len % 2 == 0:
-        return (
-            list_foo[int((list_foo_len - 1) / 2)]
-            + list_foo[int((list_foo_len + 1) / 2)]
-        ) / 2.0
+        return (list_foo[int((list_foo_len - 1) / 2)] + list_foo[int((list_foo_len + 1) / 2)]) / 2.0
 
     # Odd number of entries
     else:
@@ -76,16 +67,10 @@ def tsp_matrix_corners(corners):
         for y in range(x + 1, len_corners):
             y_corner = corners[y]
 
-            if (
-                x_corner[0].position in color_names
-                and y_corner[0].position in color_names
-            ):
+            if x_corner[0].position in color_names and y_corner[0].position in color_names:
                 distance = 999
 
-            elif (
-                x_corner[0].position not in color_names
-                and y_corner[0].position not in color_names
-            ):
+            elif x_corner[0].position not in color_names and y_corner[0].position not in color_names:
                 distance = 999
 
             else:
@@ -219,25 +204,19 @@ def tsp_matrix_edge_pairs(edge_pairs):
         for y in range(x + 1, len_edge_pairs):
             y_edge_pair = edge_pairs[y]
 
-            if (
-                x_edge_pair[0].position in color_names
-                and y_edge_pair[0].position in color_names
-            ):
+            if x_edge_pair[0].position in color_names and y_edge_pair[0].position in color_names:
                 distance = 999
 
-            elif (
-                x_edge_pair[0].position not in color_names
-                and y_edge_pair[0].position not in color_names
-            ):
+            elif x_edge_pair[0].position not in color_names and y_edge_pair[0].position not in color_names:
                 distance = 999
 
             else:
-                distance_01 = lab_distance(
-                    x_edge_pair[0].lab, y_edge_pair[0].lab
-                ) + lab_distance(x_edge_pair[1].lab, y_edge_pair[1].lab)
-                distance_10 = lab_distance(
-                    x_edge_pair[0].lab, y_edge_pair[1].lab
-                ) + lab_distance(x_edge_pair[1].lab, y_edge_pair[0].lab)
+                distance_01 = lab_distance(x_edge_pair[0].lab, y_edge_pair[0].lab) + lab_distance(
+                    x_edge_pair[1].lab, y_edge_pair[1].lab
+                )
+                distance_10 = lab_distance(x_edge_pair[0].lab, y_edge_pair[1].lab) + lab_distance(
+                    x_edge_pair[1].lab, y_edge_pair[0].lab
+                )
 
                 distance = min(distance_01, distance_10)
 
@@ -249,13 +228,9 @@ def tsp_matrix_edge_pairs(edge_pairs):
 
 def edge_pair_distance(pair1, pair2, normal):
     if normal:
-        return lab_distance(pair1[0].lab, pair2[0].lab) + lab_distance(
-            pair1[1].lab, pair2[1].lab
-        )
+        return lab_distance(pair1[0].lab, pair2[0].lab) + lab_distance(pair1[1].lab, pair2[1].lab)
     else:
-        return lab_distance(pair1[0].lab, pair2[1].lab) + lab_distance(
-            pair1[1].lab, pair2[0].lab
-        )
+        return lab_distance(pair1[0].lab, pair2[1].lab) + lab_distance(pair1[1].lab, pair2[0].lab)
 
 
 def traveling_salesman_edge_pairs(edge_pairs, desc):
@@ -270,10 +245,7 @@ def traveling_salesman_edge_pairs(edge_pairs, desc):
         distance_10 = edge_pair_distance(pair1, pair2, normal=False)
 
         if distance_10 < distance_01:
-            sorted_edge_pairs[x + 1] = (
-                sorted_edge_pairs[x + 1][1],
-                sorted_edge_pairs[x + 1][0],
-            )
+            sorted_edge_pairs[x + 1] = (sorted_edge_pairs[x + 1][1], sorted_edge_pairs[x + 1][0])
 
     while True:
         max_delta = 0
@@ -508,16 +480,10 @@ crayola_colors = {
     # "Bu": hashtag_rgb_to_labcolor("#163967"),
     # "Rd": hashtag_rgb_to_labcolor("#680402"),
     "Wh": LabColor(100.0, 0.00526049995830391, -0.01040818452526793, 255, 255, 255),
-    "Gr": LabColor(
-        39.14982168015123, -32.45052099773829, 10.60519920674466, 20, 105, 74
-    ),
-    "Ye": LabColor(
-        97.13824698129729, -21.55590833483229, 94.48248544644462, 255, 255, 0
-    ),
+    "Gr": LabColor(39.14982168015123, -32.45052099773829, 10.60519920674466, 20, 105, 74),
+    "Ye": LabColor(97.13824698129729, -21.55590833483229, 94.48248544644462, 255, 255, 0),
     "OR": LabColor(35.71689493804023, 38.18518746791636, 43.98251678431012, 148, 53, 9),
-    "Bu": LabColor(
-        23.92144819784853, 5.28400492805528, -30.63998357385018, 22, 57, 103
-    ),
+    "Bu": LabColor(23.92144819784853, 5.28400492805528, -30.63998357385018, 22, 57, 103),
     "Rd": LabColor(20.18063311070288, 40.48184409611946, 29.94038922869042, 104, 4, 2),
 }
 
@@ -638,12 +604,7 @@ div#down {
     margin-left: %dpx;
 }
 """
-                % (
-                    size - 1,
-                    size,
-                    (size - 1) * square_size,
-                    (size * square_size) + (3 * side_margin),
-                )
+                % (size - 1, size, (size - 1) * square_size, (size * square_size) + (3 * side_margin))
             )
 
             fh.write(
@@ -750,11 +711,7 @@ $(document).ready(function()
                     else:
                         raise ValueError(row_index)
 
-                    (red, green, blue) = (
-                        square.lab.red,
-                        square.lab.green,
-                        square.lab.blue,
-                    )
+                    (red, green, blue) = (square.lab.red, square.lab.green, square.lab.blue)
 
                     if index and index % 2 == 0:
                         fh.write("<span class='half_square'></span>")
@@ -792,11 +749,7 @@ $(document).ready(function()
                     else:
                         square = square2
 
-                    (red, green, blue) = (
-                        square.lab.red,
-                        square.lab.green,
-                        square.lab.blue,
-                    )
+                    (red, green, blue) = (square.lab.red, square.lab.green, square.lab.blue)
 
                     if index and index % 2 == 0:
                         fh.write("<span class='half_square'></span>")
@@ -886,14 +839,7 @@ $(document).ready(function()
     def html_cube(self, desc, use_html_colors, div_class):
         cube = ["dummy"]
 
-        for side in (
-            self.sideU,
-            self.sideL,
-            self.sideF,
-            self.sideR,
-            self.sideB,
-            self.sideD,
-        ):
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for position in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[position]
 
@@ -914,9 +860,7 @@ $(document).ready(function()
 
         sides = ("upper", "left", "front", "right", "back", "down")
         side_index = -1
-        (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(
-            self.width
-        )
+        (first_squares, last_squares, last_UBD_squares) = get_important_square_indexes(self.width)
 
         html = []
         html.append("<div class='cube {}'>".format(div_class))
@@ -931,20 +875,7 @@ $(document).ready(function()
             html.append(
                 "    <div class='square col%d' title='RGB (%d, %d, %d), Lab (%s, %s, %s), "
                 "color %s' style='background-color: #%02x%02x%02x;'><span>%02d</span></div>\n"
-                % (
-                    col,
-                    red,
-                    green,
-                    blue,
-                    int(lab.L),
-                    int(lab.a),
-                    int(lab.b),
-                    color_name,
-                    red,
-                    green,
-                    blue,
-                    index,
-                )
+                % (col, red, green, blue, int(lab.L), int(lab.a), int(lab.b), color_name, red, green, blue, index)
             )
 
             if index in last_squares:
@@ -1015,14 +946,7 @@ $(document).ready(function()
 
             # Build a list of all center squares
             center_squares = []
-            for side in (
-                self.sideU,
-                self.sideL,
-                self.sideF,
-                self.sideR,
-                self.sideB,
-                self.sideD,
-            ):
+            for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
                 square = side.squares[side.mid_pos]
                 center_squares.append(square)
             # desc = "middle center"
@@ -1057,23 +981,9 @@ $(document).ready(function()
 
         # even cube
         else:
-            self.color_to_side_name = {
-                "Wh": "U",
-                "OR": "L",
-                "Gr": "F",
-                "Rd": "R",
-                "Bu": "B",
-                "Ye": "D",
-            }
+            self.color_to_side_name = {"Wh": "U", "OR": "L", "Gr": "F", "Rd": "R", "Bu": "B", "Ye": "D"}
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
                 square.side_name = self.color_to_side_name[square.color_name]
@@ -1088,14 +998,7 @@ $(document).ready(function()
         data["sides"] = {}
         data["squares"] = {}
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
                 color = square.color_name
@@ -1105,24 +1008,16 @@ $(document).ready(function()
                     data["sides"][side_name] = {}
                     data["sides"][side_name]["colorName"] = color
                     data["sides"][side_name]["colorHTML"] = {}
-                    data["sides"][side_name]["colorHTML"]["red"] = html_color[color][
-                        "red"
-                    ]
-                    data["sides"][side_name]["colorHTML"]["green"] = html_color[color][
-                        "green"
-                    ]
-                    data["sides"][side_name]["colorHTML"]["blue"] = html_color[color][
-                        "blue"
-                    ]
+                    data["sides"][side_name]["colorHTML"]["red"] = html_color[color]["red"]
+                    data["sides"][side_name]["colorHTML"]["green"] = html_color[color]["green"]
+                    data["sides"][side_name]["colorHTML"]["blue"] = html_color[color]["blue"]
 
                 data["squares"][square.position] = {"finalSide": side_name}
 
         return data
 
     # @timed_function
-    def assign_color_names(
-        self, desc, squares_lists_all, color_permutations, color_box
-    ):
+    def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
         """
         Assign a color name to each square in each squares_list. Compute
         which naming scheme results in the least total color distance in
@@ -1165,9 +1060,7 @@ $(document).ready(function()
                 for square in squares_list:
                     distance += lab_distance(square.lab, color_lab)
                 distances_of_square_list_per_color[color_name].append(int(distance))
-            distances_of_square_list_per_color[
-                color_name
-            ] = distances_of_square_list_per_color[color_name]
+            distances_of_square_list_per_color[color_name] = distances_of_square_list_per_color[color_name]
 
         min_distance = 99999
         min_distance_permutation = None
@@ -1188,9 +1081,7 @@ $(document).ready(function()
                 min_color_name_distance = 99999
                 min_color_name_distance_index = None
 
-                for (index, distance) in enumerate(
-                    distances_of_square_list_per_color[color_name]
-                ):
+                for (index, distance) in enumerate(distances_of_square_list_per_color[color_name]):
                     if distance < min_color_name_distance:
                         min_color_name_distance = distance
                         min_color_name_distance_index = index
@@ -1200,15 +1091,9 @@ $(document).ready(function()
                 squares_lists.insert(insert_index, tmp_square_list)
 
                 for color_name in ref_ALL_COLORS:
-                    blue_distance = distances_of_square_list_per_color[color_name][
-                        min_color_name_distance_index
-                    ]
-                    distances_of_square_list_per_color[color_name].pop(
-                        min_color_name_distance_index
-                    )
-                    distances_of_square_list_per_color[color_name].insert(
-                        insert_index, blue_distance
-                    )
+                    blue_distance = distances_of_square_list_per_color[color_name][min_color_name_distance_index]
+                    distances_of_square_list_per_color[color_name].pop(min_color_name_distance_index)
+                    distances_of_square_list_per_color[color_name].insert(insert_index, blue_distance)
 
             # after sorting
             """
@@ -1306,14 +1191,7 @@ $(document).ready(function()
         green_squares = []
         blue_squares = []
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.center_squares + side.corner_squares + side.edge_squares:
                 if square.color_name == "Wh":
                     white_squares.append(square)
@@ -1328,14 +1206,7 @@ $(document).ready(function()
                 elif square.color_name == "Bu":
                     blue_squares.append(square)
 
-        return (
-            white_squares,
-            yellow_squares,
-            orange_squares,
-            red_squares,
-            green_squares,
-            blue_squares,
-        )
+        return (white_squares, yellow_squares, orange_squares, red_squares, green_squares, blue_squares)
 
     # @timed_function
     def resolve_color_box(self):
@@ -1353,14 +1224,7 @@ $(document).ready(function()
             # corner squares to create the color box.
             corner_squares = []
 
-            for side in (
-                self.sideU,
-                self.sideR,
-                self.sideF,
-                self.sideD,
-                self.sideL,
-                self.sideB,
-            ):
+            for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
                 for square in side.corner_squares:
                     corner_squares.append(square)
 
@@ -1381,17 +1245,8 @@ $(document).ready(function()
             all_squares = []
             middle_squares = []
 
-            for side in (
-                self.sideU,
-                self.sideR,
-                self.sideF,
-                self.sideD,
-                self.sideL,
-                self.sideB,
-            ):
-                for square in (
-                    side.center_squares + side.corner_squares + side.edge_squares
-                ):
+            for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+                for square in side.center_squares + side.corner_squares + side.edge_squares:
                     all_squares.append(square)
 
                 if side.mid_pos:
@@ -1400,16 +1255,22 @@ $(document).ready(function()
             edge_pairs = []
 
             if self.width == 2:
+                # rubiks cube libraries
                 from rubikscolorresolver.cube_222 import corner_tuples
             elif self.width == 3:
+                # rubiks cube libraries
                 from rubikscolorresolver.cube_333 import corner_tuples
             elif self.width == 4:
+                # rubiks cube libraries
                 from rubikscolorresolver.cube_444 import corner_tuples
             elif self.width == 5:
+                # rubiks cube libraries
                 from rubikscolorresolver.cube_555 import corner_tuples
             elif self.width == 6:
+                # rubiks cube libraries
                 from rubikscolorresolver.cube_666 import corner_tuples
             elif self.width == 7:
+                # rubiks cube libraries
                 from rubikscolorresolver.cube_777 import corner_tuples
 
             corners = []
@@ -1426,9 +1287,7 @@ $(document).ready(function()
             # ======
             # pass 1
             # ======
-            sorted_all_squares = traveling_salesman(
-                all_squares, "all", middle_squares, edge_pairs, corners
-            )
+            sorted_all_squares = traveling_salesman(all_squares, "all", middle_squares, edge_pairs, corners)
 
             self.assign_color_names(
                 "squares for color_box (pass 1)",
@@ -1464,14 +1323,7 @@ $(document).ready(function()
                 green_center = None
                 blue_center = None
 
-                for side in (
-                    self.sideU,
-                    self.sideR,
-                    self.sideF,
-                    self.sideD,
-                    self.sideL,
-                    self.sideB,
-                ):
+                for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
                     square = self.pos2square[side.mid_pos]
 
                     if square.color_name == "Wh":
@@ -1497,37 +1349,20 @@ $(document).ready(function()
                     red_orange_endpoints = (red_center, orange_center)
 
             # Nuke all color names (they were temporary)
-            for side in (
-                self.sideU,
-                self.sideR,
-                self.sideF,
-                self.sideD,
-                self.sideL,
-                self.sideB,
-            ):
-                for square in (
-                    side.center_squares + side.corner_squares + side.edge_squares
-                ):
+            for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
+                for square in side.center_squares + side.corner_squares + side.edge_squares:
                     square.color_name = None
 
             sorted_green_blue = traveling_salesman_two_colors(
-                green_squares + blue_squares,
-                endpoints=green_blue_endpoints,
-                desc="green blue",
+                green_squares + blue_squares, endpoints=green_blue_endpoints, desc="green blue"
             )
             sorted_white_yellow = traveling_salesman_two_colors(
-                white_squares + yellow_squares,
-                endpoints=white_yellow_endpoints,
-                desc="white yellow",
+                white_squares + yellow_squares, endpoints=white_yellow_endpoints, desc="white yellow"
             )
             sorted_red_orange = traveling_salesman_two_colors(
-                red_squares + orange_squares,
-                endpoints=red_orange_endpoints,
-                desc="white yellow",
+                red_squares + orange_squares, endpoints=red_orange_endpoints, desc="white yellow"
             )
-            sorted_all_squares = (
-                sorted_green_blue + sorted_white_yellow + sorted_red_orange
-            )
+            sorted_all_squares = sorted_green_blue + sorted_white_yellow + sorted_red_orange
 
             self.assign_color_names(
                 "squares for color_box (pass 2)",
@@ -1559,14 +1394,7 @@ $(document).ready(function()
         self.red_baseline = self.color_box["Rd"]
 
         # Nuke all color names (they were temporary)
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in (self.sideU, self.sideR, self.sideF, self.sideD, self.sideL, self.sideB):
             for square in side.center_squares + side.corner_squares + side.edge_squares:
                 square.color_name = None
 
@@ -1578,48 +1406,12 @@ $(document).ready(function()
         """
         Assign names to the corner squares
         """
-        white = Square(
-            None,
-            "Wh",
-            self.color_box["Wh"].red,
-            self.color_box["Wh"].green,
-            self.color_box["Wh"].blue,
-        )
-        yellow = Square(
-            None,
-            "Ye",
-            self.color_box["Ye"].red,
-            self.color_box["Ye"].green,
-            self.color_box["Ye"].blue,
-        )
-        orange = Square(
-            None,
-            "OR",
-            self.color_box["OR"].red,
-            self.color_box["OR"].green,
-            self.color_box["OR"].blue,
-        )
-        red = Square(
-            None,
-            "Rd",
-            self.color_box["Rd"].red,
-            self.color_box["Rd"].green,
-            self.color_box["Rd"].blue,
-        )
-        green = Square(
-            None,
-            "Gr",
-            self.color_box["Gr"].red,
-            self.color_box["Gr"].green,
-            self.color_box["Gr"].blue,
-        )
-        blue = Square(
-            None,
-            "Bu",
-            self.color_box["Bu"].red,
-            self.color_box["Bu"].green,
-            self.color_box["Bu"].blue,
-        )
+        white = Square(None, "Wh", self.color_box["Wh"].red, self.color_box["Wh"].green, self.color_box["Wh"].blue)
+        yellow = Square(None, "Ye", self.color_box["Ye"].red, self.color_box["Ye"].green, self.color_box["Ye"].blue)
+        orange = Square(None, "OR", self.color_box["OR"].red, self.color_box["OR"].green, self.color_box["OR"].blue)
+        red = Square(None, "Rd", self.color_box["Rd"].red, self.color_box["Rd"].green, self.color_box["Rd"].blue)
+        green = Square(None, "Gr", self.color_box["Gr"].red, self.color_box["Gr"].green, self.color_box["Gr"].blue)
+        blue = Square(None, "Bu", self.color_box["Bu"].red, self.color_box["Bu"].green, self.color_box["Bu"].blue)
 
         white.color_name = "Wh"
         yellow.color_name = "Ye"
@@ -1640,27 +1432,29 @@ $(document).ready(function()
         ]
 
         if self.width == 2:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_222 import corner_tuples
         elif self.width == 3:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import corner_tuples
         elif self.width == 4:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_444 import corner_tuples
         elif self.width == 5:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_555 import corner_tuples
         elif self.width == 6:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_666 import corner_tuples
         elif self.width == 7:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_777 import corner_tuples
 
         corners = []
 
         for corner_tuple in corner_tuples:
             corners.append(
-                [
-                    self.pos2square[corner_tuple[0]],
-                    self.pos2square[corner_tuple[1]],
-                    self.pos2square[corner_tuple[2]],
-                ]
+                [self.pos2square[corner_tuple[0]], self.pos2square[corner_tuple[1]], self.pos2square[corner_tuple[2]]]
             )
 
         sorted_corners = traveling_salesman_corners(target_corners + corners, "corners")
@@ -1686,58 +1480,27 @@ $(document).ready(function()
         if self.width == 2:
             return
         elif self.width == 3:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import edge_orbit_id
         elif self.width == 4:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_444 import edge_orbit_id
         elif self.width == 5:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_555 import edge_orbit_id
         elif self.width == 6:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_666 import edge_orbit_id
         elif self.width == 7:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_777 import edge_orbit_id
 
-        white = Square(
-            None,
-            "Wh",
-            self.color_box["Wh"].red,
-            self.color_box["Wh"].green,
-            self.color_box["Wh"].blue,
-        )
-        yellow = Square(
-            None,
-            "Ye",
-            self.color_box["Ye"].red,
-            self.color_box["Ye"].green,
-            self.color_box["Ye"].blue,
-        )
-        orange = Square(
-            None,
-            "OR",
-            self.color_box["OR"].red,
-            self.color_box["OR"].green,
-            self.color_box["OR"].blue,
-        )
-        red = Square(
-            None,
-            "Rd",
-            self.color_box["Rd"].red,
-            self.color_box["Rd"].green,
-            self.color_box["Rd"].blue,
-        )
-        green = Square(
-            None,
-            "Gr",
-            self.color_box["Gr"].red,
-            self.color_box["Gr"].green,
-            self.color_box["Gr"].blue,
-        )
-        blue = Square(
-            None,
-            "Bu",
-            self.color_box["Bu"].red,
-            self.color_box["Bu"].green,
-            self.color_box["Bu"].blue,
-        )
+        white = Square(None, "Wh", self.color_box["Wh"].red, self.color_box["Wh"].green, self.color_box["Wh"].blue)
+        yellow = Square(None, "Ye", self.color_box["Ye"].red, self.color_box["Ye"].green, self.color_box["Ye"].blue)
+        orange = Square(None, "OR", self.color_box["OR"].red, self.color_box["OR"].green, self.color_box["OR"].blue)
+        red = Square(None, "Rd", self.color_box["Rd"].red, self.color_box["Rd"].green, self.color_box["Rd"].blue)
+        green = Square(None, "Gr", self.color_box["Gr"].red, self.color_box["Gr"].green, self.color_box["Gr"].blue)
+        blue = Square(None, "Bu", self.color_box["Bu"].red, self.color_box["Bu"].green, self.color_box["Bu"].blue)
 
         white.color_name = "Wh"
         yellow.color_name = "Ye"
@@ -1758,10 +1521,7 @@ $(document).ready(function()
                         partner = self.pos2square[partner_index]
                         edge_pair = (square, partner)
 
-                        if (
-                            edge_pair not in edge_pairs
-                            and (edge_pair[1], edge_pair[0]) not in edge_pairs
-                        ):
+                        if edge_pair not in edge_pairs and (edge_pair[1], edge_pair[0]) not in edge_pairs:
                             edge_pairs.append(edge_pair)
 
             if len(edge_pairs) == 12:
@@ -1810,9 +1570,7 @@ $(document).ready(function()
             else:
                 raise ValueError("found {} edge pairs".format(len(edge_pairs)))
 
-            sorted_edge_pairs = traveling_salesman_edge_pairs(
-                target_edge_pairs + edge_pairs, "edge pairs"
-            )
+            sorted_edge_pairs = traveling_salesman_edge_pairs(target_edge_pairs + edge_pairs, "edge pairs")
 
             # assign color names
             for x in range(0, len(sorted_edge_pairs), 2):
@@ -1822,9 +1580,7 @@ $(document).ready(function()
                 pair2[1].color_name = pair1[1].position
 
             if self.write_debug_file:
-                self.write_color_edge_pairs(
-                    "edges - orbit %d" % target_orbit_id, sorted_edge_pairs
-                )
+                self.write_color_edge_pairs("edges - orbit %d" % target_orbit_id, sorted_edge_pairs)
 
     # @timed_function
     def resolve_center_squares(self):
@@ -1835,14 +1591,19 @@ $(document).ready(function()
         if self.width == 2:
             return
         elif self.width == 3:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_333 import center_groups
         elif self.width == 4:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_444 import center_groups
         elif self.width == 5:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_555 import center_groups
         elif self.width == 6:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_666 import center_groups
         elif self.width == 7:
+            # rubiks cube libraries
             from rubikscolorresolver.cube_777 import center_groups
 
         for (desc, centers_squares) in center_groups:
@@ -1861,9 +1622,7 @@ $(document).ready(function()
                 sorted_center_squares = traveling_salesman(center_squares, desc)
                 permutations = "even_cube_center_color_permutations"
 
-            self.assign_color_names(
-                desc, sorted_center_squares, permutations, self.color_box
-            )
+            self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
 
             if self.write_debug_file:
                 self.write_colors(desc, sorted_center_squares)
@@ -1871,9 +1630,7 @@ $(document).ready(function()
     # @timed_function
     def crunch_colors(self):
         if self.write_debug_file:
-            html_init_cube = self.html_cube(
-                "Initial RGB values", False, "initial_rgb_values"
-            )
+            html_init_cube = self.html_cube("Initial RGB values", False, "initial_rgb_values")
             self.write_html(html_init_cube)
             self.write_crayola_colors()
 
@@ -1977,6 +1734,7 @@ def resolve_colors(argv):
     cube.print_cube()
 
     if use_json:
+        # standard libraries
         from json import dumps as json_dumps
 
         result = json_dumps(cube.cube_for_json(), indent=4, sort_keys=True)
