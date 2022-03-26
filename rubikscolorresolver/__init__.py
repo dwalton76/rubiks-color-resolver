@@ -587,6 +587,13 @@ def square_list_to_lab(squares):
     return rgb2lab((median_red, median_green, median_blue))
 
 
+def open_mode(filename):
+    if os.path.exists(HTML_FILENAME):
+        return "a"
+    else:
+        return "w"
+
+
 class RubiksColorSolverGeneric(RubiksColorSolverGenericBase):
 
     # @timed_function
@@ -598,7 +605,7 @@ class RubiksColorSolverGeneric(RubiksColorSolverGenericBase):
         square_size = 40
         size = self.width  # 3 for 3x3x3, etc
 
-        with open(HTML_FILENAME, "a") as fh:
+        with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             fh.write(
                 """<!DOCTYPE html>
 <html>
@@ -734,7 +741,7 @@ $(document).ready(function()
             )
 
     def write_color_corners(self, desc, corners):
-        with open(HTML_FILENAME, "a") as fh:
+        with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             fh.write("<div class='clear colors'>\n")
             fh.write("<h2>%s</h2>\n" % desc)
 
@@ -780,7 +787,7 @@ $(document).ready(function()
             fh.write("</div>\n")
 
     def write_color_edge_pairs(self, desc, square_pairs):
-        with open(HTML_FILENAME, "a") as fh:
+        with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             fh.write("<div class='clear colors'>\n")
             fh.write("<h2>%s</h2>\n" % desc)
 
@@ -823,7 +830,7 @@ $(document).ready(function()
 
     # @timed_function
     def write_colors(self, desc, squares):
-        with open(HTML_FILENAME, "a") as fh:
+        with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             squares_per_row = int(len(squares) / 6)
             fh.write("<div class='clear colors'>\n")
             fh.write("<h2>%s</h2>\n" % desc)
@@ -857,7 +864,7 @@ $(document).ready(function()
 
     # @timed_function
     def www_footer(self):
-        with open(HTML_FILENAME, "a") as fh:
+        with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             fh.write(
                 """
 </body>
@@ -876,7 +883,7 @@ $(document).ready(function()
         if self.write_debug_file:
             self.www_header()
 
-            with open(HTML_FILENAME, "a") as fh:
+            with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
                 fh.write("<h1>RGB Input</h1>\n")
                 fh.write("<pre>{}</pre>\n".format(scan_data))
 
@@ -962,11 +969,11 @@ $(document).ready(function()
         return "".join(html)
 
     def write_html(self, html):
-        with open(HTML_FILENAME, "a") as fh:
+        with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             fh.write(html)
 
     def _write_colors(self, desc, box):
-        with open(HTML_FILENAME, "a") as fh:
+        with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             fh.write("<div class='clear colors'>\n")
             fh.write("<h2>{}</h2>\n".format(desc))
 
