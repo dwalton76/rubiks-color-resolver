@@ -11,7 +11,7 @@ First [install micropython](https://github.com/micropython/micropython/wiki/Gett
 ```
 $ git clone https://github.com/dwalton76/rubiks-color-resolver.git
 $ cd rubiks-color-resolver
-$ sudo make install
+$ make install-micropython
 ```
 
 ## Overview

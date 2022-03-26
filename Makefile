@@ -3,12 +3,14 @@ init:
 	python3 -m venv venv
 	@./venv/bin/python3 -m pip install -e .
 
-install:
+install-micropython:
 	micropython -m upip install micropython-array
 	micropython -m upip install micropython-logging
 	micropython -m upip install micropython-os
 	micropython -m upip install micropython-unittest
-	cp -r rubikscolorresolver/ /usr/lib/micropython/
+	sudo cp -r rubikscolorresolver/ /usr/lib/micropython/
+
+install:
 	python3 setup.py install
 
 clean:
