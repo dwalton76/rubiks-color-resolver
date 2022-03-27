@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
-from collections import defaultdict
-from math import sqrt, degrees, atan2, cos, radians, sin, exp
-from random import uniform
-from tsp_solver.greedy import solve_tsp
-
+# standard libraries
 import colorsys
 import json
 import math
-import matplotlib.pyplot as plt
 import random
 import subprocess
+from collections import defaultdict
+from math import atan2, cos, degrees, exp, radians, sin, sqrt
+from random import uniform
+
+# third party libraries
+import matplotlib.pyplot as plt
+from tsp_solver.greedy import solve_tsp
 
 lego_colors = []
 
@@ -122,7 +124,7 @@ def rgb2lab(inputColor):
     L = (116 * var_Y) - 16
     a = 500 * (var_X - var_Y)
     b = 200 * (var_Y - var_Z)
-    # log.info("RGB ({}, {}, {}), L {}, a {}, b {}".format(red, green, blue, L, a, b))
+    # logger.info("RGB ({}, {}, {}), L {}, a {}, b {}".format(red, green, blue, L, a, b))
 
     return LabColor(L, a, b, red, green, blue)
 
@@ -573,15 +575,11 @@ def traveling_salesman(colors, alg):
                 distance = delta_e_cie2000(x_lab, y_lab)
 
             elif alg == "HSV":
-                y_hsv = colorsys.rgb_to_hsv(
-                    y_red / 255.0, y_green / 255.0, y_blue / 255.0
-                )
+                y_hsv = colorsys.rgb_to_hsv(y_red / 255.0, y_green / 255.0, y_blue / 255.0)
                 distance = get_hsv_distance(x_hsv, y_hsv)
 
             elif alg == "HLS":
-                y_hls = colorsys.rgb_to_hls(
-                    y_red / 255.0, y_green / 255.0, y_blue / 255.0
-                )
+                y_hls = colorsys.rgb_to_hls(y_red / 255.0, y_green / 255.0, y_blue / 255.0)
                 distance = get_hls_distance(x_hls, y_hls)
 
             elif alg == "Lab":
@@ -606,9 +604,7 @@ def my_rgb_to_hls(red, green, blue):
     return colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
 
 
-def _plot_animated_gif(
-    color_space, x_values, y_values, z_values, colors, x_label, y_label, z_label
-):
+def _plot_animated_gif(color_space, x_values, y_values, z_values, colors, x_label, y_label, z_label):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     ax.set_xlabel(x_label)
@@ -626,15 +622,12 @@ def _plot_animated_gif(
         plt.savefig(filename, dpi=200, bbox_inches="tight")
 
     subprocess.check_output(
-        "convert -delay 20 -loop 0 image*%s*.png image-final-%s.gif"
-        % (color_space, color_space),
+        "convert -delay 20 -loop 0 image*%s*.png image-final-%s.gif" % (color_space, color_space),
         shell=True,
     )
 
 
-def _plot_show_or_save(
-    show, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
-):
+def _plot_show_or_save(show, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     ax.set_xlabel(x_label)
@@ -653,15 +646,11 @@ def _plot_show_or_save(
 
 
 def _plot_show(desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
-    _plot_show_or_save(
-        True, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
-    )
+    _plot_show_or_save(True, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label)
 
 
 def _plot_save(desc, x_values, y_values, z_values, colors, x_label, y_label, z_label):
-    _plot_show_or_save(
-        False, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label
-    )
+    _plot_show_or_save(False, desc, x_values, y_values, z_values, colors, x_label, y_label, z_label)
 
 
 def plot(plot_type, color_space, lego_colors):

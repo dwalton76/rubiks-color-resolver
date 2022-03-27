@@ -1,3 +1,4 @@
+# standard libraries
 from math import atan2, cos, degrees, exp, radians, sin, sqrt
 
 cie2000_cache = {}
@@ -30,14 +31,14 @@ def lab_distance_cie2000(lab1, lab2):
         return delta_e
 
     avg_lp = (l1 + l2) / 2.0
-    c1 = sqrt(a1 ** 2 + b1 ** 2)
-    c2 = sqrt(a2 ** 2 + b2 ** 2)
+    c1 = sqrt(a1**2 + b1**2)
+    c2 = sqrt(a2**2 + b2**2)
     avg_c = (c1 + c2) / 2.0
-    g = (1 - sqrt(avg_c ** 7 / (avg_c ** 7 + 25 ** 7))) / 2.0
+    g = (1 - sqrt(avg_c**7 / (avg_c**7 + 25**7))) / 2.0
     a1p = a1 * (1 + g)
     a2p = a2 * (1 + g)
-    c1p = sqrt(a1p ** 2 + b1 ** 2)
-    c2p = sqrt(a2p ** 2 + b2 ** 2)
+    c1p = sqrt(a1p**2 + b1**2)
+    c2p = sqrt(a2p**2 + b2**2)
     avg_cp = (c1p + c2p) / 2.0
     h1p = degrees(atan2(b1, a1p))
 
@@ -78,7 +79,7 @@ def lab_distance_cie2000(lab1, lab2):
 
     delta_ro = 30 * exp(-((((avg_hp - 275) / 25.0) ** 2)))
 
-    r_c = 2 * sqrt((avg_cp ** 7) / ((avg_cp ** 7) + (25 ** 7)))
+    r_c = 2 * sqrt((avg_cp**7) / ((avg_cp**7) + (25**7)))
     r_t = -r_c * sin(2 * radians(delta_ro))
     kl = 1.0
     kc = 1.0

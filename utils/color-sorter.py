@@ -8,16 +8,23 @@ Against Rubiks cube RGB values
 I skipped hilbert, that one was more trouble than it was worth
 """
 
-from rubikscolorresolver import k_means_colors_dictionary
-from sklearn.cluster import KMeans
-from copy import deepcopy
-from scipy.spatial import distance
-import numpy as np
+# standard libraries
 import colorsys
 import json
 import logging
 import math
 import sys
+from copy import deepcopy
+
+# third party libraries
+import numpy as np
+from scipy.spatial import distance
+from sklearn.cluster import KMeans
+
+# rubiks cube libraries
+from rubikscolorresolver import k_means_colors_dictionary
+
+logger = logging.getLogger(__name__)
 
 
 def convert_key_strings_to_int(data):
@@ -73,24 +80,22 @@ def write_colors(fh, algorithm, colors):
             continue
 
         # to use python coloursys convertion we have to rescale to range 0-1
-        (H, S, V) = colorsys.rgb_to_hsv(
-            float(red / 255), float(green / 255), float(blue / 255)
-        )
+        (H, S, V) = colorsys.rgb_to_hsv(float(red / 255), float(green / 255), float(blue / 255))
 
         # rescale H to 360 degrees and S, V to percent of 100%
         H = int(H * 360)
         S = int(S * 100)
         V = int(V * 100)
-        # log.info("%3d: RGB (%3d, %3d, %3d) -> HSV (%3d, %3d, %3d)" % (index+1, red, green, blue, H, S, V))
+        # logger.info("%3d: RGB (%3d, %3d, %3d) -> HSV (%3d, %3d, %3d)" % (index+1, red, green, blue, H, S, V))
         fh.write(
             "<span style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), HSV (%s, %s, %s)'>&nbsp;</span>\n"
             % (red, green, blue, red, green, blue, H, S, V)
         )
         # if (index+1) % squares_per_side == 0:
-        #    log.info('')
+        #    logger.info('')
 
     fh.write("</div>\n")
-    log.info("\n\n")
+    logger.info("\n\n")
 
 
 def write_footer(fh):
@@ -209,8 +214,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s %(filename)12s %(levelname)8s: %(message)s",
     )
-    log = logging.getLogger(__name__)
-
     filename = sys.argv[1]
 
     with open(filename, "r") as fh:
@@ -266,15 +269,13 @@ if __name__ == "__main__":
             elif algorithm == "kmeans2":
                 tmp_colors = []
                 # for rgb_list in k_means_colors_dictionary(deepcopy(data), (13, 38, 63, 88, 113, 138)):
-                for rgb_list in k_means_colors_dictionary(
-                    deepcopy(data), (31, 42, 73, 108, 139, 186)
-                ):
+                for rgb_list in k_means_colors_dictionary(deepcopy(data), (31, 42, 73, 108, 139, 186)):
                     for rgb in rgb_list:
                         tmp_colors.append(rgb)
                     tmp_colors.append((None, None, None))
 
             else:
-                log.warning("Implement %s" % algorithm)
+                logger.warning("Implement %s" % algorithm)
                 continue
 
             write_colors(fh, algorithm, tmp_colors)

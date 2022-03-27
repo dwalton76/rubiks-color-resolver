@@ -1,22 +1,18 @@
-
-from rubikscolorresolver.base import (
-    get_swap_count,
-    rgb2lab,
-)
-from rubikscolorresolver import (
-    hex_to_rgb,
-    median,
-)
+# standard libraries
 import logging
-import unittest
 import sys
+import unittest
+
+# rubiks cube libraries
+from rubikscolorresolver import hex_to_rgb, median
+from rubikscolorresolver.base import get_swap_count, rgb2lab
+
+logger = logging.getLogger(__name__)
 
 
 def is_micropython():
     return sys.implementation.name == "micropython"
 
-
-log = logging.getLogger(__name__)
 
 # For color names to RGB values see:
 # https://www.w3schools.com/colors/colors_names.asp
@@ -80,7 +76,7 @@ class TestRGB2Lab(unittest.TestCase):
         self.assertEqual(lab.b, -10.57740141476744)
 
 
-'''
+"""
 if not is_micropython():
     from rubikscolorresolver import get_lab_distance
 
@@ -138,7 +134,7 @@ if not is_micropython():
             lab2 = rgb2lab((49, 249, 220))
             delta_e = get_lab_distance(lab1, lab2)
             self.assertEqual(delta_e, 24.96260521154151)
-'''
+"""
 
 
 class TestMedian(unittest.TestCase):
@@ -187,7 +183,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s %(filename)16s %(levelname)8s: %(message)s",
     )
-    log = logging.getLogger(__name__)
 
     # micropython does not support the verbosity arg but
     # does give more verbose output by default so just ignore

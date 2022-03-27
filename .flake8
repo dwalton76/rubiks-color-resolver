@@ -1,7 +1,8 @@
 [flake8]
-max-line-length = 160
+max-line-length = 120
 ignore =
-  W503      # line break before binary operator; conflicts with black
+  E203  # whitespace before ':'; conflicts with black
+  W503  # line break before binary operator; conflicts with black
 exclude =
   .git,
   .tox,

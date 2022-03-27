@@ -5,9 +5,12 @@ print(the output of colormath's cie2000 vs our cie2000.  This was
 used once upon a time to verify that our cie2000 is working.
 """
 
-from colormath.color_objects import sRGBColor, LabColor
-from colormath.color_diff import delta_e_cie2000, delta_e_cie1994, delta_e_cie1976
+# third party libraries
 from colormath.color_conversions import convert_color
+from colormath.color_diff import delta_e_cie1976, delta_e_cie1994, delta_e_cie2000
+from colormath.color_objects import LabColor, sRGBColor
+
+# rubiks cube libraries
 from rubikscolorresolver import delta_e_cie2000 as my_delta_e_cie2000
 from rubikscolorresolver import rgb2lab
 

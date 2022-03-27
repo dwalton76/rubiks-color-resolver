@@ -1,5 +1,5 @@
+# third party libraries
 from setuptools import setup
-
 
 setup(
     name="rubikscolorresolver",
@@ -7,9 +7,9 @@ setup(
     description="Resolve rubiks cube RGB values to the six cube colors",
     keywords="rubiks cube color",
     url="https://github.com/dwalton76/rubiks-color-resolver",
-    author="dwalton76",
+    author="Daniel Walton",
     author_email="dwalton76@gmail.com",
-    license="GPLv3",
+    license_files=("LICENSE",),
     scripts=["usr/bin/rubiks-color-resolver.py"],
     packages=["rubikscolorresolver"],
 )

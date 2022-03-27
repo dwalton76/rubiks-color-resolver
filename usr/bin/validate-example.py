@@ -5,6 +5,7 @@ This is an example of how to use RubiksColorSolverGenericBase to
 determine if the state of your cube is valid
 """
 
+# rubiks cube libraries
 from rubikscolorresolver.base import RubiksColorSolverGenericBase
 
 cube = RubiksColorSolverGenericBase(3)
