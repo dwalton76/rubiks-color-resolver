@@ -13,7 +13,7 @@ from math import sqrt
 from rubikscolorresolver import RubiksColorSolverGeneric
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)5s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)5s [%(filename)s:%(lineno)d]: %(message)s")
 logger = logging.getLogger(__name__)
 
 # To add a test case:
@@ -156,6 +156,9 @@ test_cases = (
 results = []
 
 for (desc, filename, expected) in test_cases:
+    # dwalton
+    if not desc.startswith("2x2x2"):
+        break
     logger.warning("Test: %s" % desc)
     with open("tests/" + filename, "r") as fh:
         scan_data_str_keys = json_load(fh)

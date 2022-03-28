@@ -1,9 +1,17 @@
 # standard libraries
 import array
-import gc
+import itertools
+import logging
 import os
 import sys
 from math import sqrt
+
+try:
+    # standard libraries
+    from typing import Dict, List, Optional, Tuple, Union
+except ImportError:
+    # this will barf for micropython...ignore it
+    pass
 
 # rubiks cube libraries
 from rubikscolorresolver.base import LabColor, RubiksColorSolverGenericBase, Square, html_color, lab_distance, rgb2lab
@@ -14,11 +22,13 @@ from rubikscolorresolver.permutations import (
 )
 from rubikscolorresolver.tsp_solver_greedy import solve_tsp
 
+logger = logging.getLogger(__name__)
+
 ALL_COLORS = ("Bu", "Gr", "OR", "Rd", "Wh", "Ye")
 SIDES_COUNT = 6
 
 
-def is_micropython():
+def is_micropython() -> bool:
     return sys.implementation.name == "micropython"
 
 
@@ -33,8 +43,7 @@ except Exception:
     pass
 
 
-# @timed_function
-def median(list_foo):
+def median(list_foo: List[float]) -> float:
     list_foo = sorted(list_foo)
     list_foo_len = len(list_foo)
 
@@ -50,7 +59,7 @@ def median(list_foo):
         return list_foo[int((list_foo_len - 1) / 2)]
 
 
-def tsp_matrix_corners(corners):
+def tsp_matrix_corners(corners: List[Union[Tuple[Square, Square, Square], List[Square]]]) -> List[List[int]]:
     len_corners = len(corners)
 
     # build a full matrix of color to color distances
@@ -101,7 +110,9 @@ def tsp_matrix_corners(corners):
     return matrix
 
 
-def corner_distance(corner1, corner2):
+def corner_distance(
+    corner1: Tuple[Square, Square, Square], corner2: Union[Tuple[Square, Square, Square], List[Square]]
+) -> int:
     return (
         lab_distance(corner1[0].lab, corner2[0].lab)
         + lab_distance(corner1[1].lab, corner2[1].lab)
@@ -109,9 +120,11 @@ def corner_distance(corner1, corner2):
     )
 
 
-def traveling_salesman_corners(corners, desc):
+def traveling_salesman_corners(
+    corners: List[Union[Tuple[Square, Square, Square], List[Square]]], desc: str
+) -> List[Union[Tuple[Square, Square, Square], List[Square]]]:
     matrix = tsp_matrix_corners(corners)
-    path = solve_tsp(matrix, desc=desc)
+    path = solve_tsp(matrix)
     sorted_corners = [corners[x] for x in path]
 
     for x in range(0, len(sorted_corners), 2):
@@ -187,7 +200,7 @@ def traveling_salesman_corners(corners, desc):
     return sorted_corners
 
 
-def tsp_matrix_edge_pairs(edge_pairs):
+def tsp_matrix_edge_pairs(edge_pairs: List[Tuple[Square, Square]]) -> List[List[int]]:
     len_edge_pairs = len(edge_pairs)
 
     # build a full matrix of color to color distances
@@ -223,16 +236,16 @@ def tsp_matrix_edge_pairs(edge_pairs):
     return matrix
 
 
-def edge_pair_distance(pair1, pair2, normal):
+def edge_pair_distance(pair1: Tuple[Square, Square], pair2: Tuple[Square, Square], normal: bool) -> int:
     if normal:
         return lab_distance(pair1[0].lab, pair2[0].lab) + lab_distance(pair1[1].lab, pair2[1].lab)
     else:
         return lab_distance(pair1[0].lab, pair2[1].lab) + lab_distance(pair1[1].lab, pair2[0].lab)
 
 
-def traveling_salesman_edge_pairs(edge_pairs, desc):
+def traveling_salesman_edge_pairs(edge_pairs: List[Tuple[Square, Square]], desc: str) -> List[Tuple[Square, Square]]:
     matrix = tsp_matrix_edge_pairs(edge_pairs)
-    path = solve_tsp(matrix, desc=desc)
+    path = solve_tsp(matrix)
     sorted_edge_pairs = [edge_pairs[x] for x in path]
 
     for x in range(0, len(sorted_edge_pairs), 2):
@@ -356,7 +369,7 @@ def best_path_streak(sorted_squares, streak_length, middle_squares, edge_pairs, 
 """
 
 
-def tsp_matrix(squares):
+def tsp_matrix(squares: List[Square]) -> Tuple[Tuple[float]]:
     len_squares = len(squares)
     r_len_squares = range(len_squares)
 
@@ -383,8 +396,13 @@ def tsp_matrix(squares):
     return matrix
 
 
-# @timed_function
-def traveling_salesman(squares, desc, middle_squares=[], edge_pairs=[], corners=[]):
+def traveling_salesman(
+    squares: List[Square],
+    desc: str,
+    middle_squares: List = None,
+    edge_pairs: List = None,
+    corners: List = None,
+) -> List[Square]:
     """
     SQUARES_PER_ROW = int(len(squares) / SIDES_COUNT)
     results = []
@@ -393,35 +411,39 @@ def traveling_salesman(squares, desc, middle_squares=[], edge_pairs=[], corners=
     for x in range(SIDES_COUNT - 1):
         if x == 4:
             matrix = tsp_matrix(_squares)
-            path = solve_tsp(matrix, desc=desc)
+            path = solve_tsp(matrix)
             path_squares = [_squares[x] for x in path]
             results.extend(path_squares)
         else:
             matrix = tsp_matrix(_squares)
-            path = solve_tsp(matrix, desc=desc)
+            path = solve_tsp(matrix)
             path_squares = [_squares[x] for x in path]
             results.extend(best_path_streak(path_squares, SQUARES_PER_ROW, middle_squares, edge_pairs, corners))
             _squares = [square for square in squares if square not in results]
 
     return results
     """
+    middle_squares = middle_squares or []
+    edge_pairs = edge_pairs or []
+    corners = corners or []
     matrix = tsp_matrix(squares)
-    path = solve_tsp(matrix, desc=desc)
+    path = solve_tsp(matrix)
     return [squares[x] for x in path]
 
 
-def traveling_salesman_two_colors(squares, endpoints=None, desc=None):
+def traveling_salesman_two_colors(
+    squares: List[Square], endpoints: Optional[Tuple[Square, Square]] = None, desc: Optional[str] = None
+) -> List[Square]:
     matrix = tsp_matrix(squares)
 
     if endpoints:
         start_index = squares.index(endpoints[0])
         end_index = squares.index(endpoints[1])
         endpoints = (start_index, end_index)
-    path = solve_tsp(matrix, endpoints=endpoints, desc=desc)
+    path = solve_tsp(matrix, endpoints=endpoints)
     return [squares[x] for x in path]
 
 
-# @timed_function
 def get_important_square_indexes(size):
     squares_per_side = size * size
     max_square = squares_per_side * 6
@@ -438,7 +460,6 @@ def get_important_square_indexes(size):
     return (first_squares, last_squares, last_UBD_squares)
 
 
-# @timed_function
 def hex_to_rgb(rgb_string):
     """
     Takes #112233 and returns the RGB values in decimal
@@ -452,7 +473,6 @@ def hex_to_rgb(rgb_string):
     return (red, green, blue)
 
 
-# @timed_function
 def hashtag_rgb_to_labcolor(rgb_string):
     (red, green, blue) = hex_to_rgb(rgb_string)
     # lab = rgb2lab((red, green, blue))
@@ -488,7 +508,6 @@ crayola_colors = {
 }
 
 
-# @timed_function
 def get_row_color_distances(squares, row_baseline_lab):
     """
     'colors' is list if (index, (red, green, blue)) tuples
@@ -516,7 +535,6 @@ def get_row_color_distances(squares, row_baseline_lab):
     return results
 
 
-# @timed_function
 def get_squares_for_row(squares, target_row_index):
     results = []
     squares_per_row = int(len(squares) / 6)
@@ -534,8 +552,7 @@ def get_squares_for_row(squares, target_row_index):
     return results
 
 
-# @timed_function
-def square_list_to_lab(squares):
+def square_list_to_lab(squares: List[Square]) -> LabColor:
     reds = array.array("B")
     greens = array.array("B")
     blues = array.array("B")
@@ -561,8 +578,6 @@ def open_mode(filename):
 
 
 class RubiksColorSolverGeneric(RubiksColorSolverGenericBase):
-
-    # @timed_function
     def www_header(self):
         """
         Write the <head> including css
@@ -794,7 +809,6 @@ $(document).ready(function()
                 fh.write("<br>")
             fh.write("</div>\n")
 
-    # @timed_function
     def write_colors(self, desc, squares):
         with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             squares_per_row = int(len(squares) / 6)
@@ -828,7 +842,6 @@ $(document).ready(function()
                     fh.write("<br>")
             fh.write("</div>\n")
 
-    # @timed_function
     def www_footer(self):
         with open(HTML_FILENAME, open_mode(HTML_FILENAME)) as fh:
             fh.write(
@@ -838,8 +851,7 @@ $(document).ready(function()
 """
             )
 
-    # @timed_function
-    def enter_scan_data(self, scan_data):
+    def enter_scan_data(self, scan_data: Dict[int, List[int]]) -> None:
 
         for (position, (red, green, blue)) in scan_data.items():
             position = int(position)
@@ -855,7 +867,6 @@ $(document).ready(function()
 
         self.calculate_pos2square()
 
-    # @timed_function
     def html_cube(self, desc, use_html_colors, div_class):
         cube = ["dummy"]
 
@@ -963,16 +974,13 @@ $(document).ready(function()
             fh.write("<br>")
             fh.write("</div>\n")
 
-    # @timed_function
     def write_crayola_colors(self):
         self._write_colors("crayola box", crayola_colors)
 
-    # @timed_function
     def write_color_box(self):
         self._write_colors("color_box", self.color_box)
 
-    # @timed_function
-    def set_state(self):
+    def set_state(self) -> None:
         self.state = []
 
         # odd cube
@@ -1047,9 +1055,12 @@ $(document).ready(function()
         ):
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
+
+                if square.color_name is None:
+                    raise Exception(f"{square} does not have a color_name")
+
                 square.side_name = self.color_to_side_name[square.color_name]
 
-    # @timed_function
     def cube_for_json(self):
         """
         Return a dictionary of the cube data so that we can json dump it
@@ -1084,8 +1095,9 @@ $(document).ready(function()
 
         return data
 
-    # @timed_function
-    def assign_color_names(self, desc, squares_lists_all, color_permutations, color_box):
+    def assign_color_names(
+        self, desc: str, squares_lists_all: List[Square], color_permutations: str, color_box: Dict[str, LabColor]
+    ) -> None:
         """
         Assign a color name to each square in each squares_list. Compute
         which naming scheme results in the least total color distance in
@@ -1108,12 +1120,17 @@ $(document).ready(function()
         squares_lists = []
         square_list = []
 
+        # logger.info(f"squares_list_all {squares_lists_all}")
+        # logger.info(f"squares_per_row {squares_per_row}")
+
         for square in squares_lists_all:
             square_list.append(square)
 
             if len(square_list) == squares_per_row:
                 squares_lists.append(tuple(square_list))
                 square_list = []
+
+        # logger.info(f"squares_list10 {squares_lists}")
 
         # Compute the distance for each color in the color_box vs each squares_list
         # in squares_lists. Store this in distances_of_square_list_per_color
@@ -1123,9 +1140,9 @@ $(document).ready(function()
             color_lab = color_box[color_name]
             distances_of_square_list_per_color[color_name] = []
 
-            for (index, squares_list) in enumerate(squares_lists):
+            for (index, square_list) in enumerate(squares_lists):
                 distance = 0
-                for square in squares_list:
+                for square in square_list:
                     distance += lab_distance(square.lab, color_lab)
                 distances_of_square_list_per_color[color_name].append(int(distance))
             distances_of_square_list_per_color[color_name] = distances_of_square_list_per_color[color_name]
@@ -1245,13 +1262,15 @@ $(document).ready(function()
                 #    logger.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
 
         # Assign the color name to the Square object
-        for (index, squares_list) in enumerate(squares_lists):
+        for (index, square_list) in enumerate(squares_lists):
             color_name = min_distance_permutation[index]
 
-            for square in squares_list:
+            for square in square_list:
                 square.color_name = color_name
 
-    def get_squares_by_color_name(self):
+    def get_squares_by_color_name(
+        self,
+    ) -> Tuple[List[Square], List[Square], List[Square], List[Square], List[Square], List[Square]]:
         white_squares = []
         yellow_squares = []
         orange_squares = []
@@ -1290,8 +1309,7 @@ $(document).ready(function()
             blue_squares,
         )
 
-    # @timed_function
-    def resolve_color_box(self):
+    def resolve_color_box(self) -> None:
         """
         Temporarily assign names to all squares, use crayola colors as reference point.
 
@@ -1524,62 +1542,54 @@ $(document).ready(function()
         if self.write_debug_file:
             self.write_color_box()
 
-    # @timed_function
-    def resolve_corner_squares(self):
+    def resolve_corner_squares(self) -> None:
         """
         Assign names to the corner squares
         """
         white = Square(
             None,
-            "Wh",
             self.color_box["Wh"].red,
             self.color_box["Wh"].green,
             self.color_box["Wh"].blue,
+            color_name="Wh",
         )
         yellow = Square(
             None,
-            "Ye",
             self.color_box["Ye"].red,
             self.color_box["Ye"].green,
             self.color_box["Ye"].blue,
+            color_name="Ye",
         )
         orange = Square(
             None,
-            "OR",
             self.color_box["OR"].red,
             self.color_box["OR"].green,
             self.color_box["OR"].blue,
+            color_name="OR",
         )
         red = Square(
             None,
-            "Rd",
             self.color_box["Rd"].red,
             self.color_box["Rd"].green,
             self.color_box["Rd"].blue,
+            color_name="Rd",
         )
         green = Square(
             None,
-            "Gr",
             self.color_box["Gr"].red,
             self.color_box["Gr"].green,
             self.color_box["Gr"].blue,
+            color_name="Gr",
         )
         blue = Square(
             None,
-            "Bu",
             self.color_box["Bu"].red,
             self.color_box["Bu"].green,
             self.color_box["Bu"].blue,
+            color_name="Bu",
         )
 
-        white.color_name = "Wh"
-        yellow.color_name = "Ye"
-        orange.color_name = "OR"
-        red.color_name = "Rd"
-        green.color_name = "Gr"
-        blue.color_name = "Bu"
-
-        target_corners = [
+        target_corners = (
             (white, green, orange),
             (white, red, green),
             (white, orange, blue),
@@ -1588,7 +1598,7 @@ $(document).ready(function()
             (yellow, green, red),
             (yellow, blue, orange),
             (yellow, red, blue),
-        ]
+        )
 
         if self.width == 2:
             # rubiks cube libraries
@@ -1613,28 +1623,101 @@ $(document).ready(function()
 
         for corner_tuple in corner_tuples:
             corners.append(
-                [
+                (
                     self.pos2square[corner_tuple[0]],
                     self.pos2square[corner_tuple[1]],
                     self.pos2square[corner_tuple[2]],
-                ]
+                )
             )
 
-        sorted_corners = traveling_salesman_corners(target_corners + corners, "corners")
+        min_distance = 999999
+        min_distance_permutation = None
+        distance_cache = {}
+
+        # dwalton here now
+        for permutation_index, corner_permutation in enumerate(itertools.permutations(corners)):
+            total_distance = 0
+
+            for corner1, corner2 in zip(corner_permutation, target_corners):
+                distance = distance_cache.get((corner1, corner2))
+
+                if distance is None:
+
+                    distance_012 = (
+                        lab_distance(corner1[0].lab, corner2[0].lab)
+                        + lab_distance(corner1[1].lab, corner2[1].lab)
+                        + lab_distance(corner1[2].lab, corner2[2].lab)
+                    )
+
+                    distance_201 = (
+                        lab_distance(corner1[0].lab, corner2[2].lab)
+                        + lab_distance(corner1[1].lab, corner2[0].lab)
+                        + lab_distance(corner1[2].lab, corner2[1].lab)
+                    )
+
+                    distance_120 = (
+                        lab_distance(corner1[0].lab, corner2[1].lab)
+                        + lab_distance(corner1[1].lab, corner2[2].lab)
+                        + lab_distance(corner1[2].lab, corner2[0].lab)
+                    )
+
+                    distance = min(distance_012, distance_201, distance_120)
+                    distance_cache[(corner1, corner2)] = distance
+
+                total_distance += distance
+
+                # if total_distance > min_distance:
+                #    break
+
+            if total_distance < min_distance:
+                min_distance = total_distance
+                min_distance_permutation = corner_permutation
+                logger.info(f"permutation #{permutation_index} NEW MIN {min_distance}")
 
         # assign color names
-        for x in range(0, len(sorted_corners), 2):
-            corner1 = sorted_corners[x]
-            corner2 = sorted_corners[x + 1]
-            corner2[0].color_name = corner1[0].position
-            corner2[1].color_name = corner1[1].position
-            corner2[2].color_name = corner1[2].position
+        for corner1, corner2 in zip(min_distance_permutation, target_corners):
+            distance_012 = (
+                lab_distance(corner1[0].lab, corner2[0].lab)
+                + lab_distance(corner1[1].lab, corner2[1].lab)
+                + lab_distance(corner1[2].lab, corner2[2].lab)
+            )
+
+            distance_201 = (
+                lab_distance(corner1[0].lab, corner2[2].lab)
+                + lab_distance(corner1[1].lab, corner2[0].lab)
+                + lab_distance(corner1[2].lab, corner2[1].lab)
+            )
+
+            distance_120 = (
+                lab_distance(corner1[0].lab, corner2[1].lab)
+                + lab_distance(corner1[1].lab, corner2[2].lab)
+                + lab_distance(corner1[2].lab, corner2[0].lab)
+            )
+
+            distance = min(distance_012, distance_201, distance_120)
+
+            if distance == distance_012:
+                corner1[0].color_name = corner2[0].color_name
+                corner1[1].color_name = corner2[1].color_name
+                corner1[2].color_name = corner2[2].color_name
+
+            elif distance == distance_201:
+                corner1[0].color_name = corner2[2].color_name
+                corner1[1].color_name = corner2[0].color_name
+                corner1[2].color_name = corner2[1].color_name
+
+            elif distance == distance_120:
+                corner1[0].color_name = corner2[1].color_name
+                corner1[1].color_name = corner2[2].color_name
+                corner1[2].color_name = corner2[0].color_name
+
+            else:
+                raise ValueError(distance)
 
         if self.write_debug_file:
-            self.write_color_corners("corners", sorted_corners)
+            self.write_color_corners("corners", min_distance_permutation)
 
-    # @timed_function
-    def resolve_edge_squares(self):
+    def resolve_edge_squares(self) -> None:
         """
         Use traveling salesman algorithm to sort the colors
         """
@@ -1660,53 +1743,46 @@ $(document).ready(function()
 
         white = Square(
             None,
-            "Wh",
             self.color_box["Wh"].red,
             self.color_box["Wh"].green,
             self.color_box["Wh"].blue,
+            color_name="Wh",
         )
         yellow = Square(
             None,
-            "Ye",
             self.color_box["Ye"].red,
             self.color_box["Ye"].green,
             self.color_box["Ye"].blue,
+            color_name="Ye",
         )
         orange = Square(
             None,
-            "OR",
             self.color_box["OR"].red,
             self.color_box["OR"].green,
             self.color_box["OR"].blue,
+            color_name="OR",
         )
         red = Square(
             None,
-            "Rd",
             self.color_box["Rd"].red,
             self.color_box["Rd"].green,
             self.color_box["Rd"].blue,
+            color_name="Rd",
         )
         green = Square(
             None,
-            "Gr",
             self.color_box["Gr"].red,
             self.color_box["Gr"].green,
             self.color_box["Gr"].blue,
+            color_name="Gr",
         )
         blue = Square(
             None,
-            "Bu",
             self.color_box["Bu"].red,
             self.color_box["Bu"].green,
             self.color_box["Bu"].blue,
+            color_name="Bu",
         )
-
-        white.color_name = "Wh"
-        yellow.color_name = "Ye"
-        orange.color_name = "OR"
-        red.color_name = "Rd"
-        green.color_name = "Gr"
-        blue.color_name = "Bu"
 
         for target_orbit_id in range(self.orbits):
             edge_pairs = []
@@ -1775,14 +1851,13 @@ $(document).ready(function()
             for x in range(0, len(sorted_edge_pairs), 2):
                 pair1 = sorted_edge_pairs[x]
                 pair2 = sorted_edge_pairs[x + 1]
-                pair2[0].color_name = pair1[0].position
-                pair2[1].color_name = pair1[1].position
+                pair2[0].color_name = pair1[0].color_name
+                pair2[1].color_name = pair1[1].color_name
 
             if self.write_debug_file:
                 self.write_color_edge_pairs("edges - orbit %d" % target_orbit_id, sorted_edge_pairs)
 
-    # @timed_function
-    def resolve_center_squares(self):
+    def resolve_center_squares(self) -> None:
         """
         Use traveling salesman algorithm to sort the squares by color
         """
@@ -1826,36 +1901,26 @@ $(document).ready(function()
             if self.write_debug_file:
                 self.write_colors(desc, sorted_center_squares)
 
-    # @timed_function
-    def crunch_colors(self):
+    def crunch_colors(self) -> None:
         if self.write_debug_file:
             html_init_cube = self.html_cube("Initial RGB values", False, "initial_rgb_values")
             self.write_html(html_init_cube)
             self.write_crayola_colors()
 
-        gc.collect()
         self.resolve_color_box()
 
         # corners
-        gc.collect()
         self.resolve_corner_squares()
 
         # centers
-        gc.collect()
         self.resolve_center_squares()
 
         # edges
-        gc.collect()
         self.resolve_edge_squares()
-        gc.collect()
         self.set_state()
-        gc.collect()
         self.sanity_check_edge_squares()
-        gc.collect()
         self.validate_all_corners_found()
-        gc.collect()
         self.validate_odd_cube_midge_vs_corner_parity()
-        gc.collect()
 
         if self.write_debug_file:
             html_final_cube = self.html_cube("Final Cube", True, "final_cube")
@@ -1869,7 +1934,6 @@ $(document).ready(function()
         pass
 
 
-# @timed_function
 def resolve_colors(argv):
     help_string = """usage: rubiks-color-resolver.py [-h] [-j] [--filename FILENAME] [--rgb RGB]
 

@@ -1,3 +1,13 @@
+"""
+To use this:
+
+from rubikscolorresolver.profile import timed_function
+
+@timed_function
+def some_slow_function():
+    pass
+"""
+
 # standard libraries
 import sys
 

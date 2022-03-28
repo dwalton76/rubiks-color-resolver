@@ -6,11 +6,15 @@ https://github.com/dmishin/tsp-solver/blob/master/tsp_solver/greedy.py
 # standard libraries
 from array import array as pyarray
 
-# from rubikscolorresolver.profile import timed_function
+try:
+    # standard libraries
+    from typing import List, Tuple
+except ImportError:
+    # this will barf for micropython...ignore it
+    pass
 
 
-# @timed_function
-def optimize_solution(distances, connections, endpoints):
+def optimize_solution(distances, connections, endpoints) -> Tuple:
     """
     Tries to optimize solution, found by the greedy algorithm
     """
@@ -53,8 +57,7 @@ def optimize_solution(distances, connections, endpoints):
     return (optimizations, d_total)
 
 
-# @timed_function
-def restore_path(connections, endpoints):
+def restore_path(connections: List[List[int]], endpoints: Tuple[int, int]) -> List[int]:
     """
     Takes array of connections and returns a path.
     Connections is array of lists with 1 or 2 elements.
@@ -84,8 +87,7 @@ def restore_path(connections, endpoints):
     return path
 
 
-# @timed_function
-def pairs_by_dist(N, distances):
+def pairs_by_dist(N: int, distances) -> Tuple[Tuple[int, int]]:
     """
     returns list of coordinate pairs (i,j), sorted by distances; such that i < j
     """
@@ -101,7 +103,7 @@ def pairs_by_dist(N, distances):
     return ((ij // N, ij % N) for ij in indices)
 
 
-def calc_path_cost(distances, path):
+def calc_path_cost(distances, path) -> float:
     """
     Calculate the total for each row (if there are 24 squares, 6 sides of a cube then
     there are 4 squares per row) and total all of those together. We do this because
@@ -132,8 +134,7 @@ def calc_path_cost(distances, path):
     return cost
 
 
-# @timed_function
-def solve_tsp(distances, optim_steps=0, endpoints=None, desc=None):
+def solve_tsp(distances, optim_steps: int = 0, endpoints: Tuple[int, int] = None) -> List[int]:
     """
     Given a distance matrix, finds a solution for the TSP problem.
     Returns list of vertex indices.

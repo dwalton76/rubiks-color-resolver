@@ -1,10 +1,19 @@
-# from rubikscolorresolver.profile import timed_function
 # standard libraries
+import logging
 import sys
 from math import ceil, sqrt
 
+try:
+    # standard libraries
+    from typing import Dict, List, Set, Tuple
+except ImportError:
+    # this will barf for micropython...ignore it
+    pass
 
-def is_micropython():
+logger = logging.getLogger(__name__)
+
+
+def is_micropython() -> bool:
     return sys.implementation.name == "micropython"
 
 
@@ -19,26 +28,6 @@ else:
     from rubikscolorresolver.cie2000 import lab_distance_cie2000
 
 
-# @timed_function
-def lab_distance(lab1, lab2):
-    """
-    http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
-
-    In mathematics, the Euclidean distance or Euclidean metric is the "ordinary"
-    (i.e. straight-line) distance between two points in Euclidean space. With this
-    distance, Euclidean space becomes a metric space. The associated norm is called
-    the Euclidean norm.
-    """
-
-    # CIE2000 takes about 3x more CPU so use euclidean distance to save some cycles.  CIE2000
-    # does give a more accurate distance metric but for our purposes it is no longer worth
-    # the extra CPU cycles.
-    if True or is_micropython():
-        return int(sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2)))
-    else:
-        return lab_distance_cie2000(lab1, lab2)
-
-
 html_color = {
     "Gr": {"red": 0, "green": 102, "blue": 0},
     "Bu": {"red": 0, "green": 0, "blue": 153},
@@ -47,7 +36,6 @@ html_color = {
     "Wh": {"red": 255, "green": 255, "blue": 255},
     "Ye": {"red": 255, "green": 255, "blue": 0},
 }
-
 
 edge_color_pair_map = {
     # Up (white)
@@ -85,16 +73,14 @@ class ListMissingValue(Exception):
     pass
 
 
-# @timed_function
-def find_index_for_value(list_foo, target, min_index):
+def find_index_for_value(list_foo: List[str], target: str, min_index: int) -> int:
     for (index, value) in enumerate(list_foo):
         if value == target and index >= min_index:
             return index
     raise ListMissingValue("Did not find %s in list %s" % (target, list_foo))
 
 
-# @timed_function
-def get_swap_count(listA, listB):
+def get_swap_count(listA: List[str], listB: List[str]) -> int:
     """
     How many swaps do we have to make in listB for it to match listA
     Example:
@@ -146,9 +132,10 @@ def get_swap_count(listA, listB):
 
 
 class LabColor(object):
-
-    # @timed_function
-    def __init__(self, L, a, b, red, green, blue):
+    def __init__(self, L: float, a: float, b: float, red: int, green: int, blue: int) -> None:
+        assert isinstance(red, int)
+        assert isinstance(green, int)
+        assert isinstance(blue, int)
         self.L = L
         self.a = a
         self.b = b
@@ -156,13 +143,19 @@ class LabColor(object):
         self.green = green
         self.blue = blue
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "Lab (%s, %s, %s)" % (self.L, self.a, self.b)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __lt__(self, other):
+    # def __hash__(self):
+    #    return hash((self.L, self.a, self.b))
+
+    def __eq__(self, other) -> bool:
+        return bool(self.L == other.L and self.a == other.a and self.b == other.b)
+
+    def __lt__(self, other) -> bool:
         if self.L != other.L:
             return self.L < other.L
 
@@ -172,8 +165,25 @@ class LabColor(object):
         return self.b < other.b
 
 
-# @timed_function
-def rgb2lab(inputColor):
+def lab_distance(lab1: LabColor, lab2: LabColor) -> int:
+    """
+    http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
+
+    In mathematics, the Euclidean distance or Euclidean metric is the "ordinary"
+    (i.e. straight-line) distance between two points in Euclidean space. With this
+    distance, Euclidean space becomes a metric space. The associated norm is called
+    the Euclidean norm.
+    """
+    # CIE2000 takes about 3x more CPU so use euclidean distance to save some cycles.  CIE2000
+    # does give a more accurate distance metric but for our purposes it is no longer worth
+    # the extra CPU cycles.
+    if True or is_micropython():
+        return int(sqrt(((lab1.L - lab2.L) ** 2) + ((lab1.a - lab2.a) ** 2) + ((lab1.b - lab2.b) ** 2)))
+    else:
+        return lab_distance_cie2000(lab1, lab2)
+
+
+def rgb2lab(inputColor: Tuple[int, int, int]) -> LabColor:
     (red, green, blue) = inputColor
 
     # XYZ -> Standard-RGB
@@ -238,7 +248,7 @@ def rgb2lab(inputColor):
     return LabColor(L, a, b, red, green, blue)
 
 
-def rgb_to_hsv(r, g, b):
+def rgb_to_hsv(r: int, g: int, b: int) -> Tuple[float, float, float]:
     mx = max(r, g, b)
     mn = min(r, g, b)
     df = mx - mn
@@ -262,24 +272,39 @@ def rgb_to_hsv(r, g, b):
 
 
 class Square(object):
-    def __init__(self, side, position, red, green, blue, side_name=None, color_name=None):
+    def __init__(
+        self, position: int, red: int, green: int, blue: int, side_name: None = None, color_name: None = None
+    ) -> None:
+        assert position is None or isinstance(position, int)
+        assert isinstance(red, int)
+        assert isinstance(green, int)
+        assert isinstance(blue, int)
+        assert side_name is None or isinstance(side_name, str)
+        assert color_name is None or isinstance(color_name, str)
+
+        if side_name is not None:
+            assert side_name in ("U", "L", "F", "R", "B", "D")
+
+        if color_name is not None:
+            assert color_name in ("Wh", "Ye", "OR", "Rd", "Gr", "Bu")
+
         self.position = position
         self.lab = rgb2lab((red, green, blue))
         self.side_name = side_name  # ULFRBD
         self.color_name = color_name
 
-    def __str__(self):
-        return "{}{}-{}".format(self.side, self.position, self.color_name)
+    def __str__(self) -> str:
+        return "{}{}-{}".format(self.side_name, self.position, self.color_name)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return self.position < other.position
 
 
 class Side(object):
-    def __init__(self, cube, width, name):
+    def __init__(self, cube: "RubiksColorSolverGenericBase", width: int, name: str) -> None:
         self.cube = cube
         self.name = name  # U, L, etc
         self.color = None
@@ -356,15 +381,16 @@ class Side(object):
                 for x in range(west_edge + 1, east_edge):
                     self.center_pos.append(x)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "side-{}".format(self.name)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    # @timed_function
-    def set_square(self, position, red, green, blue, side_name=None, color_name=None):
-        self.squares[position] = Square(self, position, red, green, blue, side_name, color_name)
+    def set_square(
+        self, position: int, red: int, green: int, blue: int, side_name: None = None, color_name: None = None
+    ) -> None:
+        self.squares[position] = Square(position, red, green, blue, side_name=side_name, color_name=color_name)
 
         if position in self.center_pos:
             self.center_squares.append(self.squares[position])
@@ -378,16 +404,14 @@ class Side(object):
         else:
             raise Exception("Could not determine egde vs corner vs center")
 
-    # @timed_function
-    def calculate_wing_partners(self):
+    def calculate_wing_partners(self) -> None:
         for (pos1, pos2) in self.cube.all_edge_positions:
             if pos1 >= self.min_pos and pos1 <= self.max_pos:
                 self.wing_partner[pos1] = pos2
             elif pos2 >= self.min_pos and pos2 <= self.max_pos:
                 self.wing_partner[pos2] = pos1
 
-    # @timed_function
-    def get_wing_partner(self, wing_index):
+    def get_wing_partner(self, wing_index: int) -> int:
         try:
             return self.wing_partner[wing_index]
         except KeyError:
@@ -396,7 +420,7 @@ class Side(object):
 
 
 class RubiksColorSolverGenericBase(object):
-    def __init__(self, width):
+    def __init__(self, width: int) -> None:
         self.width = width
         self.height = width
         self.squares_per_side = self.width * self.width
@@ -492,19 +516,17 @@ class RubiksColorSolverGenericBase(object):
         # This is no longer neeeded now that the Side objects have been created
         self.all_edge_positions = []
 
-    # @timed_function
-    def calculate_pos2side(self):
+    def calculate_pos2side(self) -> None:
         for side in self.sides.values():
             for x in range(side.min_pos, side.max_pos + 1):
                 self.pos2side[x] = side
 
-    # @timed_function
-    def calculate_pos2square(self):
+    def calculate_pos2square(self) -> None:
         for side in self.sides.values():
             for (position, square) in side.squares.items():
                 self.pos2square[position] = square
 
-    def enter_cube_state(self, input_state, order="URFDLB"):
+    def enter_cube_state(self, input_state, order="URFDLB") -> None:
         """
         If you already have the cube state this method allows you to enter it
         so we can then validate the cube state via:
@@ -583,8 +605,7 @@ class RubiksColorSolverGenericBase(object):
 
         self.calculate_pos2square()
 
-    # @timed_function
-    def print_cube(self):
+    def print_cube(self) -> None:
         data = []
         for x in range(3 * self.height):
             data.append([])
@@ -626,8 +647,7 @@ class RubiksColorSolverGenericBase(object):
 
         sys.stderr.write("Cube\n\n%s\n" % "\n".join(output))
 
-    # @timed_function
-    def cube_for_kociemba_strict(self):
+    def cube_for_kociemba_strict(self) -> List[str]:
         # logger.info("color_to_side_name:\n{}\n".format(self.color_to_side_name))
         data = []
         for side in (
@@ -644,8 +664,7 @@ class RubiksColorSolverGenericBase(object):
 
         return data
 
-    # @timed_function
-    def validate_edge_orbit(self, orbit_id):
+    def validate_edge_orbit(self, orbit_id: int) -> bool:
 
         if self.width == 2:
             # rubiks cube libraries
@@ -698,8 +717,7 @@ class RubiksColorSolverGenericBase(object):
 
         return valid
 
-    # @timed_function
-    def find_corners_by_color(self):
+    def find_corners_by_color(self) -> Tuple:
         green_white_corners = []
         green_yellow_corners = []
         blue_white_corners = []
@@ -751,8 +769,14 @@ class RubiksColorSolverGenericBase(object):
             blue_yellow_corners,
         )
 
-    # @timed_function
-    def find_edges_by_color(self, orbit_id):
+    def find_edges_by_color(
+        self, orbit_id: int
+    ) -> Tuple[
+        List[Tuple[Square, Square]],
+        List[Tuple[Square, Square]],
+        List[Tuple[Square, Square]],
+        List[Tuple[Square, Square]],
+    ]:
 
         if self.width == 2:
             # rubiks cube libraries
@@ -822,8 +846,7 @@ class RubiksColorSolverGenericBase(object):
             yellow_red_or_orange_edges,
         )
 
-    # @timed_function
-    def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id):
+    def sanity_check_edges_red_orange_count_for_orbit(self, target_orbit_id: int) -> None:
 
         if self.width == 4 or self.width == 6 or (self.width == 5 and target_orbit_id == 0):
             high_low_edge_per_color = self.get_high_low_per_edge_color(target_orbit_id)
@@ -940,8 +963,7 @@ class RubiksColorSolverGenericBase(object):
 
         self.validate_edge_orbit(target_orbit_id)
 
-    # @timed_function
-    def get_high_low_per_edge_color(self, target_orbit_id):
+    def get_high_low_per_edge_color(self, target_orbit_id: int) -> Dict[str, Set[str]]:
 
         if self.width == 4:
             # rubiks cube libraries
@@ -988,13 +1010,11 @@ class RubiksColorSolverGenericBase(object):
         # logger.info("")
         return high_low_per_edge_color
 
-    # @timed_function
-    def sanity_check_edge_squares(self):
+    def sanity_check_edge_squares(self) -> None:
         for orbit_id in range(self.orbits):
             self.sanity_check_edges_red_orange_count_for_orbit(orbit_id)
 
-    # @timed_function
-    def assign_green_white_corners(self, green_white_corners):
+    def assign_green_white_corners(self, green_white_corners) -> None:
         # logger.info("Gr/Wh corner tuples %s".format(green_white_corners))
         valid_green_orange_white = (
             ["Gr", "OR", "Wh"],
@@ -1047,8 +1067,7 @@ class RubiksColorSolverGenericBase(object):
                     #    "change Gr/Wh corner partner %s from Rd to OR" % corner3
                     # )
 
-    # @timed_function
-    def assign_green_yellow_corners(self, green_yellow_corners):
+    def assign_green_yellow_corners(self, green_yellow_corners) -> None:
         valid_green_yellow_orange = (
             ["Gr", "Ye", "OR"],
             ["OR", "Gr", "Ye"],
@@ -1101,8 +1120,7 @@ class RubiksColorSolverGenericBase(object):
                     #    "change Gr/Ye corner partner %s from Rd to OR" % corner3
                     # )
 
-    # @timed_function
-    def assign_blue_white_corners(self, blue_white_corners):
+    def assign_blue_white_corners(self, blue_white_corners) -> None:
         # logger.info("Bu/Wh corner tuples %s".format(blue_white_corners))
         valid_blue_white_orange = (
             ["Bu", "Wh", "OR"],
@@ -1156,8 +1174,7 @@ class RubiksColorSolverGenericBase(object):
                     #    "change Bu/Wh corner partner %s from Rd to OR" % corner3
                     # )
 
-    # @timed_function
-    def assign_blue_yellow_corners(self, blue_yellow_corners):
+    def assign_blue_yellow_corners(self, blue_yellow_corners) -> None:
         valid_blue_yellow_red = (
             ["Bu", "Ye", "Rd"],
             ["Rd", "Bu", "Ye"],
@@ -1210,8 +1227,7 @@ class RubiksColorSolverGenericBase(object):
                     #    "change Bu/Ye corner partner %s from Rd to OR" % corner3
                     # )
 
-    # @timed_function
-    def sanity_check_corner_squares(self):
+    def sanity_check_corner_squares(self) -> None:
         (
             green_white_corners,
             green_yellow_corners,
@@ -1223,8 +1239,7 @@ class RubiksColorSolverGenericBase(object):
         self.assign_blue_white_corners(blue_white_corners)
         self.assign_blue_yellow_corners(blue_yellow_corners)
 
-    # @timed_function
-    def get_corner_swap_count(self):
+    def get_corner_swap_count(self) -> int:
 
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
 
@@ -1281,20 +1296,17 @@ class RubiksColorSolverGenericBase(object):
 
         return get_swap_count(needed_corners, current_corners)
 
-    # @timed_function
-    def corner_swaps_even(self):
+    def corner_swaps_even(self) -> bool:
         if self.get_corner_swap_count() % 2 == 0:
             return True
         return False
 
-    # @timed_function
-    def corner_swaps_odd(self):
+    def corner_swaps_odd(self) -> bool:
         if self.get_corner_swap_count() % 2 == 1:
             return True
         return False
 
-    # @timed_function
-    def get_edge_swap_count(self, orbit):
+    def get_edge_swap_count(self, orbit: None) -> int:
         needed_edges = []
         to_check = []
 
@@ -1385,20 +1397,17 @@ class RubiksColorSolverGenericBase(object):
 
         return get_swap_count(needed_edges, current_edges)
 
-    # @timed_function
-    def edge_swaps_even(self, orbit):
+    def edge_swaps_even(self, orbit: None) -> bool:
         if self.get_edge_swap_count(orbit) % 2 == 0:
             return True
         return False
 
-    # @timed_function
-    def edge_swaps_odd(self, orbit):
+    def edge_swaps_odd(self, orbit) -> bool:
         if self.get_edge_swap_count(orbit) % 2 == 1:
             return True
         return False
 
-    # @timed_function
-    def validate_all_corners_found(self):
+    def validate_all_corners_found(self) -> None:
         needed_corners = ["BLU", "BRU", "FLU", "FRU", "DFL", "DFR", "BDL", "BDR"]
 
         to_check = [
@@ -1458,8 +1467,7 @@ class RubiksColorSolverGenericBase(object):
             if corner not in current_corners:
                 raise Exception("corner {} is missing".format(corner))
 
-    # @timed_function
-    def validate_odd_cube_midge_vs_corner_parity(self):
+    def validate_odd_cube_midge_vs_corner_parity(self) -> None:
         """
         http://www.ryanheise.com/cube/parity.html
 
