@@ -1,10 +1,10 @@
 # standard libraries
 import array
-import itertools
 import logging
 import os
 import sys
 from math import sqrt
+from pprint import pformat
 
 try:
     # standard libraries
@@ -1546,6 +1546,55 @@ $(document).ready(function()
         """
         Assign names to the corner squares
         """
+        distance_cache = {}
+
+        def corner_vs_corner_distance(cornersA, cornersB) -> float:
+            total_distance = 0
+
+            for cornerA, cornerB in zip(cornersA, cornersB):
+                distance = distance_cache.get((cornerA, cornerB))
+
+                if distance is None:
+                    distance_012 = (
+                        lab_distance(cornerA[0].lab, cornerB[0].lab)
+                        + lab_distance(cornerA[1].lab, cornerB[1].lab)
+                        + lab_distance(cornerA[2].lab, cornerB[2].lab)
+                    )
+
+                    distance_201 = (
+                        lab_distance(cornerA[0].lab, cornerB[2].lab)
+                        + lab_distance(cornerA[1].lab, cornerB[0].lab)
+                        + lab_distance(cornerA[2].lab, cornerB[1].lab)
+                    )
+
+                    distance_120 = (
+                        lab_distance(cornerA[0].lab, cornerB[1].lab)
+                        + lab_distance(cornerA[1].lab, cornerB[2].lab)
+                        + lab_distance(cornerA[2].lab, cornerB[0].lab)
+                    )
+
+                    distance = min(distance_012, distance_201, distance_120)
+
+                total_distance += distance
+
+            return total_distance
+
+        def skip_index(corner_indexes: int, min_distance: float) -> bool:
+            last_index = corner_indexes[-1]
+            all_but_last_index = corner_indexes[0:-1]
+
+            if last_index in all_but_last_index:
+                return True
+
+            corners_for_corner_indexes = []
+            for corner_index in corner_indexes:
+                corners_for_corner_indexes.append(corners[corner_index])
+
+            if corner_vs_corner_distance(corners_for_corner_indexes, target_corners) >= min_distance:
+                return True
+
+            return False
+
         white = Square(
             None,
             self.color_box["Wh"].red,
@@ -1630,49 +1679,56 @@ $(document).ready(function()
                 )
             )
 
+        # dwalton corners example
         min_distance = 999999
         min_distance_permutation = None
-        distance_cache = {}
+        permutation_index = 0
 
-        # dwalton here now
-        for permutation_index, corner_permutation in enumerate(itertools.permutations(corners)):
-            total_distance = 0
+        # fmt: off
+        for corner1_index, corner1 in enumerate(corners):
 
-            for corner1, corner2 in zip(corner_permutation, target_corners):
-                distance = distance_cache.get((corner1, corner2))
+            for corner2_index, corner2 in enumerate(corners):
+                if skip_index((corner1_index, corner2_index), min_distance):
+                    continue
 
-                if distance is None:
+                for corner3_index, corner3 in enumerate(corners):
+                    if skip_index((corner1_index, corner2_index, corner3_index), min_distance):
+                        continue
 
-                    distance_012 = (
-                        lab_distance(corner1[0].lab, corner2[0].lab)
-                        + lab_distance(corner1[1].lab, corner2[1].lab)
-                        + lab_distance(corner1[2].lab, corner2[2].lab)
-                    )
+                    for corner4_index, corner4 in enumerate(corners):
+                        if skip_index((corner1_index, corner2_index, corner3_index, corner4_index), min_distance):
+                            continue
 
-                    distance_201 = (
-                        lab_distance(corner1[0].lab, corner2[2].lab)
-                        + lab_distance(corner1[1].lab, corner2[0].lab)
-                        + lab_distance(corner1[2].lab, corner2[1].lab)
-                    )
+                        for corner5_index, corner5 in enumerate(corners):
+                            if skip_index((corner1_index, corner2_index, corner3_index, corner4_index, corner5_index), min_distance):
+                                continue
 
-                    distance_120 = (
-                        lab_distance(corner1[0].lab, corner2[1].lab)
-                        + lab_distance(corner1[1].lab, corner2[2].lab)
-                        + lab_distance(corner1[2].lab, corner2[0].lab)
-                    )
+                            for corner6_index, corner6 in enumerate(corners):
+                                if skip_index((corner1_index, corner2_index, corner3_index, corner4_index, corner5_index, corner6_index), min_distance):
+                                    continue
 
-                    distance = min(distance_012, distance_201, distance_120)
-                    distance_cache[(corner1, corner2)] = distance
+                                for corner7_index, corner7 in enumerate(corners):
+                                    if skip_index((corner1_index, corner2_index, corner3_index, corner4_index, corner5_index, corner6_index, corner7_index), min_distance):
+                                        continue
 
-                total_distance += distance
+                                    for corner8_index, corner8 in enumerate(corners):
+                                        if corner8_index in (corner1_index, corner2_index, corner3_index, corner4_index, corner5_index, corner6_index, corner7_index):
+                                            continue
 
-                # if total_distance > min_distance:
-                #    break
+                                        corner_permutation = [corner1, corner2, corner3, corner4, corner5, corner6, corner7, corner8]
+                                        total_distance = corner_vs_corner_distance(corner_permutation, target_corners)
 
-            if total_distance < min_distance:
-                min_distance = total_distance
-                min_distance_permutation = corner_permutation
-                logger.info(f"permutation #{permutation_index} NEW MIN {min_distance}")
+                                        if total_distance < min_distance:
+                                            min_distance = total_distance
+                                            min_distance_permutation = corner_permutation[:]
+                                            logger.info(f"corner permutation {permutation_index:,} NEW MIN {min_distance}")
+
+                                        permutation_index += 1
+        # fmt: on
+
+        logger.info(f"explored {permutation_index} permutations, min distance {min_distance}")
+        logger.info(f"min_distance_permutation\n{pformat(min_distance_permutation)}")
+        logger.info(f"target corners\n{pformat(target_corners)}")
 
         # assign color names
         for corner1, corner2 in zip(min_distance_permutation, target_corners):
@@ -1721,6 +1777,38 @@ $(document).ready(function()
         """
         Use traveling salesman algorithm to sort the colors
         """
+        distance_cache = {}
+
+        def edges_vs_edges_distance(edgesA, edgesB) -> float:
+            total_distance = 0
+            for edgeA, edgeB in zip(edgesA, edgesB):
+                distance = distance_cache.get((edgeA, edgeB))
+
+                if distance is None:
+                    distance_01 = edge_pair_distance(edgeA, edgeB, normal=True)
+                    distance_10 = edge_pair_distance(edgeA, edgeB, normal=False)
+                    distance = min(distance_01, distance_10)
+                    distance_cache[(edgeA, edgeB)] = distance
+
+                total_distance += distance
+
+            return total_distance
+
+        def skip_index(corner_indexes: int, min_distance: float) -> bool:
+            last_index = corner_indexes[-1]
+            all_but_last_index = corner_indexes[0:-1]
+
+            if last_index in all_but_last_index:
+                return True
+
+            corners_for_corner_indexes = []
+            for corner_index in corner_indexes:
+                corners_for_corner_indexes.append(edge_pairs[corner_index])
+
+            if edges_vs_edges_distance(corners_for_corner_indexes, target_edge_pairs) >= min_distance:
+                return True
+
+            return False
 
         # Nothing to be done for 2x2x2
         if self.width == 2:
@@ -1845,17 +1933,117 @@ $(document).ready(function()
             else:
                 raise ValueError("found {} edge pairs".format(len(edge_pairs)))
 
-            sorted_edge_pairs = traveling_salesman_edge_pairs(target_edge_pairs + edge_pairs, "edge pairs")
+        # dwalton find a starting permutation to hopefully give us a reasonably low min_distance to start with
+        def simple_permutation(edge_pairs, target_edge_pairs):
+            edge_pair_permutation = []
 
-            # assign color names
-            for x in range(0, len(sorted_edge_pairs), 2):
-                pair1 = sorted_edge_pairs[x]
-                pair2 = sorted_edge_pairs[x + 1]
-                pair2[0].color_name = pair1[0].color_name
-                pair2[1].color_name = pair1[1].color_name
+            # for each target_edge_pair, find the edge_pair that is the closest match
+            for target_edge_pair in target_edge_pairs:
+                min_distance_this_target = 9999999
+                min_edge_pair_this_target = None
+                for edge_pair in edge_pairs:
+                    if edge_pair in edge_pair_permutation:
+                        continue
 
-            if self.write_debug_file:
-                self.write_color_edge_pairs("edges - orbit %d" % target_orbit_id, sorted_edge_pairs)
+                    distance_01 = edge_pair_distance(target_edge_pair, edge_pair, normal=True)
+                    distance_10 = edge_pair_distance(target_edge_pair, edge_pair, normal=False)
+                    distance = min(distance_01, distance_10)
+
+                    if distance < min_distance_this_target:
+                        min_distance_this_target = distance
+                        min_edge_pair_this_target = edge_pair
+
+                edge_pair_permutation.append(min_edge_pair_this_target)
+
+            distance = edges_vs_edges_distance(edge_pair_permutation, target_edge_pairs)
+            return (distance, edge_pair_permutation)
+
+        min_distance, min_distance_permutation = simple_permutation(edge_pairs, target_edge_pairs)
+        logger.info(f"edge permutation INIT MIN {min_distance}")
+        permutation_index = 0
+
+        # fmt: off
+        for edge_pair1_index, edge_pair1 in enumerate(edge_pairs):
+
+            for edge_pair2_index, edge_pair2 in enumerate(edge_pairs):
+                if skip_index((edge_pair1_index, edge_pair2_index), min_distance):
+                    continue
+
+                for edge_pair3_index, edge_pair3 in enumerate(edge_pairs):
+                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index), min_distance):
+                        continue
+
+                    for edge_pair4_index, edge_pair4 in enumerate(edge_pairs):
+                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index), min_distance):
+                            continue
+
+                        for edge_pair5_index, edge_pair5 in enumerate(edge_pairs):
+                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index), min_distance):
+                                continue
+
+                            for edge_pair6_index, edge_pair6 in enumerate(edge_pairs):
+                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index), min_distance):
+                                    continue
+
+                                for edge_pair7_index, edge_pair7 in enumerate(edge_pairs):
+                                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index), min_distance):
+                                        continue
+
+                                    for edge_pair8_index, edge_pair8 in enumerate(edge_pairs):
+                                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index), min_distance):
+                                            continue
+
+                                        for edge_pair9_index, edge_pair9 in enumerate(edge_pairs):
+                                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index), min_distance):
+                                                continue
+
+                                            for edge_pair10_index, edge_pair10 in enumerate(edge_pairs):
+                                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index), min_distance):
+                                                    continue
+
+                                                for edge_pair11_index, edge_pair11 in enumerate(edge_pairs):
+                                                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index), min_distance):
+                                                        continue
+
+                                                    for edge_pair12_index, edge_pair12 in enumerate(edge_pairs):
+                                                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index), min_distance):
+                                                            continue
+
+                                                        # dwalton
+                                                        edge_pair_permutation = [edge_pair1, edge_pair2, edge_pair3, edge_pair4, edge_pair5, edge_pair6, edge_pair7, edge_pair8, edge_pair9, edge_pair10, edge_pair11, edge_pair12]
+                                                        total_distance = edges_vs_edges_distance(edge_pair_permutation, target_edge_pairs)
+
+                                                        if total_distance < min_distance:
+                                                            min_distance = total_distance
+                                                            min_distance_permutation = edge_pair_permutation[:]
+                                                            logger.info(f"edge permutation {permutation_index:,} NEW MIN {min_distance}")
+
+                                                        permutation_index += 1
+        # fmt: on
+
+        logger.info(f"explored {permutation_index} permutations, min distance {min_distance}")
+        logger.info(f"min_distance_permutation\n{pformat(min_distance_permutation)}")
+        logger.info(f"target edge pairs\n{pformat(target_edge_pairs)}")
+
+        # assign color names
+        for edge1, edge2 in zip(min_distance_permutation, target_edge_pairs):
+            distance_01 = edge_pair_distance(edge1, edge2, normal=True)
+            distance_10 = edge_pair_distance(edge1, edge2, normal=False)
+            distance = min(distance_01, distance_10)
+
+            if distance == distance_01:
+                edge1[0].color_name = edge2[0].color_name
+                edge1[1].color_name = edge2[1].color_name
+
+            elif distance == distance_10:
+                edge1[0].color_name = edge2[1].color_name
+                edge1[1].color_name = edge2[0].color_name
+
+            else:
+                raise ValueError(distance)
+
+        if self.write_debug_file:
+            self.write_color_edge_pairs(f"edges - orbit {target_orbit_id}", min_distance_permutation)
 
     def resolve_center_squares(self) -> None:
         """

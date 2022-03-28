@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 try:
     # standard libraries
     from json import load as json_load
@@ -157,8 +159,12 @@ results = []
 
 for (desc, filename, expected) in test_cases:
     # dwalton
-    if not desc.startswith("2x2x2"):
-        break
+    # if not desc.startswith("2x2x2"):
+    #    continue
+
+    if not desc.startswith("3x3x3"):
+        continue
+
     logger.warning("Test: %s" % desc)
     with open("tests/" + filename, "r") as fh:
         scan_data_str_keys = json_load(fh)
@@ -192,5 +198,8 @@ for (desc, filename, expected) in test_cases:
 
         cube = None
         gc.collect()
+
+    # dwalton
+    break
 
 print("\n".join(results))
