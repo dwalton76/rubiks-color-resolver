@@ -200,6 +200,6 @@ for (desc, filename, expected) in test_cases:
         gc.collect()
 
     # dwalton
-    break
+    # break
 
 print("\n".join(results))
