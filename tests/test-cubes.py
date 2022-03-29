@@ -161,9 +161,10 @@ for (desc, filename, expected) in test_cases:
     # dwalton
     # if not desc.startswith("2x2x2"):
     #    continue
-
     if not desc.startswith("3x3x3"):
         continue
+    # if not desc.startswith("4x4x4"):
+    #    continue
 
     logger.warning("Test: %s" % desc)
     with open("tests/" + filename, "r") as fh:
