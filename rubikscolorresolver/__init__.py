@@ -120,29 +120,38 @@ def tsp_corner_distance(
     )
 
 
+corners_distance_cache = {}
+
+
 def corners_vs_corners_distance(cornersA, cornersB) -> float:
+    global corners_distance_cache
     total_distance = 0
 
     for cornerA, cornerB in zip(cornersA, cornersB):
-        distance_012 = (
-            lab_distance(cornerA[0].lab, cornerB[0].lab)
-            + lab_distance(cornerA[1].lab, cornerB[1].lab)
-            + lab_distance(cornerA[2].lab, cornerB[2].lab)
-        )
+        distance = corners_distance_cache.get((cornerA, cornerB))
 
-        distance_201 = (
-            lab_distance(cornerA[0].lab, cornerB[2].lab)
-            + lab_distance(cornerA[1].lab, cornerB[0].lab)
-            + lab_distance(cornerA[2].lab, cornerB[1].lab)
-        )
+        if distance is None:
+            distance_012 = (
+                lab_distance(cornerA[0].lab, cornerB[0].lab)
+                + lab_distance(cornerA[1].lab, cornerB[1].lab)
+                + lab_distance(cornerA[2].lab, cornerB[2].lab)
+            )
 
-        distance_120 = (
-            lab_distance(cornerA[0].lab, cornerB[1].lab)
-            + lab_distance(cornerA[1].lab, cornerB[2].lab)
-            + lab_distance(cornerA[2].lab, cornerB[0].lab)
-        )
+            distance_201 = (
+                lab_distance(cornerA[0].lab, cornerB[2].lab)
+                + lab_distance(cornerA[1].lab, cornerB[0].lab)
+                + lab_distance(cornerA[2].lab, cornerB[1].lab)
+            )
 
-        total_distance += min(distance_012, distance_201, distance_120)
+            distance_120 = (
+                lab_distance(cornerA[0].lab, cornerB[1].lab)
+                + lab_distance(cornerA[1].lab, cornerB[2].lab)
+                + lab_distance(cornerA[2].lab, cornerB[0].lab)
+            )
+            distance = min(distance_012, distance_201, distance_120)
+            corners_distance_cache[(cornerA, cornerB)] = distance
+
+        total_distance += distance
 
     return total_distance
 
@@ -241,27 +250,35 @@ def corner_permutation_builder(corners, target_corners, min_distance):
     # fmt: on
 
 
+edges_distance_cache = {}
+
+
 def edges_vs_edges_distance(edgesA, edgesB) -> float:
+    global edges_distance_cache
     total_distance = 0
 
     for edgeA, edgeB in zip(edgesA, edgesB):
-        distance_01 = edge_pair_distance(edgeA, edgeB, normal=True)
-        distance_10 = edge_pair_distance(edgeA, edgeB, normal=False)
-        total_distance += min(distance_01, distance_10)
+        distance = edges_distance_cache.get((edgeA, edgeB))
+
+        if distance is None:
+            distance_01 = edge_pair_distance(edgeA, edgeB, normal=True)
+            distance_10 = edge_pair_distance(edgeA, edgeB, normal=False)
+            distance = min(distance_01, distance_10)
+            edges_distance_cache[(edgeA, edgeB)] = distance
+
+        total_distance += distance
 
     return total_distance
 
 
 def edges_skip_index(edge_pairs, target_edge_pairs, edge_indexes: int, min_distance: float) -> bool:
     last_index = edge_indexes[-1]
-    all_but_last_index = edge_indexes[0:-1]
+    all_but_last_index = set(edge_indexes[0:-1])
 
     if last_index in all_but_last_index:
         return True
 
-    edges_for_edges_indexes = []
-    for edge_index in edge_indexes:
-        edges_for_edges_indexes.append(edge_pairs[edge_index])
+    edges_for_edges_indexes = [edge_pairs[edge_index] for edge_index in edge_indexes]
 
     if edges_vs_edges_distance(edges_for_edges_indexes, target_edge_pairs) >= min_distance:
         return True
@@ -294,8 +311,9 @@ def edges_vs_edges_simple_permutation(edge_pairs, target_edge_pairs):
     return (distance, edge_pair_permutation)
 
 
-def edge_permutation_builder(edge_pairs, target_edge_pairs, min_distance):
-    # fmt: off
+# dwalton
+# fmt: off
+def edge_permutation_builder12(edge_pairs, target_edge_pairs, min_distance, yield_pairs_only: bool=True):
     for edge_pair1_index, edge_pair1 in enumerate(edge_pairs):
 
         for edge_pair2_index, edge_pair2 in enumerate(edge_pairs):
@@ -342,8 +360,78 @@ def edge_permutation_builder(edge_pairs, target_edge_pairs, min_distance):
                                                     if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index), min_distance):
                                                         continue
 
-                                                    yield [edge_pair1, edge_pair2, edge_pair3, edge_pair4, edge_pair5, edge_pair6, edge_pair7, edge_pair8, edge_pair9, edge_pair10, edge_pair11, edge_pair12]
-    # fmt: on
+                                                    if yield_pairs_only:
+                                                        yield [edge_pair1, edge_pair2, edge_pair3, edge_pair4, edge_pair5, edge_pair6, edge_pair7, edge_pair8, edge_pair9, edge_pair10, edge_pair11, edge_pair12]
+                                                    else:
+                                                        yield [
+                                                            edge_pair1, edge_pair2, edge_pair3, edge_pair4, edge_pair5, edge_pair6, edge_pair7, edge_pair8, edge_pair9, edge_pair10, edge_pair11, edge_pair12,
+                                                            edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index
+                                                        ]
+
+
+def edge_permutation_builder24(edge_pairs, target_edge_pairs, min_distance):
+    foo = list(edge_permutation_builder12(edge_pairs, target_edge_pairs, min_distance, False))
+    logger.info(f"foo has {len(foo)} entries")
+
+    for edge_pair1, edge_pair2, edge_pair3, edge_pair4, edge_pair5, edge_pair6, edge_pair7, edge_pair8, edge_pair9, edge_pair10, edge_pair11, edge_pair12, edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index in edge_permutation_builder12(edge_pairs, target_edge_pairs, min_distance, False):
+
+        for edge_pair13_index, edge_pair13 in enumerate(edge_pairs):
+            if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index), min_distance):
+                continue
+
+            for edge_pair14_index, edge_pair14 in enumerate(edge_pairs):
+                if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index), min_distance):
+                    continue
+
+                for edge_pair15_index, edge_pair15 in enumerate(edge_pairs):
+                    if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index), min_distance):
+                        continue
+
+                    for edge_pair16_index, edge_pair16 in enumerate(edge_pairs):
+                        if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index), min_distance):
+                            continue
+
+                        for edge_pair17_index, edge_pair17 in enumerate(edge_pairs):
+                            if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index), min_distance):
+                                continue
+
+                            for edge_pair18_index, edge_pair18 in enumerate(edge_pairs):
+                                if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index), min_distance):
+                                    continue
+
+                                for edge_pair19_index, edge_pair19 in enumerate(edge_pairs):
+                                    if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index), min_distance):
+                                        continue
+
+                                    for edge_pair20_index, edge_pair20 in enumerate(edge_pairs):
+                                        if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index), min_distance):
+                                            continue
+
+                                        for edge_pair21_index, edge_pair21 in enumerate(edge_pairs):
+                                            if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index), min_distance):
+                                                continue
+
+                                            for edge_pair22_index, edge_pair22 in enumerate(edge_pairs):
+                                                if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index, edge_pair22_index), min_distance):
+                                                    continue
+
+                                                for edge_pair23_index, edge_pair23 in enumerate(edge_pairs):
+                                                    if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index, edge_pair22_index, edge_pair23_index), min_distance):
+                                                        continue
+
+                                                    for edge_pair24_index, edge_pair24 in enumerate(edge_pairs):
+                                                        if edges_skip_index(edge_pairs, target_edge_pairs, (edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index, edge_pair22_index, edge_pair23_index, edge_pair24_index), min_distance):
+                                                            continue
+
+                                                        yield [
+                                                            edge_pair1, edge_pair2, edge_pair3, edge_pair4,
+                                                            edge_pair5, edge_pair6, edge_pair7, edge_pair8,
+                                                            edge_pair9, edge_pair10, edge_pair11, edge_pair12,
+                                                            edge_pair13, edge_pair14, edge_pair15, edge_pair16,
+                                                            edge_pair17, edge_pair18, edge_pair19, edge_pair20,
+                                                            edge_pair21, edge_pair22, edge_pair23, edge_pair24,
+                                                        ]
+# fmt: on
 
 
 def traveling_salesman_corners(
@@ -1814,6 +1902,30 @@ $(document).ready(function()
 
         return (white, yellow, orange, red, green, blue)
 
+    def _resolve_corner_squares_via_for_loops(self, corners, target_corners):
+        min_distance, min_distance_permutation = corners_vs_corners_simple_permutation(corners, target_corners)
+        init_min_distance = min_distance
+        permutation_index = 0
+
+        for corner_permutation in corner_permutation_builder(corners, target_corners, min_distance):
+            total_distance = corners_vs_corners_distance(corner_permutation, target_corners)
+
+            if total_distance < min_distance:
+                min_distance = total_distance
+                min_distance_permutation = corner_permutation[:]
+                logger.info(f"corner permutation {permutation_index:,} NEW MIN {min_distance}")
+
+            permutation_index += 1
+
+        logger.info(
+            f"corners explored {permutation_index} permutations, init min distance {init_min_distance}, final min distance {min_distance}"
+        )
+
+        return min_distance_permutation
+
+    def _resolve_corner_squares_via_tsp(self):
+        pass
+
     def resolve_corner_squares(self) -> None:
         """
         Assign names to the corner squares
@@ -1859,23 +1971,7 @@ $(document).ready(function()
                 )
             )
 
-        min_distance, min_distance_permutation = corners_vs_corners_simple_permutation(corners, target_corners)
-        init_min_distance = min_distance
-        permutation_index = 0
-
-        for corner_permutation in corner_permutation_builder(corners, target_corners, min_distance):
-            total_distance = corners_vs_corners_distance(corner_permutation, target_corners)
-
-            if total_distance < min_distance:
-                min_distance = total_distance
-                min_distance_permutation = corner_permutation[:]
-                logger.info(f"corner permutation {permutation_index:,} NEW MIN {min_distance}")
-
-            permutation_index += 1
-
-        logger.info(
-            f"corners explored {permutation_index} permutations, init min distance {init_min_distance}, final min distance {min_distance}"
-        )
+        min_distance_permutation = self._resolve_corner_squares_via_for_loops(corners, target_corners)
         # logger.info(f"min_distance_permutation\n{pformat(min_distance_permutation)}")
         # logger.info(f"target corners\n{pformat(target_corners)}")
 
@@ -1921,6 +2017,49 @@ $(document).ready(function()
 
         if self.write_debug_file:
             self.write_color_corners("corners", min_distance_permutation)
+
+    def _resolve_edge_squares_via_for_loops12(self, edge_pairs, target_edge_pairs):
+        min_distance, min_distance_permutation = edges_vs_edges_simple_permutation(edge_pairs, target_edge_pairs)
+        init_min_distance = min_distance
+        permutation_index = 0
+
+        for edge_pair_permutation in edge_permutation_builder12(edge_pairs, target_edge_pairs, min_distance):
+            total_distance = edges_vs_edges_distance(edge_pair_permutation, target_edge_pairs)
+
+            if total_distance < min_distance:
+                min_distance = total_distance
+                min_distance_permutation = edge_pair_permutation[:]
+                logger.info(f"edge permutation {permutation_index:,} NEW MIN {min_distance}")
+
+            permutation_index += 1
+
+        logger.info(
+            f"edges explored {permutation_index} permutations, init min distance {init_min_distance}, final min distance {min_distance}"
+        )
+        return min_distance_permutation
+
+    def _resolve_edge_squares_via_for_loops24(self, edge_pairs, target_edge_pairs):
+        min_distance, min_distance_permutation = edges_vs_edges_simple_permutation(edge_pairs, target_edge_pairs)
+        init_min_distance = min_distance
+        permutation_index = 0
+
+        for edge_pair_permutation in edge_permutation_builder24(edge_pairs, target_edge_pairs, min_distance):
+            total_distance = edges_vs_edges_distance(edge_pair_permutation, target_edge_pairs)
+
+            if total_distance < min_distance:
+                min_distance = total_distance
+                min_distance_permutation = edge_pair_permutation[:]
+                logger.info(f"edge permutation {permutation_index:,} NEW MIN {min_distance}")
+
+            permutation_index += 1
+
+        logger.info(
+            f"edges explored {permutation_index} permutations, init min distance {init_min_distance}, final min distance {min_distance}"
+        )
+        return min_distance_permutation
+
+    def _resolve_edge_squares_via_tsp(self):
+        pass
 
     def resolve_edge_squares(self) -> None:
         """
@@ -1977,20 +2116,7 @@ $(document).ready(function()
                     (yellow, green),
                     (yellow, blue),
                 ]
-
-                min_distance, min_distance_permutation = edges_vs_edges_simple_permutation(edge_pairs, target_edge_pairs)
-                init_min_distance = min_distance
-                permutation_index = 0
-
-                for edge_pair_permutation in edge_permutation_builder(edge_pairs, target_edge_pairs, min_distance):
-                    total_distance = edges_vs_edges_distance(edge_pair_permutation, target_edge_pairs)
-
-                    if total_distance < min_distance:
-                        min_distance = total_distance
-                        min_distance_permutation = edge_pair_permutation[:]
-                        logger.info(f"edge permutation {permutation_index:,} NEW MIN {min_distance}")
-
-                    permutation_index += 1
+                min_distance_permutation = self._resolve_edge_squares_via_for_loops12(edge_pairs, target_edge_pairs)
 
             elif len(edge_pairs) == 24:
                 target_edge_pairs = [
@@ -2019,129 +2145,11 @@ $(document).ready(function()
                     (yellow, blue),
                     (yellow, blue),
                 ]
-
-                # dwalton here now
-                # fmt: off
-                """
-                for edge_pair1_index, edge_pair1 in enumerate(edge_pairs):
-
-                    for edge_pair2_index, edge_pair2 in enumerate(edge_pairs):
-                        if skip_index((edge_pair1_index, edge_pair2_index), min_distance):
-                            continue
-
-                        for edge_pair3_index, edge_pair3 in enumerate(edge_pairs):
-                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index), min_distance):
-                                continue
-
-                            for edge_pair4_index, edge_pair4 in enumerate(edge_pairs):
-                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index), min_distance):
-                                    continue
-
-                                for edge_pair5_index, edge_pair5 in enumerate(edge_pairs):
-                                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index), min_distance):
-                                        continue
-
-                                    for edge_pair6_index, edge_pair6 in enumerate(edge_pairs):
-                                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index), min_distance):
-                                            continue
-
-                                        for edge_pair7_index, edge_pair7 in enumerate(edge_pairs):
-                                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index), min_distance):
-                                                continue
-
-                                            for edge_pair8_index, edge_pair8 in enumerate(edge_pairs):
-                                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index), min_distance):
-                                                    continue
-
-                                                for edge_pair9_index, edge_pair9 in enumerate(edge_pairs):
-                                                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index), min_distance):
-                                                        continue
-
-                                                    for edge_pair10_index, edge_pair10 in enumerate(edge_pairs):
-                                                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index), min_distance):
-                                                            continue
-
-                                                        for edge_pair11_index, edge_pair11 in enumerate(edge_pairs):
-                                                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index), min_distance):
-                                                                continue
-
-                                                            for edge_pair12_index, edge_pair12 in enumerate(edge_pairs):
-                                                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index), min_distance):
-                                                                    continue
-
-                                                                for edge_pair13_index, edge_pair13 in enumerate(edge_pairs):
-                                                                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index), min_distance):
-                                                                        continue
-
-                                                                    for edge_pair14_index, edge_pair14 in enumerate(edge_pairs):
-                                                                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index), min_distance):
-                                                                            continue
-
-                                                                        for edge_pair15_index, edge_pair15 in enumerate(edge_pairs):
-                                                                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index), min_distance):
-                                                                                continue
-
-                                                                            for edge_pair16_index, edge_pair16 in enumerate(edge_pairs):
-                                                                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index), min_distance):
-                                                                                    continue
-
-                                                                                for edge_pair17_index, edge_pair17 in enumerate(edge_pairs):
-                                                                                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index), min_distance):
-                                                                                        continue
-
-                                                                                    for edge_pair18_index, edge_pair18 in enumerate(edge_pairs):
-                                                                                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index), min_distance):
-                                                                                            continue
-
-                                                                                        for edge_pair19_index, edge_pair19 in enumerate(edge_pairs):
-                                                                                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index), min_distance):
-                                                                                                continue
-
-                                                                                            for edge_pair20_index, edge_pair20 in enumerate(edge_pairs):
-                                                                                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index), min_distance):
-                                                                                                    continue
-
-                                                                                                for edge_pair21_index, edge_pair21 in enumerate(edge_pairs):
-                                                                                                    if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index), min_distance):
-                                                                                                        continue
-
-                                                                                                    for edge_pair22_index, edge_pair22 in enumerate(edge_pairs):
-                                                                                                        if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index, edge_pair22_index), min_distance):
-                                                                                                            continue
-
-                                                                                                        for edge_pair23_index, edge_pair23 in enumerate(edge_pairs):
-                                                                                                            if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index, edge_pair22_index, edge_pair23_index), min_distance):
-                                                                                                                continue
-
-                                                                                                            for edge_pair24_index, edge_pair24 in enumerate(edge_pairs):
-                                                                                                                if skip_index((edge_pair1_index, edge_pair2_index, edge_pair3_index, edge_pair4_index, edge_pair5_index, edge_pair6_index, edge_pair7_index, edge_pair8_index, edge_pair9_index, edge_pair10_index, edge_pair11_index, edge_pair12_index, edge_pair13_index, edge_pair14_index, edge_pair15_index, edge_pair16_index, edge_pair17_index, edge_pair18_index, edge_pair19_index, edge_pair20_index, edge_pair21_index, edge_pair22_index, edge_pair23_index, edge_pair24_index), min_distance):
-                                                                                                                    continue
-
-                                                                                                                edge_pair_permutation = [
-                                                                                                                    edge_pair1, edge_pair2, edge_pair3, edge_pair4,
-                                                                                                                    edge_pair5, edge_pair6, edge_pair7, edge_pair8,
-                                                                                                                    edge_pair9, edge_pair10, edge_pair11, edge_pair12,
-                                                                                                                    edge_pair13, edge_pair14, edge_pair15, edge_pair16,
-                                                                                                                    edge_pair17, edge_pair18, edge_pair19, edge_pair20,
-                                                                                                                    edge_pair21, edge_pair22, edge_pair23, edge_pair24,
-                                                                                                                ]
-                                                                                                                total_distance = edges_vs_edges_distance(edge_pair_permutation, target_edge_pairs)
-
-                                                                                                                if total_distance < min_distance:
-                                                                                                                    min_distance = total_distance
-                                                                                                                    min_distance_permutation = edge_pair_permutation[:]
-                                                                                                                    logger.info(f"edge permutation {permutation_index:,} NEW MIN {min_distance}")
-
-                                                                                                                permutation_index += 1
-                """
-                # fmt: on
+                min_distance_permutation = self._resolve_edge_squares_via_for_loops24(edge_pairs, target_edge_pairs)
 
             else:
                 raise ValueError("found {} edge pairs".format(len(edge_pairs)))
 
-            logger.info(
-                f"edges explored {permutation_index} permutations, init min distance {init_min_distance}, final min distance {min_distance}"
-            )
             # logger.info(f"min_distance_permutation\n{pformat(min_distance_permutation)}")
             # logger.info(f"target edge pairs\n{pformat(target_edge_pairs)}")
 
