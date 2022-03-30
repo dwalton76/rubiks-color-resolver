@@ -7,7 +7,6 @@ except ImportError:
     from ujson import load as json_load
 
 # standard libraries
-import gc
 import logging
 from math import sqrt
 
@@ -158,12 +157,7 @@ test_cases = (
 results = []
 
 for (desc, filename, expected) in test_cases:
-    # dwalton
-    #if not desc.startswith("2x2x2"):
-    #    continue
-    if not desc.startswith("3x3x3"):
-        continue
-    #if not desc.startswith("4x4x4"):
+    # if not desc.startswith("2x2x2"):
     #    continue
 
     logger.warning("Test: %s" % desc)
@@ -198,9 +192,5 @@ for (desc, filename, expected) in test_cases:
             results.append("   output   %s" % output)
 
         cube = None
-        gc.collect()
-
-    # dwalton
-    # break
 
 print("\n".join(results))

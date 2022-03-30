@@ -273,7 +273,14 @@ def rgb_to_hsv(r: int, g: int, b: int) -> Tuple[float, float, float]:
 
 class Square(object):
     def __init__(
-        self, position: int, red: int, green: int, blue: int, side_name: None = None, color_name: None = None
+        self,
+        position: int,
+        red: int,
+        green: int,
+        blue: int,
+        side_name: None = None,
+        color_name: None = None,
+        via_color_box: bool = False,
     ) -> None:
         assert position is None or isinstance(position, int)
         assert isinstance(red, int)
@@ -292,6 +299,7 @@ class Square(object):
         self.lab = rgb2lab((red, green, blue))
         self.side_name = side_name  # ULFRBD
         self.color_name = color_name
+        self.via_color_box = via_color_box
 
     def __str__(self) -> str:
         return "{}{}-{}".format(self.side_name, self.position, self.color_name)
