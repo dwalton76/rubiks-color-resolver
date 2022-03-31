@@ -21,9 +21,6 @@ import numpy as np
 from scipy.spatial import distance
 from sklearn.cluster import KMeans
 
-# rubiks cube libraries
-from rubikscolorresolver import k_means_colors_dictionary
-
 logger = logging.getLogger(__name__)
 
 
@@ -95,7 +92,6 @@ def write_colors(fh, algorithm, colors):
         #    logger.info('')
 
     fh.write("</div>\n")
-    logger.info("\n\n")
 
 
 def write_footer(fh):
@@ -224,10 +220,9 @@ if __name__ == "__main__":
 
     with open("foo.html", "w") as fh:
         write_header(fh)
-        # for algorithm in ('none', 'rgb', 'hsv', 'hls', 'luminosity', 'step', 'travelling-salesman'):
         # for algorithm in ('none', 'hsv', 'step', 'kmeans'):
         # for algorithm in ('none', 'hsv', 'kmeans'):
-        for algorithm in ("kmeans", "kmeans2"):
+        for algorithm in ("none", "rgb", "hsv", "hls", "luminosity", "step", "travelling-salesman", "kmeans"):
 
             if algorithm == "none":
                 tmp_colors = colors
@@ -264,14 +259,6 @@ if __name__ == "__main__":
                     for (index, cluster) in enumerate(clt.labels_):
                         if cluster == target_cluster:
                             tmp_colors.append(colors[index])
-                    tmp_colors.append((None, None, None))
-
-            elif algorithm == "kmeans2":
-                tmp_colors = []
-                # for rgb_list in k_means_colors_dictionary(deepcopy(data), (13, 38, 63, 88, 113, 138)):
-                for rgb_list in k_means_colors_dictionary(deepcopy(data), (31, 42, 73, 108, 139, 186)):
-                    for rgb in rgb_list:
-                        tmp_colors.append(rgb)
                     tmp_colors.append((None, None, None))
 
             else:

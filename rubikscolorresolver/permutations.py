@@ -50,7 +50,7 @@ odd_cube_center_color_permutations = (
     ("Bu", "OR", "Wh", "Rd", "Ye", "Gr"),
 )
 
-# even_cube_center_color_permutations = list(sorted(permutations(ALL_COLORS)))
+# we use a string here (that we split up later) instead of a huge list of tuples to save memory
 even_cube_center_color_permutations = """Bu Gr OR Rd Wh Ye
 Bu Gr OR Rd Ye Wh
 Bu Gr OR Wh Rd Ye

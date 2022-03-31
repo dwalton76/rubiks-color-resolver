@@ -5,15 +5,14 @@ except ImportError:
     from ujson import load as json_load
 
 # standard libraries
-import gc
 import logging
 from math import sqrt
 
 # rubiks cube libraries
-from rubikscolorresolver import RubiksColorSolverGeneric
+from rubikscolorresolver.solver import RubiksColorSolverGeneric
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)5s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)5s [%(filename)s:%(lineno)d]: %(message)s")
 logger = logging.getLogger(__name__)
 
 # To add a test case:
@@ -70,11 +69,6 @@ test_cases = (
         "3x3x3 random 05",
         "test-data/3x3x3-random-05.txt",
         "BRRDUFDFUBDFFRBDDUBRRRFLLUFUBLRDBBFFULLULBRDFDULLBLRUD",
-    ),
-    (
-        "3x3x3 random 07",
-        "test-data/3x3x3-random-07.txt",
-        "BUDDUBLDDRURURFBLDULBFFLRDDFRLRDBRDFUFFRLLBFUFRLUBBLBU",
     ),
     (
         "4x4x4 solved 01",
@@ -156,7 +150,9 @@ test_cases = (
 results = []
 
 for (desc, filename, expected) in test_cases:
-    logger.warning("Test: %s" % desc)
+    # if not desc.startswith("2x2x2"):
+    #    continue
+
     with open("tests/" + filename, "r") as fh:
         scan_data_str_keys = json_load(fh)
         scan_data = {}
@@ -177,17 +173,15 @@ for (desc, filename, expected) in test_cases:
         except Exception as e:
             print(e)
             logger.exception(str(e))
-            # output = "Exception"
             output = e
 
         if output == expected:
             results.append("\033[92mPASS\033[0m: %s" % desc)
         else:
-            results.append("\033[91mFAIL\033[0m: %s" % desc)
+            results.append("\033[91mFAIL\033[0m: %s - tests/%s" % (desc, filename))
             results.append("   expected %s" % expected)
             results.append("   output   %s" % output)
 
         cube = None
-        gc.collect()
 
 print("\n".join(results))

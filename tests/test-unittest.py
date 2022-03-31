@@ -1,24 +1,16 @@
 # standard libraries
 import logging
-import sys
 import unittest
 
 # rubiks cube libraries
-from rubikscolorresolver import hex_to_rgb, median
-from rubikscolorresolver.base import get_swap_count, rgb2lab
-
-logger = logging.getLogger(__name__)
-
-
-def is_micropython():
-    return sys.implementation.name == "micropython"
-
-
-# For color names to RGB values see:
-# https://www.w3schools.com/colors/colors_names.asp
+from rubikscolorresolver.color import hex_to_rgb, rgb2lab
+from rubikscolorresolver.solver import median
 
 
 class TestHex2RGB(unittest.TestCase):
+    # For color names to RGB values see:
+    # https://www.w3schools.com/colors/colors_names.asp
+
     def test_white(self):
         (red, green, blue) = hex_to_rgb("#FFFFFF")
         self.assertEqual(red, 255)
@@ -77,8 +69,7 @@ class TestRGB2Lab(unittest.TestCase):
 
 
 """
-if not is_micropython():
-    from rubikscolorresolver import get_lab_distance
+    from rubikscolorresolver.color import get_lab_distance
 
     class TestDeltaCIE2000(unittest.TestCase):
         def test_246_251_252_vs_246_251_252(self):
@@ -157,23 +148,6 @@ class TestMedian(unittest.TestCase):
     def test_list_of_four(self):
         m = median([9, 8, 7, 10])
         self.assertEqual(m, 8.5)
-
-
-class TestSwapCount(unittest.TestCase):
-    def test_zero(self):
-        swaps = get_swap_count([1, 2, 3, 0, 4], [1, 2, 3, 0, 4])
-        self.assertEqual(swaps, 0)
-
-    def test_even(self):
-        # swap 1 and 3
-        # swap 2 and 4
-        swaps = get_swap_count([1, 2, 3, 0, 4], [3, 4, 1, 0, 2])
-        self.assertEqual(swaps, 2)
-
-    def test_odd(self):
-        # swap 2 and 4
-        swaps = get_swap_count([1, 2, 3, 0, 4], [1, 4, 3, 0, 2])
-        self.assertEqual(swaps, 1)
 
 
 if __name__ == "__main__":
