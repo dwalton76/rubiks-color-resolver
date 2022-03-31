@@ -6,7 +6,7 @@ from math import ceil
 from rubikscolorresolver.side import Side
 
 
-class RubiksColorSolverGenericBase(object):
+class RubiksCube:
     def __init__(self, width: int) -> None:
         self.width = width
         self.squares_per_side = self.width * self.width
