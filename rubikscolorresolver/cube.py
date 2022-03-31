@@ -135,12 +135,12 @@ class RubiksColorSolverGenericBase(object):
         #    os.makedirs(HTML_DIRECTORY)
 
         self.sides = {
-            "U": Side(self, self.width, "U"),
-            "L": Side(self, self.width, "L"),
-            "F": Side(self, self.width, "F"),
-            "R": Side(self, self.width, "R"),
-            "B": Side(self, self.width, "B"),
-            "D": Side(self, self.width, "D"),
+            "U": Side(self.width, "U"),
+            "L": Side(self.width, "L"),
+            "F": Side(self.width, "F"),
+            "R": Side(self.width, "R"),
+            "B": Side(self.width, "B"),
+            "D": Side(self.width, "D"),
         }
 
         self.sideU = self.sides["U"]
@@ -202,7 +202,11 @@ class RubiksColorSolverGenericBase(object):
             self.all_edge_positions.append((pos1, pos2))
 
         for side in self.sides.values():
-            side.calculate_wing_partners()
+            for (pos1, pos2) in self.all_edge_positions:
+                if pos1 >= side.min_pos and pos1 <= side.max_pos:
+                    side.wing_partner[pos1] = pos2
+                elif pos2 >= side.min_pos and pos2 <= side.max_pos:
+                    side.wing_partner[pos2] = pos1
 
         self.calculate_pos2side()
 
@@ -1071,7 +1075,7 @@ class RubiksColorSolverGenericBase(object):
 
         for square_index in to_check:
             side = self.pos2side[square_index]
-            partner_index = side.get_wing_partner(square_index)
+            partner_index = side.wing_partner[square_index]
             square1 = self.pos2square[square_index]
             square2 = self.pos2square[partner_index]
 
@@ -1218,7 +1222,7 @@ class RubiksColorSolverGenericBase(object):
             self.sideD,
         ):
             for square in side.edge_squares:
-                partner_position = side.get_wing_partner(square.position)
+                partner_position = side.wing_partner[square.position]
                 partner = self.pos2square[partner_position]
 
                 if square.color_name == "Gr" and partner.color_name == "OR":

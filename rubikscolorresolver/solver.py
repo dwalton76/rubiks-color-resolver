@@ -1374,7 +1374,7 @@ $(document).ready(function()
                     orbit_id = edge_orbit_id[square.position]
 
                     if orbit_id == target_orbit_id:
-                        partner_index = side.get_wing_partner(square.position)
+                        partner_index = side.wing_partner[square.position]
                         partner = self.pos2square[partner_index]
                         edge_pair = (square, partner)
 

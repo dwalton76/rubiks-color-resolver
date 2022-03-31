@@ -19,8 +19,7 @@ else:
 
 class Side(object):
     # cube is a RubiksColorSolverGenericBase
-    def __init__(self, cube, width: int, name: str) -> None:
-        self.cube = cube
+    def __init__(self, width: int, name: str) -> None:
         self.name = name  # U, L, etc
         self.color = None
         self.squares = OrderedDict()
@@ -29,6 +28,8 @@ class Side(object):
         self.center_squares = []
         self.edge_squares = []
         self.corner_squares = []
+
+        # our wing_partners will be populated by RubiksColorSolverGenericBase
         self.wing_partner = {}
 
         if self.name == "U":
@@ -118,17 +119,3 @@ class Side(object):
 
         else:
             raise Exception("Could not determine egde vs corner vs center")
-
-    def calculate_wing_partners(self) -> None:
-        for (pos1, pos2) in self.cube.all_edge_positions:
-            if pos1 >= self.min_pos and pos1 <= self.max_pos:
-                self.wing_partner[pos1] = pos2
-            elif pos2 >= self.min_pos and pos2 <= self.max_pos:
-                self.wing_partner[pos2] = pos1
-
-    def get_wing_partner(self, wing_index: int) -> int:
-        try:
-            return self.wing_partner[wing_index]
-        except KeyError:
-            # logger.info("wing_partner\n%s\n".format(self.wing_partner))
-            raise

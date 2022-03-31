@@ -34,6 +34,9 @@ def hex_to_rgb(rgb_string: str) -> Tuple[int, int, int]:
 
 class LabColor(object):
     def __init__(self, L: float, a: float, b: float, red: int, green: int, blue: int) -> None:
+        assert isinstance(L, float)
+        assert isinstance(a, float)
+        assert isinstance(b, float)
         assert isinstance(red, int)
         assert isinstance(green, int)
         assert isinstance(blue, int)
@@ -67,6 +70,9 @@ class LabColor(object):
 
 
 def rgb2lab(inputColor: Tuple[int, int, int]) -> LabColor:
+    """
+    Given a tuple of red, green, blue values return the corresponding LabColor object
+    """
     (red, green, blue) = inputColor
 
     # XYZ -> Standard-RGB
@@ -132,6 +138,9 @@ def rgb2lab(inputColor: Tuple[int, int, int]) -> LabColor:
 
 
 def rgb_to_hsv(r: int, g: int, b: int) -> Tuple[float, float, float]:
+    """
+    Given a tuple of red, green, blue values return the corresponding HSV values
+    """
     mx = max(r, g, b)
     mn = min(r, g, b)
     df = mx - mn
@@ -267,5 +276,8 @@ def lab_distance(lab1: LabColor, lab2: LabColor) -> int:
 
 
 def hashtag_rgb_to_labcolor(rgb_string: str) -> LabColor:
+    """
+    Given a string like #AABBCC return the corresponding LabColor object
+    """
     (red, green, blue) = hex_to_rgb(rgb_string)
     return rgb2lab((red, green, blue))
