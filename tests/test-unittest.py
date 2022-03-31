@@ -4,7 +4,6 @@ import unittest
 
 # rubiks cube libraries
 from rubikscolorresolver.color import hex_to_rgb, rgb2lab
-from rubikscolorresolver.cube import get_swap_count
 from rubikscolorresolver.solver import median
 
 
@@ -153,23 +152,6 @@ class TestMedian(unittest.TestCase):
     def test_list_of_four(self):
         m = median([9, 8, 7, 10])
         self.assertEqual(m, 8.5)
-
-
-class TestSwapCount(unittest.TestCase):
-    def test_zero(self):
-        swaps = get_swap_count([1, 2, 3, 0, 4], [1, 2, 3, 0, 4])
-        self.assertEqual(swaps, 0)
-
-    def test_even(self):
-        # swap 1 and 3
-        # swap 2 and 4
-        swaps = get_swap_count([1, 2, 3, 0, 4], [3, 4, 1, 0, 2])
-        self.assertEqual(swaps, 2)
-
-    def test_odd(self):
-        # swap 2 and 4
-        swaps = get_swap_count([1, 2, 3, 0, 4], [1, 4, 3, 0, 2])
-        self.assertEqual(swaps, 1)
 
 
 if __name__ == "__main__":

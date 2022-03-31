@@ -1,28 +1,12 @@
-# standard libraries
-import sys
-
 # rubiks cube libraries
 from rubikscolorresolver.square import Square
 
 
-def is_micropython() -> bool:
-    return sys.implementation.name == "micropython"
-
-
-if is_micropython():
-    # third party libraries
-    from ucollections import OrderedDict
-else:
-    # standard libraries
-    from collections import OrderedDict
-
-
 class Side(object):
-    # cube is a RubiksColorSolverGenericBase
     def __init__(self, width: int, name: str) -> None:
         self.name = name  # U, L, etc
         self.color = None
-        self.squares = OrderedDict()
+        self.squares = {}
         self.width = width
         self.squares_per_side = width * width
         self.center_squares = []

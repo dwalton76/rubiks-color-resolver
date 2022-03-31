@@ -1510,9 +1510,6 @@ $(document).ready(function()
         # edges
         self.resolve_edge_squares()
         self.set_state()
-        self.sanity_check_edge_squares()
-        self.validate_all_corners_found()
-        self.validate_odd_cube_midge_vs_corner_parity()
 
         if self.write_debug_file:
             html_final_cube = self.html_cube("Final Cube", True, "final_cube")
