@@ -69,11 +69,7 @@ class TestRGB2Lab(unittest.TestCase):
 
 
 """
-def is_micropython():
-    return sys.implementation.name == "micropython"
-
-if not is_micropython():
-    from rubikscolorresolver import get_lab_distance
+    from rubikscolorresolver.color import get_lab_distance
 
     class TestDeltaCIE2000(unittest.TestCase):
         def test_246_251_252_vs_246_251_252(self):

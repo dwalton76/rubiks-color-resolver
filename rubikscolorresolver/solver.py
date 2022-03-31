@@ -26,22 +26,14 @@ from rubikscolorresolver.tsp_solver_greedy import solve_tsp
 logger = logging.getLogger(__name__)
 
 ALL_COLORS = ("Bu", "Gr", "OR", "Rd", "Wh", "Ye")
-SIDES_COUNT = 6
 
-
-def is_micropython() -> bool:
-    return sys.implementation.name == "micropython"
-
-
-if is_micropython():
+if sys.implementation.name == "micropython":
     HTML_FILENAME = "rubiks-color-resolver.html"
 else:
     HTML_FILENAME = "/tmp/rubiks-color-resolver.html"
 
-try:
+if os.path.exists(HTML_FILENAME):
     os.unlink(HTML_FILENAME)
-except Exception:
-    pass
 
 
 def median(list_foo: List[float]) -> float:
@@ -354,50 +346,6 @@ crayola_colors = {
     "Bu": LabColor(23.92144819784853, 5.28400492805528, -30.63998357385018, 22, 57, 103),
     "Rd": LabColor(20.18063311070288, 40.48184409611946, 29.94038922869042, 104, 4, 2),
 }
-
-
-def get_row_color_distances(squares, row_baseline_lab):
-    """
-    'colors' is list if (index, (red, green, blue)) tuples
-    'row_baseline_lab' is a list of Lab colors, one for each row of colors
-
-    Return the total distance of the colors in a row vs their baseline
-    """
-    results = []
-    squares_per_row = int(len(squares) / 6)
-    count = 0
-    row_index = 0
-    distance = 0
-    baseline_lab = row_baseline_lab[row_index]
-
-    for square in squares:
-        baseline_lab = row_baseline_lab[row_index]
-        distance += lab_distance(baseline_lab, square.lab)
-        count += 1
-
-        if count % squares_per_row == 0:
-            results.append(int(distance))
-            row_index += 1
-            distance = 0
-
-    return results
-
-
-def get_squares_for_row(squares, target_row_index):
-    results = []
-    squares_per_row = int(len(squares) / 6)
-    count = 0
-    row_index = 0
-
-    for square in squares:
-        if row_index == target_row_index:
-            results.append(square)
-        count += 1
-
-        if count % squares_per_row == 0:
-            row_index += 1
-
-    return results
 
 
 def square_list_to_lab(squares: List[Square]) -> LabColor:
@@ -829,7 +777,6 @@ $(document).ready(function()
         self._write_colors("color_box", self.color_box)
 
     def set_state(self) -> None:
-        self.state = []
 
         # odd cube
         if self.sideU.mid_pos is not None:
@@ -952,8 +899,6 @@ $(document).ready(function()
         terms of the assigned color name vs. the colors in color_box.
         """
         ref_even_cube_center_color_permutations = even_cube_center_color_permutations
-        # print("\n\n\n")
-        # print("assign_color_names '{}' via {}".format(desc, color_permutations))
 
         def get_even_cube_center_color_permutation(permutation_index):
             LINE_LENGTH = 18
@@ -968,17 +913,12 @@ $(document).ready(function()
         squares_lists = []
         square_list = []
 
-        # logger.info(f"squares_list_all {squares_lists_all}")
-        # logger.info(f"squares_per_row {squares_per_row}")
-
         for square in squares_lists_all:
             square_list.append(square)
 
             if len(square_list) == squares_per_row:
                 squares_lists.append(tuple(square_list))
                 square_list = []
-
-        # logger.info(f"squares_list10 {squares_lists}")
 
         # Compute the distance for each color in the color_box vs each squares_list
         # in squares_lists. Store this in distances_of_square_list_per_color
@@ -1000,14 +940,6 @@ $(document).ready(function()
 
         if color_permutations == "even_cube_center_color_permutations":
 
-            # before sorting
-            """
-            print("\n".join(map(str, squares_lists)))
-            for color_name in ref_ALL_COLORS:
-                print("pre  distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))  # noqa: E501
-            print("")
-            """
-
             # Move the squares_list row that is closest to Bu to the front, then Gr, OR, Rd, Wh, Ye.
             # This will allow us to skip many more entries later.
             for (insert_index, color_name) in enumerate(ref_ALL_COLORS):
@@ -1028,18 +960,8 @@ $(document).ready(function()
                     distances_of_square_list_per_color[color_name].pop(min_color_name_distance_index)
                     distances_of_square_list_per_color[color_name].insert(insert_index, blue_distance)
 
-            # after sorting
-            """
-            print("\n".join(map(str, squares_lists)))
-            for color_name in ref_ALL_COLORS:
-                print("post distances_of_square_list_per_color {} : {}".format(color_name, distances_of_square_list_per_color[color_name]))  # noqa: E501
-            print("")
-            """
-
             permutation_len = len_even_cube_center_color_permutations
             permutation_index = 0
-            # total = 0
-            # skip_total = 0
             r = range(6)
 
             while permutation_index < permutation_len:
@@ -1061,31 +983,17 @@ $(document).ready(function()
                         elif x == 3:
                             skip_by = 2
 
-                        # if skip_by:
-                        #    print("{} PERMUTATION {} - {}, x {} distance {:,} > min {}, skip_by {}".format(
-                        #        desc, permutation_index, permutation, x, distance, min_distance, skip_by))
                         break
 
                 if skip_by:
                     permutation_index += skip_by
-                    # skip_total += skip_by
                     continue
 
                 if distance < min_distance:
-                    # print("{} PERMUTATION {} - {}, DISTANCE {:,} vs min {} (NEW MIN)".format(desc, permutation_index, permutation, distance, min_distance))  # noqa: E501
-                    # logger.info("{} PERMUTATION {}, DISTANCE {:,} (NEW MIN)".format(desc, permutation, int(distance)))
                     min_distance = distance
                     min_distance_permutation = permutation
-                # else:
-                #    print("{} PERMUTATION {} - {}, DISTANCE {} vs min {}".format(desc, permutation_index, permutation, distance, min_distance))  # noqa: E501
-                #    #logger.info("{} PERMUTATION {}, DISTANCE {}".format(desc, permutation, distance))
 
-                # total += 1
                 permutation_index += 1
-
-            # print("total {}".format(total))
-            # print("skip total {}".format(skip_total))
-            # print("")
 
         elif color_permutations == "odd_cube_center_color_permutations":
             for permutation in odd_cube_center_color_permutations:
@@ -1200,9 +1108,6 @@ $(document).ready(function()
         self.color_box["Rd"] = square_list_to_lab(red_squares)
         self.color_box["Gr"] = square_list_to_lab(green_squares)
         self.color_box["Bu"] = square_list_to_lab(blue_squares)
-
-        self.orange_baseline = self.color_box["OR"]
-        self.red_baseline = self.color_box["Rd"]
 
         # Nuke all color names (they were temporary)
         for side in (

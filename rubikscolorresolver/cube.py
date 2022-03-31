@@ -1,63 +1,16 @@
 # standard libraries
-import logging
 import sys
 from math import ceil
 
-try:
-    # standard libraries
-    from typing import List
-except ImportError:
-    # this will barf for micropython...ignore it
-    pass
-
 # rubiks cube libraries
 from rubikscolorresolver.side import Side
-
-logger = logging.getLogger(__name__)
-
-
-edge_color_pair_map = {
-    # Up (white)
-    "Gr/Wh": "Gr/Wh",
-    "Wh/Gr": "Gr/Wh",
-    "Bu/Wh": "Bu/Wh",
-    "Wh/Bu": "Bu/Wh",
-    "OR/Wh": "OR/Wh",
-    "Wh/OR": "OR/Wh",
-    "Rd/Wh": "Rd/Wh",
-    "Wh/Rd": "Rd/Wh",
-    # Left (orange)
-    "Gr/OR": "Gr/OR",
-    "OR/Gr": "Gr/OR",
-    "Bu/OR": "Bu/OR",
-    "OR/Bu": "Bu/OR",
-    # Right (red)
-    "Gr/Rd": "Gr/Rd",
-    "Rd/Gr": "Gr/Rd",
-    "Bu/Rd": "Bu/Rd",
-    "Rd/Bu": "Bu/Rd",
-    # Down (yellow)
-    "Gr/Ye": "Gr/Ye",
-    "Ye/Gr": "Gr/Ye",
-    "Bu/Ye": "Bu/Ye",
-    "Ye/Bu": "Bu/Ye",
-    "OR/Ye": "OR/Ye",
-    "Ye/OR": "OR/Ye",
-    "Rd/Ye": "Rd/Ye",
-    "Ye/Rd": "Rd/Ye",
-}
 
 
 class RubiksColorSolverGenericBase(object):
     def __init__(self, width: int) -> None:
         self.width = width
-        self.height = width
         self.squares_per_side = self.width * self.width
         self.orbits = int(ceil((self.width - 2) / 2.0))
-        self.state = []
-        self.orange_baseline = None
-        self.red_baseline = None
-        all_edge_positions = []
         self.write_debug_file = False
 
         self.sides = {
@@ -78,6 +31,7 @@ class RubiksColorSolverGenericBase(object):
         self.side_order = ("U", "L", "F", "R", "B", "D")
         self.pos2side = {}
         self.pos2square = {}
+        all_edge_positions = []
 
         # U and B
         for (pos1, pos2) in zip(self.sideU.edge_north_pos, reversed(self.sideB.edge_north_pos)):
@@ -148,7 +102,7 @@ class RubiksColorSolverGenericBase(object):
 
     def print_cube(self) -> None:
         data = []
-        for x in range(3 * self.height):
+        for x in range(3 * self.width):
             data.append([])
 
         color_codes = {"OR": 90, "Rd": 91, "Gr": 92, "Ye": 93, "Bu": 94, "Wh": 97}
@@ -188,7 +142,7 @@ class RubiksColorSolverGenericBase(object):
 
         sys.stderr.write("Cube\n\n%s\n" % "\n".join(output))
 
-    def cube_for_kociemba_strict(self) -> List[str]:
+    def cube_for_kociemba_strict(self):
         data = []
 
         for side in (
