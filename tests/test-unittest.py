@@ -1,27 +1,17 @@
-#!/usr/bin/env python3
-
 # standard libraries
 import logging
-import sys
 import unittest
 
 # rubiks cube libraries
-from rubikscolorresolver import median
 from rubikscolorresolver.color import hex_to_rgb, rgb2lab
 from rubikscolorresolver.cube import get_swap_count
-
-logger = logging.getLogger(__name__)
-
-
-def is_micropython():
-    return sys.implementation.name == "micropython"
-
-
-# For color names to RGB values see:
-# https://www.w3schools.com/colors/colors_names.asp
+from rubikscolorresolver.solver import median
 
 
 class TestHex2RGB(unittest.TestCase):
+    # For color names to RGB values see:
+    # https://www.w3schools.com/colors/colors_names.asp
+
     def test_white(self):
         (red, green, blue) = hex_to_rgb("#FFFFFF")
         self.assertEqual(red, 255)
@@ -80,6 +70,9 @@ class TestRGB2Lab(unittest.TestCase):
 
 
 """
+def is_micropython():
+    return sys.implementation.name == "micropython"
+
 if not is_micropython():
     from rubikscolorresolver import get_lab_distance
 

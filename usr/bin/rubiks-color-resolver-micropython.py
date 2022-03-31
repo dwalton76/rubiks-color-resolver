@@ -4,6 +4,6 @@
 import sys
 
 # rubiks cube libraries
-from rubikscolorresolver import resolve_colors
+from rubikscolorresolver.solver import resolve_colors
 
 resolve_colors(sys.argv)

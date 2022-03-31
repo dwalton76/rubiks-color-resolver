@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 try:
     # standard libraries
     from json import load as json_load
@@ -11,7 +9,7 @@ import logging
 from math import sqrt
 
 # rubiks cube libraries
-from rubikscolorresolver import RubiksColorSolverGeneric
+from rubikscolorresolver.solver import RubiksColorSolverGeneric
 
 # logging.basicConfig(filename='rubiks-rgb-solver.log',
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)5s [%(filename)s:%(lineno)d]: %(message)s")

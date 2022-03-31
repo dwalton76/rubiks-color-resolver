@@ -5,7 +5,7 @@ import logging
 import sys
 
 # rubiks cube libraries
-from rubikscolorresolver import resolve_colors
+from rubikscolorresolver.solver import resolve_colors
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)7s: %(message)s")
 

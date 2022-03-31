@@ -1,6 +1,13 @@
 # standard libraries
 from math import atan2, cos, degrees, exp, radians, sin, sqrt
-from typing import Tuple
+
+try:
+    # standard libraries
+    from typing import Tuple
+except ImportError:
+    # this will barf for micropython...ignore it
+    pass
+
 
 html_color = {
     "Gr": {"red": 0, "green": 102, "blue": 0},
