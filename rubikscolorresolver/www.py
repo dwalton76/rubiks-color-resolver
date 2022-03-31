@@ -15,8 +15,10 @@ if sys.implementation.name == "micropython":
 else:
     HTML_FILENAME = "/tmp/rubiks-color-resolver.html"
 
-if os.path.exists(HTML_FILENAME):
+try:
     os.unlink(HTML_FILENAME)
+except Exception:
+    pass
 
 
 def get_important_square_indexes(size):
