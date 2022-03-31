@@ -6,8 +6,9 @@ import sys
 import unittest
 
 # rubiks cube libraries
-from rubikscolorresolver import hex_to_rgb, median
-from rubikscolorresolver.base import get_swap_count, rgb2lab
+from rubikscolorresolver import median
+from rubikscolorresolver.color import hex_to_rgb, rgb2lab
+from rubikscolorresolver.cube import get_swap_count
 
 logger = logging.getLogger(__name__)
 

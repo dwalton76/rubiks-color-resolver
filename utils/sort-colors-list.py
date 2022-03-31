@@ -7,136 +7,28 @@ import math
 import random
 import subprocess
 from collections import defaultdict
-from math import atan2, cos, degrees, exp, radians, sin, sqrt
+from math import sqrt
 from random import uniform
 
 # third party libraries
 import matplotlib.pyplot as plt
-from tsp_solver.greedy import solve_tsp
+
+# rubiks cube libraries
+from rubikscolorresolver.color import hashtag_rgb_to_labcolor, lab_distance_cie2000, rgb2lab
+from rubikscolorresolver.tsp_solver_greedy import solve_tsp
 
 lego_colors = []
 
-with open(
-    "/Users/ddwalton/rubiks-cube/rubiks-color-resolver/test-data/6x6x6-random-02.txt",
-    "r",
-) as fh:
-    lego_colors.extend(list(json.load(fh).values()))
+if False:
+    with open("tests/test-data/6x6x6-random-03.txt", "r") as fh:
+        lego_colors.extend(list(json.load(fh).values()))
 
+else:
+    colors_length = 200
+    random.seed(1234)
 
-# uncomment to use a more random set of colors
-"""
-colors_length = 10
-random.seed(1234)
-
-for i in range(colors_length):
-    lego_colors.append((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
-
-"""
-
-
-def hex_to_rgb(rgb_string):
-    """
-    Takes #112233 and returns the RGB values in decimal
-    """
-    if rgb_string.startswith("#"):
-        rgb_string = rgb_string[1:]
-
-    red = int(rgb_string[0:2], 16)
-    green = int(rgb_string[2:4], 16)
-    blue = int(rgb_string[4:6], 16)
-    return (red, green, blue)
-
-
-class LabColor(object):
-    def __init__(self, L, a, b, red, green, blue):
-        self.L = L
-        self.a = a
-        self.b = b
-        self.red = red
-        self.green = green
-        self.blue = blue
-        self.name = None
-
-    def __str__(self):
-        return "Lab (%s, %s, %s)" % (self.L, self.a, self.b)
-
-    def __lt__(self, other):
-        return self.name < other.name
-
-
-def rgb2lab(inputColor):
-    (red, green, blue) = inputColor
-
-    # XYZ -> Standard-RGB
-    # https://www.easyrgb.com/en/math.php
-    var_R = red / 255
-    var_G = green / 255
-    var_B = blue / 255
-
-    if var_R > 0.04045:
-        var_R = pow(((var_R + 0.055) / 1.055), 2.4)
-    else:
-        var_R = var_R / 12.92
-
-    if var_G > 0.04045:
-        var_G = pow(((var_G + 0.055) / 1.055), 2.4)
-    else:
-        var_G = var_G / 12.92
-
-    if var_B > 0.04045:
-        var_B = pow(((var_B + 0.055) / 1.055), 2.4)
-    else:
-        var_B = var_B / 12.92
-
-    var_R = var_R * 100
-    var_G = var_G * 100
-    var_B = var_B * 100
-
-    X = var_R * 0.4124 + var_G * 0.3576 + var_B * 0.1805
-    Y = var_R * 0.2126 + var_G * 0.7152 + var_B * 0.0722
-    Z = var_R * 0.0193 + var_G * 0.1192 + var_B * 0.9505
-
-    reference_X = 95.047
-    reference_Y = 100.0
-    reference_Z = 108.883
-
-    # XYZ -> CIE-L*ab
-    # //www.easyrgb.com/en/math.php
-    var_X = X / reference_X
-    var_Y = Y / reference_Y
-    var_Z = Z / reference_Z
-
-    if var_X > 0.008856:
-        var_X = pow(var_X, 1 / 3)
-    else:
-        var_X = (7.787 * var_X) + (16 / 116)
-
-    if var_Y > 0.008856:
-        var_Y = pow(var_Y, 1 / 3)
-    else:
-        var_Y = (7.787 * var_Y) + (16 / 116)
-
-    if var_Z > 0.008856:
-        var_Z = pow(var_Z, 1 / 3)
-    else:
-        var_Z = (7.787 * var_Z) + (16 / 116)
-
-    L = (116 * var_Y) - 16
-    a = 500 * (var_X - var_Y)
-    b = 200 * (var_Y - var_Z)
-    # logger.info("RGB ({}, {}, {}), L {}, a {}, b {}".format(red, green, blue, L, a, b))
-
-    return LabColor(L, a, b, red, green, blue)
-
-
-def rgb2lab_tuple(inputColor):
-    lab = rgb2lab(inputColor)
-    return (lab.L, lab.a, lab.b)
-
-
-def hashtag_rgb_to_labcolor(rgb_string):
-    (red, green, blue) = hex_to_rgb(rgb_string)
-    return rgb2lab((red, green, blue))
+    for i in range(colors_length):
+        lego_colors.append((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
 
 
 crayola_colors = {
@@ -220,82 +112,6 @@ def write_colors(title, colors_to_write):
     fh.write("<br></div>")
 
 
-def delta_e_cie2000(lab1, lab2):
-    """
-    Ported from this php implementation
-    https://github.com/renasboy/php-color-difference/blob/master/lib/color_difference.class.php
-    """
-    l1 = lab1.L
-    a1 = lab1.a
-    b1 = lab1.b
-
-    l2 = lab2.L
-    a2 = lab2.a
-    b2 = lab2.b
-
-    avg_lp = (l1 + l2) / 2.0
-    c1 = sqrt(pow(a1, 2) + pow(b1, 2))
-    c2 = sqrt(pow(a2, 2) + pow(b2, 2))
-    avg_c = (c1 + c2) / 2.0
-    g = (1 - sqrt(pow(avg_c, 7) / (pow(avg_c, 7) + pow(25, 7)))) / 2.0
-    a1p = a1 * (1 + g)
-    a2p = a2 * (1 + g)
-    c1p = sqrt(pow(a1p, 2) + pow(b1, 2))
-    c2p = sqrt(pow(a2p, 2) + pow(b2, 2))
-    avg_cp = (c1p + c2p) / 2.0
-    h1p = degrees(atan2(b1, a1p))
-
-    if h1p < 0:
-        h1p += 360
-
-    h2p = degrees(atan2(b2, a2p))
-
-    if h2p < 0:
-        h2p += 360
-
-    if abs(h1p - h2p) > 180:
-        avg_hp = (h1p + h2p + 360) / 2.0
-    else:
-        avg_hp = (h1p + h2p) / 2.0
-
-    t = (
-        1
-        - 0.17 * cos(radians(avg_hp - 30))
-        + 0.24 * cos(radians(2 * avg_hp))
-        + 0.32 * cos(radians(3 * avg_hp + 6))
-        - 0.2 * cos(radians(4 * avg_hp - 63))
-    )
-    delta_hp = h2p - h1p
-
-    if abs(delta_hp) > 180:
-        if h2p <= h1p:
-            delta_hp += 360
-        else:
-            delta_hp -= 360
-
-    delta_lp = l2 - l1
-    delta_cp = c2p - c1p
-    delta_hp = 2 * sqrt(c1p * c2p) * sin(radians(delta_hp) / 2.0)
-    s_l = 1 + ((0.015 * pow(avg_lp - 50, 2)) / sqrt(20 + pow(avg_lp - 50, 2)))
-    s_c = 1 + 0.045 * avg_cp
-    s_h = 1 + 0.015 * avg_cp * t
-
-    delta_ro = 30 * exp(-(pow((avg_hp - 275) / 25.0, 2)))
-    r_c = 2 * sqrt(pow(avg_cp, 7) / (pow(avg_cp, 7) + pow(25, 7)))
-    r_t = -r_c * sin(2 * radians(delta_ro))
-    kl = 1.0
-    kc = 1.0
-    kh = 1.0
-    delta_e = sqrt(
-        pow(delta_lp / (s_l * kl), 2)
-        + pow(delta_cp / (s_c * kc), 2)
-        + pow(delta_hp / (s_h * kh), 2)
-        + r_t * (delta_cp / (s_c * kc)) * (delta_hp / (s_h * kh))
-    )
-
-    return delta_e
-
-
 def get_euclidean_lab_distance(lab1, lab2):
     """
     http://www.w3resource.com/python-exercises/math/python-math-exercise-79.php
@@ -305,9 +121,6 @@ def get_euclidean_lab_distance(lab1, lab2):
     distance, Euclidean space becomes a metric space. The associated norm is called
     the Euclidean norm.
     """
-    # I experiment with this sometimes
-    # return delta_e_cie2000(lab1, lab2)
-
     lab1_tuple = (lab1.L, lab1.a, lab1.b)
     lab2_tuple = (lab2.L, lab2.a, lab2.b)
     return math.sqrt(sum([(a - b) ** 2 for a, b in zip(lab1_tuple, lab2_tuple)]))
@@ -440,7 +253,7 @@ def assign_points(data_points, centers):
         shortest = None  # positive infinity
         shortest_index = 0
         for i in range(len(centers)):
-            val = delta_e_cie2000(rgb2lab(point), rgb2lab(centers[i]))
+            val = lab_distance_cie2000(rgb2lab(point), rgb2lab(centers[i]))
             if shortest is None or val < shortest:
                 shortest = val
                 shortest_index = i
@@ -518,7 +331,7 @@ def get_closest_cie2000_match(rgb, colors):
             continue
 
         x_lab = rgb2lab((x_red, x_green, x_blue))
-        distance = delta_e_cie2000(lab, x_lab)
+        distance = lab_distance_cie2000(lab, x_lab)
 
         if min_distance is None or distance < min_distance:
             min_distance = distance
@@ -538,7 +351,7 @@ def get_total_cie2000_distance(rgb_list):
     for rgb in rgb_list[1:]:
         lab = rgb2lab(rgb)
 
-        total += delta_e_cie2000(lab, prev_lab)
+        total += lab_distance_cie2000(lab, prev_lab)
         prev_lab = lab
 
     return total
@@ -572,7 +385,7 @@ def traveling_salesman(colors, alg):
 
             if alg == "cie2000":
                 y_lab = rgb2lab((y_red, y_green, y_blue))
-                distance = delta_e_cie2000(x_lab, y_lab)
+                distance = lab_distance_cie2000(x_lab, y_lab)
 
             elif alg == "HSV":
                 y_hsv = colorsys.rgb_to_hsv(y_red / 255.0, y_green / 255.0, y_blue / 255.0)

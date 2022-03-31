@@ -160,7 +160,6 @@ for (desc, filename, expected) in test_cases:
     # if not desc.startswith("2x2x2"):
     #    continue
 
-    logger.warning("Test: %s" % desc)
     with open("tests/" + filename, "r") as fh:
         scan_data_str_keys = json_load(fh)
         scan_data = {}
@@ -181,13 +180,12 @@ for (desc, filename, expected) in test_cases:
         except Exception as e:
             print(e)
             logger.exception(str(e))
-            # output = "Exception"
             output = e
 
         if output == expected:
             results.append("\033[92mPASS\033[0m: %s" % desc)
         else:
-            results.append("\033[91mFAIL\033[0m: %s" % desc)
+            results.append("\033[91mFAIL\033[0m: %s - tests/%s" % (desc, filename))
             results.append("   expected %s" % expected)
             results.append("   output   %s" % output)
 
