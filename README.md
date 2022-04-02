@@ -7,8 +7,8 @@ $ sudo python3 -m pip install git+https://github.com/dwalton76/rubiks-color-reso
 
 ## micropython install
 
-First [install micropython](https://github.com/micropython/micropython/wiki/Getting-Started) then:
 ```
+$ sudo apt-get install micropython
 $ git clone https://github.com/dwalton76/rubiks-color-resolver.git
 $ cd rubiks-color-resolver
 $ make install-micropython
