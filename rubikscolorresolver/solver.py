@@ -415,7 +415,7 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
                 square = side.squares[x]
 
                 if square.color_name is None:
-                    raise Exception("square does not have a color_name")
+                    raise Exception(f"{square} does not have a color_name")
 
                 square.side_name = self.color_to_side_name[square.color_name]
 
