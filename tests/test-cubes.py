@@ -26,8 +26,13 @@ test_cases = (
     ("2x2x2 random 03", "test-data/2x2x2-random-03.txt", "RUDRDFLRLFBULBFDUFUDRBBL"),
     ("2x2x2 random 04", "test-data/2x2x2-random-04.txt", "FDFBUBULRLUFBRBFDDDRRLUL"),
     (
-        "3x3x3 solved",
-        "test-data/3x3x3-solved.txt",
+        "3x3x3 solved 01",
+        "test-data/3x3x3-solved-01.txt",
+        "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB",
+    ),
+    (
+        "3x3x3 solved 02",
+        "test-data/3x3x3-solved-02.txt",
         "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB",
     ),
     (

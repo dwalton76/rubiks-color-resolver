@@ -49,11 +49,11 @@ crayola_colors = {
     #   blue = (22, 57, 103)
     #   red = (104, 4, 2)
     "Wh": LabColor(100.0, 0.00526049995830391, -0.01040818452526793, 255, 255, 255),
-    "Gr": LabColor(39.14982168015123, -32.45052099773829, 10.60519920674466, 20, 105, 74),
-    "Ye": LabColor(97.13824698129729, -21.55590833483229, 94.48248544644462, 255, 255, 0),
     "OR": LabColor(35.71689493804023, 38.18518746791636, 43.98251678431012, 148, 53, 9),
-    "Bu": LabColor(23.92144819784853, 5.28400492805528, -30.63998357385018, 22, 57, 103),
+    "Gr": LabColor(39.14982168015123, -32.45052099773829, 10.60519920674466, 20, 105, 74),
     "Rd": LabColor(20.18063311070288, 40.48184409611946, 29.94038922869042, 104, 4, 2),
+    "Bu": LabColor(23.92144819784853, 5.28400492805528, -30.63998357385018, 22, 57, 103),
+    "Ye": LabColor(97.13824698129729, -21.55590833483229, 94.48248544644462, 255, 255, 0),
 }
 
 
@@ -348,14 +348,7 @@ $(document).ready(function()
     def html_cube(self, desc, use_html_colors, div_class):
         cube = ["dummy"]
 
-        for side in (
-            self.sideU,
-            self.sideL,
-            self.sideF,
-            self.sideR,
-            self.sideB,
-            self.sideD,
-        ):
+        for side in self.sides.values():
             for position in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[position]
 
@@ -430,9 +423,7 @@ $(document).ready(function()
             fh.write("<div class='clear colors'>\n")
             fh.write("<h2>{}</h2>\n".format(desc))
 
-            for color_name in ("Wh", "Ye", "Gr", "Bu", "OR", "Rd"):
-                lab = box[color_name]
-
+            for color_name, lab in box.items():
                 fh.write(
                     "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%s</span>\n"  # noqa: E501
                     % (
