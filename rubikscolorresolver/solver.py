@@ -352,14 +352,7 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
 
             # Build a list of all center squares
             center_squares = []
-            for side in (
-                self.sideU,
-                self.sideL,
-                self.sideF,
-                self.sideR,
-                self.sideB,
-                self.sideD,
-            ):
+            for side in self.sides.values():
                 square = side.squares[side.mid_pos]
                 center_squares.append(square)
             # desc = "middle center"
@@ -403,19 +396,12 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
                 "Ye": "D",
             }
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in self.sides.values():
             for x in range(side.min_pos, side.max_pos + 1):
                 square = side.squares[x]
 
                 if square.color_name is None:
-                    raise Exception("square does not have a color_name")
+                    raise Exception(f"{square} does not have a color_name")
 
                 square.side_name = self.color_to_side_name[square.color_name]
 
@@ -496,7 +482,6 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
                 for square in square_list:
                     distance += lab_distance(square.lab, color_lab)
                 distances_of_square_list_per_color[color_name].append(int(distance))
-            distances_of_square_list_per_color[color_name] = distances_of_square_list_per_color[color_name]
 
         min_distance = 99999
         min_distance_permutation = None
@@ -570,8 +555,11 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
                 )
 
                 if distance < min_distance:
+                    logger.debug(f"permutation {permutation} distance {distance} (NEW MIN)")
                     min_distance = distance
                     min_distance_permutation = permutation
+                else:
+                    logger.debug(f"permutation {permutation} distance {distance}")
 
         # Assign the color name to the Square object
         for (index, square_list) in enumerate(squares_lists):
@@ -590,14 +578,7 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
         green_squares = []
         blue_squares = []
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in self.sides.values():
             for square in side.center_squares + side.corner_squares + side.edge_squares:
                 if square.color_name == "Wh":
                     white_squares.append(square)
@@ -630,31 +611,35 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
         and center squares.
         """
 
-        # Save CPU cycles by only using the corner squares to create the color box
-        corner_squares = []
+        # For odd cubes use the dead center squares to define the color box
+        # For even cubes use the corner squares to define the color box
+        squares_for_color_box = []
 
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
-            for square in side.corner_squares:
-                corner_squares.append(square)
+        if self.is_odd():
+            for side in self.sides.values():
+                squares_for_color_box.append(side.squares[side.mid_pos])
 
-        sorted_corner_squares = traveling_salesman(corner_squares)
+            desc = "dead center squares for color_box"
+            color_permutations = "odd_cube_center_color_permutations"
+
+        else:
+            for side in self.sides.values():
+                for square in side.corner_squares:
+                    squares_for_color_box.append(square)
+
+            desc = "corner squares for color_box"
+            color_permutations = "even_cube_center_color_permutations"
+            squares_for_color_box = traveling_salesman(squares_for_color_box)
 
         self.assign_color_names(
-            "corner squares for color_box",
-            sorted_corner_squares,
-            "even_cube_center_color_permutations",
+            desc,
+            squares_for_color_box,
+            color_permutations,
             crayola_colors,
         )
 
         if self.write_debug_file:
-            self.write_colors("corners for color_box", sorted_corner_squares)
+            self.write_colors(desc, squares_for_color_box)
 
         (
             white_squares,
@@ -664,23 +649,20 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
             green_squares,
             blue_squares,
         ) = self.get_squares_by_color_name()
-        self.color_box = {}
-        self.color_box["Wh"] = square_list_to_lab(white_squares)
-        self.color_box["Ye"] = square_list_to_lab(yellow_squares)
-        self.color_box["OR"] = square_list_to_lab(orange_squares)
-        self.color_box["Rd"] = square_list_to_lab(red_squares)
-        self.color_box["Gr"] = square_list_to_lab(green_squares)
-        self.color_box["Bu"] = square_list_to_lab(blue_squares)
+
+        # The order here is important, use the very first odd_cube_center_color_permutations
+        # which is ("Wh", "OR", "Gr", "Rd", "Bu", "Ye")
+        self.color_box = {
+            "Wh": square_list_to_lab(white_squares),
+            "OR": square_list_to_lab(orange_squares),
+            "Gr": square_list_to_lab(green_squares),
+            "Rd": square_list_to_lab(red_squares),
+            "Bu": square_list_to_lab(blue_squares),
+            "Ye": square_list_to_lab(yellow_squares),
+        }
 
         # Nuke all color names (they were temporary)
-        for side in (
-            self.sideU,
-            self.sideR,
-            self.sideF,
-            self.sideD,
-            self.sideL,
-            self.sideB,
-        ):
+        for side in self.sides.values():
             for square in side.center_squares + side.corner_squares + side.edge_squares:
                 square.color_name = None
 
@@ -952,11 +934,14 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
             if desc == "centers":
                 sorted_center_squares = center_squares[:]
                 permutations = "odd_cube_center_color_permutations"
+                self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
             else:
                 sorted_center_squares = traveling_salesman(center_squares)
                 permutations = "even_cube_center_color_permutations"
+                self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
 
-            self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
+                # resort sorted_center_squares so that we display them consistently
+                sorted_center_squares = sorted(sorted_center_squares, key=lambda x: x.color_name)
 
             if self.write_debug_file:
                 self.write_colors(desc, sorted_center_squares)

@@ -158,3 +158,9 @@ class RubiksCube:
                 data.append(square.side_name)
 
         return data
+
+    def is_even(self) -> bool:
+        return bool(self.width % 2 == 0)
+
+    def is_odd(self) -> bool:
+        return not self.is_even()
