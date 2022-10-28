@@ -234,8 +234,13 @@ $(document).ready(function()
                     if index and index % 2 == 0:
                         fh.write("<span class='half_square'></span>")
 
+                    if square.position:
+                        desc = square.position
+                    else:
+                        desc = square.color_name
+
                     fh.write(
-                        "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s, side %s'>%s</span>\n"  # noqa: E501
+                        "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%s</span>\n"  # noqa: E501
                         % (
                             red,
                             green,
@@ -247,8 +252,7 @@ $(document).ready(function()
                             int(square.lab.a),
                             int(square.lab.b),
                             square.color_name,
-                            square.side_name,
-                            square.position,
+                            desc,
                         )
                     )
                 fh.write("<br>")
@@ -276,8 +280,13 @@ $(document).ready(function()
                     if index and index % 2 == 0:
                         fh.write("<span class='half_square'></span>")
 
+                    if square.position:
+                        desc = square.position
+                    else:
+                        desc = square.color_name
+
                     fh.write(
-                        "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s, side %s'>%s</span>\n"  # noqa: E501
+                        "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%s</span>\n"  # noqa: E501
                         % (
                             red,
                             green,
@@ -289,8 +298,7 @@ $(document).ready(function()
                             int(square.lab.a),
                             int(square.lab.b),
                             square.color_name,
-                            square.side_name,
-                            square.position,
+                            desc,
                         )
                     )
                 fh.write("<br>")
@@ -306,7 +314,7 @@ $(document).ready(function()
             for square in squares:
                 (red, green, blue) = (square.lab.red, square.lab.green, square.lab.blue)
                 fh.write(
-                    "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s, side %s'>%d</span>\n"  # noqa: E501
+                    "<span class='square' style='background-color:#%02x%02x%02x' title='RGB (%s, %s, %s), Lab (%s, %s, %s), color %s'>%d</span>\n"  # noqa: E501
                     % (
                         red,
                         green,
@@ -318,7 +326,6 @@ $(document).ready(function()
                         int(square.lab.a),
                         int(square.lab.b),
                         square.color_name,
-                        square.side_name,
                         square.position,
                     )
                 )

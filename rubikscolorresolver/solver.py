@@ -958,6 +958,9 @@ class RubiksColorSolverGeneric(RubiksCube, WwwMixin):
 
             self.assign_color_names(desc, sorted_center_squares, permutations, self.color_box)
 
+            # resort sorted_center_squares so that we display them consistently
+            sorted_center_squares = sorted(sorted_center_squares, key=lambda x: x.color_name)
+
             if self.write_debug_file:
                 self.write_colors(desc, sorted_center_squares)
 
